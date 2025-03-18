@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tinfoil Hat Competition - Cypher Con</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: inline-block;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .button-secondary {
+            background-color: #2ecc71;
+        }
+        
+        .button-secondary:hover {
+            background-color: #27ae60;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+        }
+        
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+        
+        .message {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* Animation for leaderboard updates */
+        @keyframes highlight {
+            0% { background-color: rgba(82, 196, 26, 0.8); }
+            100% { background-color: transparent; }
+        }
+        
+        .highlight-row {
+            animation: highlight 2s ease-in-out;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Tinfoil Hat Competition - Cypher Con</h1>
+    
+    <div id="messages">
+        {% for message in get_flashed_messages() %}
+            <div class="message info">{{ message }}</div>
+        {% endfor %}
+    </div>
+
+    <div class="container">
+        <div>
+            <!-- Left Side: Leaderboard and Registration -->
+            <div class="card">
+                <h2>Leaderboard</h2>
+                <table id="leaderboard">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Team Name</th>
+                            <th>Attenuation Score</th>
+                            <th>Test Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for contestant in leaderboard %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td>{{ contestant.name }}</td>
+                                <td>{{ "%.2f"|format(contestant.average_attenuation) }}</td>
+                                <td>{{ contestant.test_date }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="card">
+                <h2>Contestant Registration</h2>
+                <form id="new-contestant-form" action="{{ url_for('tinfoilhat.add_contestant') }}" method="post">
+                    <div class="form-group">
+                        <label for="name">Team Name:</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact_info">Contact Information:</label>
+                        <textarea id="contact_info" name="contact_info" rows="3"></textarea>
+                    </div>
+                    <button type="submit">Register New Contestant</button>
+                </form>
+            </div>
+        </div>
+        
+        <div>
+            <!-- Right Side: Test Controls and Results -->
+            <div class="card">
+                <h2>Test Controls</h2>
+                <div class="form-group">
+                    <label for="contestant_id">Select Contestant:</label>
+                    <select id="contestant_id" name="contestant_id">
+                        <option value="">-- Select a team --</option>
+                        {% for contestant in contestants %}
+                            <option value="{{ contestant.id }}">{{ contestant.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <button id="baseline-button" onclick="runBaseline()">1. Run Baseline Test</button>
+                    <button id="measure-button" class="button-secondary" onclick="measureHat()" disabled>2. Measure Hat</button>
+                </div>
+                
+                <div id="test-status" class="message info hidden"></div>
+                <div id="test-results" class="hidden">
+                    <h3>Test Results</h3>
+                    <p><strong>Average Attenuation:</strong> <span id="average-attenuation"></span> dB</p>
+                    <p><strong>Samples per Frequency:</strong> <span id="samples-per-frequency"></span></p>
+                    <p id="best-score-message" class="message success hidden">This is the best score for this team!</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Spectrum Analyzer</h2>
+                <div class="chart-container">
+                    <canvas id="spectrum-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables for chart and test data
+        let spectrumChart = null;
+        let baselineData = null;
+        
+        // Initialize the spectrum chart
+        function initChart() {
+            const ctx = document.getElementById('spectrum-chart').getContext('2d');
+            spectrumChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Frequency (MHz)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Signal Level (dBm)'
+                            },
+                            min: -100,
+                            max: -60
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Fetch and update the leaderboard
+        async function updateLeaderboard(highlightTeam = null) {
+            try {
+                const response = await fetch('/leaderboard');
+                const data = await response.json();
+                
+                const leaderboardBody = document.querySelector('#leaderboard tbody');
+                leaderboardBody.innerHTML = ''; // Clear existing rows
+                
+                data.leaderboard.forEach(entry => {
+                    const row = document.createElement('tr');
+                    
+                    // Add highlight class if this is the team we just updated
+                    if (highlightTeam && entry.name === highlightTeam) {
+                        row.classList.add('highlight-row');
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${entry.rank}</td>
+                        <td>${entry.name}</td>
+                        <td>${entry.average_attenuation.toFixed(2)}</td>
+                        <td>${entry.test_date}</td>
+                    `;
+                    leaderboardBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error updating leaderboard:', error);
+            }
+        }
+        
+        // Run baseline test
+        async function runBaseline() {
+            const statusEl = document.getElementById('test-status');
+            statusEl.textContent = 'Running baseline test...';
+            statusEl.classList.remove('hidden');
+            
+            try {
+                const response = await fetch('/test/baseline', {
+                    method: 'POST',
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    statusEl.textContent = result.message || 'Baseline test completed successfully.';
+                    
+                    // Save baseline data for later use
+                    baselineData = result.data;
+                    
+                    // Update chart with baseline data
+                    updateChart(baselineData.frequencies, baselineData.baseline);
+                    
+                    // Show samples per frequency
+                    document.getElementById('samples-per-frequency').textContent = 
+                        baselineData.samples_per_frequency || 1;
+                    
+                    // Enable measure button
+                    document.getElementById('measure-button').disabled = false;
+                } else {
+                    statusEl.textContent = 'Error: ' + result.message;
+                    statusEl.classList.add('error');
+                }
+            } catch (error) {
+                statusEl.textContent = 'Error running baseline test: ' + error.message;
+                statusEl.classList.add('error');
+            }
+        }
+        
+        // Measure hat attenuation
+        async function measureHat() {
+            const contestantId = document.getElementById('contestant_id').value;
+            
+            if (!contestantId) {
+                alert('Please select a contestant before measuring.');
+                return;
+            }
+            
+            const statusEl = document.getElementById('test-status');
+            statusEl.textContent = 'Measuring hat attenuation...';
+            statusEl.classList.remove('hidden');
+            
+            try {
+                const formData = new FormData();
+                formData.append('contestant_id', contestantId);
+                
+                const response = await fetch('/test/measure', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    statusEl.textContent = result.message || 'Hat measurement completed successfully.';
+                    
+                    // Update chart with both baseline and hat data
+                    updateChartWithComparison(
+                        result.data.frequencies,
+                        result.data.baseline,
+                        result.data.hat_measurements,
+                        result.data.attenuation
+                    );
+                    
+                    // Show results
+                    document.getElementById('test-results').classList.remove('hidden');
+                    document.getElementById('average-attenuation').textContent = 
+                        result.data.average_attenuation.toFixed(2);
+                    document.getElementById('samples-per-frequency').textContent = 
+                        result.data.samples_per_frequency || 1;
+                    
+                    // Show best score message if applicable
+                    const bestScoreMsg = document.getElementById('best-score-message');
+                    if (result.data.is_best_score) {
+                        bestScoreMsg.classList.remove('hidden');
+                        bestScoreMsg.textContent = `This is the best score for team "${result.data.contestant_name}"! The leaderboard has been updated.`;
+                        
+                        // Update the leaderboard if this is a new best score
+                        updateLeaderboard(result.data.contestant_name);  // Pass the team name to highlight
+                    } else {
+                        bestScoreMsg.classList.add('hidden');
+                    }
+                } else {
+                    statusEl.textContent = 'Error: ' + result.message;
+                    statusEl.classList.add('error');
+                }
+            } catch (error) {
+                statusEl.textContent = 'Error measuring hat: ' + error.message;
+                statusEl.classList.add('error');
+            }
+        }
+        
+        // Update chart with baseline data
+        function updateChart(frequencies, baseline) {
+            // Convert Hz to MHz for display
+            const freqLabels = frequencies.map(f => (f / 1e6).toFixed(2));
+            
+            spectrumChart.data.labels = freqLabels;
+            spectrumChart.data.datasets = [{
+                label: 'Baseline',
+                data: baseline,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1
+            }];
+            
+            spectrumChart.update();
+        }
+        
+        // Update chart with comparison data
+        function updateChartWithComparison(frequencies, baseline, hatData, attenuation) {
+            // Convert Hz to MHz for display
+            const freqLabels = frequencies.map(f => (f / 1e6).toFixed(2));
+            
+            spectrumChart.data.labels = freqLabels;
+            spectrumChart.data.datasets = [
+                {
+                    label: 'Baseline',
+                    data: baseline,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Hat Measurement',
+                    data: hatData,
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.1
+                },
+                {
+                    label: 'Attenuation',
+                    data: attenuation,
+                    borderColor: 'rgb(54, 162, 235)',
+                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                    tension: 0.1,
+                    yAxisID: 'attenuation'
+                }
+            ];
+            
+            // Add a second y-axis for attenuation
+            spectrumChart.options.scales.attenuation = {
+                position: 'right',
+                title: {
+                    display: true,
+                    text: 'Attenuation (dB)'
+                },
+                min: 0,
+                max: 30
+            };
+            
+            spectrumChart.update();
+        }
+        
+        // Initialize the chart when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            
+            // Also fetch the initial leaderboard data
+            updateLeaderboard();
+            
+            // Add event listener for contestant registration form
+            const registrationForm = document.getElementById('new-contestant-form');
+            registrationForm.addEventListener('submit', function(event) {
+                // Note: We don't prevent default here so the form still submits normally
+                // But after submission, when page reloads, the leaderboard will be fresh
+            });
+        });
+    </script>
+</body>
+</html> 
