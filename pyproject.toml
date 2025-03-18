@@ -31,19 +31,21 @@ dev = [
 packages = ["tinfoilhat"]
 
 [tool.black]
-line-length = 88
+line-length = 120
 target-version = ["py38"]
 include = '\.pyi?$'
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 120
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 target-version = "py38"
+
+[tool.ruff.lint]
 select = ["E", "F", "W", "I", "C90", "N", "B", "SIM", "TCH", "UP", "YTT", "BLE"]
-ignore = []
+ignore = ["BLE001", "B904", "C901"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

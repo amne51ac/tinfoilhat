@@ -15,15 +15,12 @@ from flask.cli import with_appcontext
 def get_db():
     """
     Get a database connection.
-    
+
     :return: SQLite database connection
     :rtype: sqlite3.Connection
     """
     if "db" not in g:
-        g.db = sqlite3.connect(
-            current_app.config["DATABASE"],
-            detect_types=sqlite3.PARSE_DECLTYPES
-        )
+        g.db = sqlite3.connect(current_app.config["DATABASE"], detect_types=sqlite3.PARSE_DECLTYPES)
         g.db.row_factory = sqlite3.Row
 
     return g.db
@@ -32,7 +29,7 @@ def get_db():
 def close_db(e=None):
     """
     Close the database connection.
-    
+
     :param e: Error that triggered the close, defaults to None
     :type e: Exception, optional
     """
@@ -58,4 +55,4 @@ def init_db():
 def init_db_command():
     """Clear the existing data and create new tables."""
     init_db()
-    click.echo("Initialized the database.") 
+    click.echo("Initialized the database.")

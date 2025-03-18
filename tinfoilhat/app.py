@@ -6,7 +6,7 @@ the Flask application.
 """
 
 import os
-from pathlib import Path
+from contextlib import suppress
 
 from flask import Flask
 
@@ -39,10 +39,8 @@ def create_app(test_config=None):
         app.config.from_mapping(test_config)
 
     # Ensure the instance folder exists
-    try:
+    with suppress(OSError):
         os.makedirs(app.instance_path)
-    except OSError:
-        pass
 
     # Initialize database
     with app.app_context():
@@ -54,4 +52,4 @@ def create_app(test_config=None):
     # Register blueprints
     app.register_blueprint(routes.bp)
 
-    return app 
+    return app

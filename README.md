@@ -31,7 +31,7 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 ## Requirements
 
 - Python 3.8+
-- HackRF One with telescoping antenna (for real measurements, simulated in development mode)
+- HackRF One with telescoping antenna
 - Mannequin head for testing
 - HackRF system tools
 
