@@ -1,0 +1,11 @@
+flask>=2.0.0
+numpy>=1.20.0
+matplotlib>=3.5.0
+pyrtlsdr>=0.2.0
+
+# Development dependencies
+tox>=3.24.0
+black>=22.1.0
+ruff>=0.0.189
+isort>=5.10.0
+pytest>=7.0.0 
