@@ -90,7 +90,9 @@ def add_contestant():
     :rtype: Response
     """
     name = request.form.get("name")
-    contact_info = request.form.get("contact_info", "")
+    phone_number = request.form.get("phone_number", "")
+    email = request.form.get("email", "")
+    notes = request.form.get("notes", "")
     
     if not name:
         flash("Contestant name is required.")
@@ -98,8 +100,8 @@ def add_contestant():
     
     db = get_db()
     db.execute(
-        "INSERT INTO contestant (name, contact_info) VALUES (?, ?)",
-        (name, contact_info)
+        "INSERT INTO contestant (name, phone_number, email, notes) VALUES (?, ?, ?, ?)",
+        (name, phone_number, email, notes)
     )
     db.commit()
     

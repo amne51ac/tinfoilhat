@@ -9,7 +9,9 @@ DROP TABLE IF EXISTS test_data;
 CREATE TABLE contestant (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  contact_info TEXT,
+  phone_number TEXT,
+  email TEXT,
+  notes TEXT,
   created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
