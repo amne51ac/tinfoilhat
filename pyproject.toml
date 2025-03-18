@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tinfoilhat"
+version = "0.1.0"
+description = "Tinfoil Hat Competition App for Cypher Con"
+readme = "README.md"
+authors = [
+    {name = "Cypher Con Team", email = "info@cyphercon.com"}
+]
+requires-python = ">=3.8"
+dependencies = [
+    "flask>=2.0.0",
+    "numpy>=1.20.0",
+    "matplotlib>=3.5.0",
+    "pyrtlsdr>=0.2.0",  # For HackRF One interaction
+]
+
+[project.optional-dependencies]
+dev = [
+    "tox>=3.24.0",
+    "black>=22.1.0",
+    "ruff>=0.0.189",
+    "isort>=5.10.0",
+    "pytest>=7.0.0",
+]
+
+[tool.setuptools]
+packages = ["tinfoilhat"]
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py38"
+select = ["E", "F", "W", "I", "C90", "N", "B", "SIM", "TCH", "UP", "YTT", "BLE"]
+ignore = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py" 
