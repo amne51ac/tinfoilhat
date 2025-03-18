@@ -16,47 +16,82 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 - Python 3.8+
 - HackRF One with telescoping antenna (for real measurements, simulated in development mode)
 - Mannequin head for testing
+- HackRF system tools
 
-## Quick Start
+## Hardware Setup
 
-### Using Setup Scripts
+1. **Connect the HackRF One to your computer's USB port**
 
-On Linux/macOS:
-```bash
-./setup.sh
-python run.py
-```
+2. **Install HackRF Tools**
 
-On Windows:
-```
-setup.bat
-python run.py
-```
+   - **MacOS**:
+     ```
+     brew install hackrf
+     ```
 
-### Manual Setup
+   - **Ubuntu/Debian**:
+     ```
+     sudo apt-get install hackrf
+     ```
 
-1. Create a virtual environment:
-   ```bash
+   - **Windows**:
+     Download and install from https://github.com/greatscottgadgets/hackrf/releases
+
+3. **Verify HackRF connection**:
+   ```
+   hackrf_info
+   ```
+   
+   The output should show your HackRF One device details.
+
+## Software Setup
+
+1. **Create and activate a virtual environment**:
+   ```
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-2. Install the package:
-   ```bash
+2. **Install the package and dependencies**:
+   ```
    pip install -e .
    ```
 
-3. Initialize the database:
-   ```bash
-   python init_db.py
+3. **Initialize the database**:
+   ```
+   python -m tinfoilhat.init_db
    ```
 
-4. Run the application:
-   ```bash
-   python run.py
-   ```
+## Running the Application
 
-5. Open your browser and navigate to http://localhost:8000
+Start the application with:
+```
+python run.py
+```
+
+Then open your browser and navigate to http://localhost:8000
+
+## Usage Instructions
+
+1. **Register Contestants**: Enter the contestant details in the registration form.
+
+2. **Testing Process**:
+   - First, measure the baseline (without the hat)
+   - Place the tinfoil hat on the mannequin/test subject
+   - Run the measurement test
+   - The application will calculate the RF attenuation and update the leaderboard
+
+## Leaderboard
+
+The leaderboard displays contestants ranked by the effectiveness of their tinfoil hats, measured by RF signal attenuation in dB.
+
+## Hardware Recommendations
+
+For optimal performance:
+- Place the HackRF at a consistent distance from the test subject
+- Use an antenna suitable for the frequency ranges being tested
+- Ensure a consistent testing environment with minimal RF interference
+- Keep the HackRF in the same orientation throughout all tests
 
 ## How It Works
 
