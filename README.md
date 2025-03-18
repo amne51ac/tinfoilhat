@@ -13,6 +13,13 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 
 ## Recent Updates
 
+### Code Quality and Linting Improvements (March 2025)
+- Updated code style configuration to use 120-character line length
+- Fixed whitespace issues in SQL queries
+- Improved exception handling using contextlib.suppress
+- Modernized Ruff linting configuration
+- Streamlined development workflow with targeted tox environments
+
 ### Real-time Measurement Functionality (March 2025)
 - Added real-time frequency measurement endpoints
 - Implemented a progress bar with current frequency display
@@ -30,10 +37,13 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 
 ## Requirements
 
-- Python 3.8+
+- Python 3.8+ (primary development on Python 3.9)
 - HackRF One with telescoping antenna
 - Mannequin head for testing
 - HackRF system tools
+
+### Supported Python Versions
+The application is tested primarily with Python 3.9. While the codebase should be compatible with Python 3.8 and 3.10+, these versions are not actively tested in the CI pipeline. If you encounter any issues with other Python versions, please report them.
 
 ## Hardware Setup
 
@@ -142,6 +152,23 @@ The project uses the following development tools:
 - ruff for linting
 - isort for import sorting
 
+### Code Style and Linting
+
+This project follows modern Python coding standards with a 120-character line length limit. The configuration is set in `pyproject.toml`:
+
+- **Black**: Formats code to a consistent style
+- **isort**: Sorts and groups imports using Black-compatible settings
+- **Ruff**: Performs fast, comprehensive linting with customized rules
+
+We've configured the linters to work together without conflicts by:
+1. Using the same line length (120) across all tools
+2. Setting isort to use Black's profile
+3. Moving Ruff's configuration to the modern `tool.ruff.lint` section format
+4. Configuring Ruff to ignore certain warnings that would require substantial refactoring:
+   - `BLE001` (blind exception catches)
+   - `B904` (exception re-raising pattern)
+   - `C901` (function complexity)
+
 ### Running Tests
 
 ```bash
@@ -153,6 +180,12 @@ pytest
 
 # Run full test suite with linting and formatting
 tox
+
+# Run only the linting check
+tox -e lint
+
+# Run only the formatting check
+tox -e format
 ```
 
 ### Project Structure
