@@ -211,30 +211,42 @@
                 </div>
                 
                 <div class="form-group">
-                    <button id="baseline-button" onclick="runBaseline()">1. Run Baseline Test</button>
-                    <button id="measure-button" class="button-secondary" onclick="measureHat()" disabled>2. Measure Hat</button>
+                    <button id="baseline-button" onclick="runBaselineRealtime()">1. Run Baseline Test</button>
+                    <button id="measure-button" class="button-secondary" onclick="measureHatRealtime()" disabled>2. Measure Hat</button>
+                    <button id="stop-button" class="button-stop" onclick="stopMeasurement()" style="background-color: #e74c3c; display: none;">Stop Measurement</button>
+                </div>
+                
+                <div id="progress-container" style="margin-top: 15px; display: none;">
+                    <label>Measurement Progress:</label>
+                    <div style="display: flex; align-items: center;">
+                        <progress id="measurement-progress" value="0" max="100" style="flex-grow: 1;"></progress>
+                        <span id="progress-text" style="margin-left: 10px;">0%</span>
+                    </div>
+                    <p id="current-freq-text">Measuring at: <span id="current-frequency">0</span> MHz</p>
                 </div>
                 
                 <div id="test-status" class="message info hidden"></div>
                 <div id="test-results" class="hidden">
                     <h3>Test Results</h3>
-                    <p><strong>Average Attenuation:</strong> <span id="average-attenuation"></span> dB</p>
-                    <p><strong>Samples per Frequency:</strong> <span id="samples-per-frequency"></span></p>
+                    <p><strong>Average Attenuation:</strong> <span id="average-attenuation">0.00</span> dB</p>
+                    <p><strong>Samples per Frequency:</strong> <span id="samples-per-frequency">1</span></p>
 
                     <div>
                         <h4>Effectiveness by Frequency Range</h4>
-                        <p><strong>Low Frequencies (&lt;1 GHz):</strong> <span id="low-freq-att"></span> dB</p>
-                        <p><strong>Mid Frequencies (1-3 GHz):</strong> <span id="mid-freq-att"></span> dB</p>
-                        <p><strong>High Frequencies (&gt;3 GHz):</strong> <span id="high-freq-att"></span> dB</p>
+                        <p><strong>Low Frequencies (&lt;1 GHz):</strong> <span id="low-freq-att">0.00</span> dB</p>
+                        <p><strong>Mid Frequencies (1-3 GHz):</strong> <span id="mid-freq-att">0.00</span> dB</p>
+                        <p><strong>High Frequencies (&gt;3 GHz):</strong> <span id="high-freq-att">0.00</span> dB</p>
                     </div>
 
                     <div>
                         <h4>Key Frequencies</h4>
-                        <p><strong>Best Performance at:</strong> <span id="max-freq"></span> MHz (<span id="max-att"></span> dB)</p>
-                        <p><strong>Worst Performance at:</strong> <span id="min-freq"></span> MHz (<span id="min-att"></span> dB)</p>
+                        <p><strong>Best Performance at:</strong> <span id="max-freq">0.00</span> MHz (<span id="max-att">0.00</span> dB)</p>
+                        <p><strong>Worst Performance at:</strong> <span id="min-freq">0.00</span> MHz (<span id="min-att">0.00</span> dB)</p>
                     </div>
                     
                     <p id="best-score-message" class="message success hidden">This is the best score for this team!</p>
+                    
+                    <button id="save-results-button" class="button-secondary" onclick="saveResults()" style="margin-top: 15px; display: none;">Save Results</button>
                 </div>
             </div>
             
@@ -250,7 +262,13 @@
     <script>
         // Global variables for chart and test data
         let spectrumChart = null;
-        let baselineData = null;
+        let baselineData = {};
+        let hatData = {};
+        let attenuationData = {};
+        let allFrequencies = [];
+        let currentTestType = null; // 'baseline' or 'hat'
+        let measurementInProgress = false;
+        let shouldStopMeasurement = false;
         
         // Initialize the spectrum chart
         function initChart() {
@@ -259,7 +277,30 @@
                 type: 'line',
                 data: {
                     labels: [],
-                    datasets: []
+                    datasets: [
+                        {
+                            label: 'Baseline',
+                            data: [],
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Hat Measurement',
+                            data: [],
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Attenuation',
+                            data: [],
+                            borderColor: 'rgb(54, 162, 235)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.1,
+                            yAxisID: 'attenuation'
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
@@ -277,10 +318,444 @@
                             },
                             min: -100,
                             max: -60
+                        },
+                        attenuation: {
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Attenuation (dB)'
+                            },
+                            min: 0,
+                            max: 30
                         }
                     }
                 }
             });
+        }
+        
+        // Fetch the list of frequencies to test
+        async function getFrequencies() {
+            try {
+                const response = await fetch('/test/get_frequencies');
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    allFrequencies = result.data.frequencies;
+                    return allFrequencies;
+                } else {
+                    console.error('Error fetching frequencies:', result.message);
+                    return [];
+                }
+            } catch (error) {
+                console.error('Error fetching frequencies:', error);
+                return [];
+            }
+        }
+        
+        // Run baseline test with real-time updates
+        async function runBaselineRealtime() {
+            if (measurementInProgress) {
+                return;
+            }
+            
+            // Reset data
+            baselineData = {};
+            hatData = {};
+            attenuationData = {};
+            currentTestType = 'baseline';
+            shouldStopMeasurement = false;
+            
+            // Show progress elements
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('stop-button').style.display = 'inline-block';
+            document.getElementById('baseline-button').disabled = true;
+            document.getElementById('test-results').classList.add('hidden');
+            document.getElementById('save-results-button').style.display = 'none';
+            
+            const statusEl = document.getElementById('test-status');
+            statusEl.textContent = 'Running baseline test...';
+            statusEl.classList.remove('hidden');
+            statusEl.classList.remove('error');
+            
+            // Make sure we have the frequencies
+            if (allFrequencies.length === 0) {
+                allFrequencies = await getFrequencies();
+                if (allFrequencies.length === 0) {
+                    statusEl.textContent = 'Error: Could not fetch frequencies to test.';
+                    statusEl.classList.add('error');
+                    document.getElementById('progress-container').style.display = 'none';
+                    document.getElementById('stop-button').style.display = 'none';
+                    document.getElementById('baseline-button').disabled = false;
+                    return;
+                }
+            }
+            
+            // Prepare chart
+            updateChartLabels();
+            
+            // Start measuring
+            measurementInProgress = true;
+            await measureAllFrequencies('baseline');
+            
+            // Measurement complete or stopped
+            if (!shouldStopMeasurement) {
+                statusEl.textContent = 'Baseline test completed. You can now measure with a hat.';
+                document.getElementById('measure-button').disabled = false;
+            } else {
+                statusEl.textContent = 'Baseline test stopped.';
+            }
+            
+            document.getElementById('baseline-button').disabled = false;
+            document.getElementById('stop-button').style.display = 'none';
+            document.getElementById('progress-container').style.display = 'none';
+            measurementInProgress = false;
+        }
+        
+        // Measure hat attenuation with real-time updates
+        async function measureHatRealtime() {
+            const contestantId = document.getElementById('contestant_id').value;
+            
+            if (!contestantId) {
+                alert('Please select a contestant before measuring.');
+                return;
+            }
+            
+            if (measurementInProgress) {
+                return;
+            }
+            
+            // Reset hat data
+            hatData = {};
+            attenuationData = {};
+            currentTestType = 'hat';
+            shouldStopMeasurement = false;
+            
+            // Show progress elements
+            document.getElementById('progress-container').style.display = 'block';
+            document.getElementById('stop-button').style.display = 'inline-block';
+            document.getElementById('measure-button').disabled = true;
+            document.getElementById('test-results').classList.add('hidden');
+            
+            const statusEl = document.getElementById('test-status');
+            statusEl.textContent = 'Measuring hat attenuation...';
+            statusEl.classList.remove('hidden');
+            statusEl.classList.remove('error');
+            
+            // Make sure we have the frequencies
+            if (allFrequencies.length === 0) {
+                allFrequencies = await getFrequencies();
+                if (allFrequencies.length === 0) {
+                    statusEl.textContent = 'Error: Could not fetch frequencies to test.';
+                    statusEl.classList.add('error');
+                    document.getElementById('progress-container').style.display = 'none';
+                    document.getElementById('stop-button').style.display = 'none';
+                    document.getElementById('measure-button').disabled = false;
+                    return;
+                }
+            }
+            
+            // Start measuring
+            measurementInProgress = true;
+            await measureAllFrequencies('hat');
+            
+            // Measurement complete or stopped
+            if (!shouldStopMeasurement) {
+                // Calculate and display stats
+                calculateAndDisplayStats();
+                statusEl.textContent = 'Hat measurement completed successfully.';
+                document.getElementById('test-results').classList.remove('hidden');
+                document.getElementById('save-results-button').style.display = 'inline-block';
+            } else {
+                statusEl.textContent = 'Hat measurement stopped.';
+            }
+            
+            document.getElementById('measure-button').disabled = false;
+            document.getElementById('stop-button').style.display = 'none';
+            document.getElementById('progress-container').style.display = 'none';
+            measurementInProgress = false;
+        }
+        
+        // Stop ongoing measurement
+        function stopMeasurement() {
+            if (measurementInProgress) {
+                shouldStopMeasurement = true;
+            }
+        }
+        
+        // Measure all frequencies sequentially
+        async function measureAllFrequencies(measurementType) {
+            // Get total number of frequencies for progress calculation
+            const totalFrequencies = allFrequencies.length;
+            let progress = 0;
+            let errorCount = 0;
+            
+            // For each frequency
+            for (let i = 0; i < totalFrequencies; i++) {
+                if (shouldStopMeasurement) {
+                    break;
+                }
+                
+                // Convert Hz to MHz
+                const frequencyHz = allFrequencies[i];
+                const frequencyMhz = frequencyHz / 1e6;
+                
+                // Update UI to show current frequency
+                document.getElementById('current-frequency').textContent = frequencyMhz.toFixed(2);
+                
+                // Update progress bar
+                progress = Math.round((i / totalFrequencies) * 100);
+                document.getElementById('measurement-progress').value = progress;
+                document.getElementById('progress-text').textContent = `${progress}%`;
+                
+                // Measure power at this frequency
+                try {
+                    const result = await measureFrequency(frequencyMhz, measurementType);
+                    
+                    if (result) {
+                        // Store the measurement using the Hz frequency as key
+                        if (measurementType === 'baseline') {
+                            baselineData[frequencyHz] = result.power;
+                        } else {
+                            hatData[frequencyHz] = result.power;
+                            if (result.attenuation !== null) {
+                                attenuationData[frequencyHz] = result.attenuation;
+                            }
+                        }
+                        
+                        // Update chart
+                        updateChartData();
+                    } else {
+                        errorCount++;
+                        console.warn(`No result data received for frequency ${frequencyMhz} MHz`);
+                    }
+                    
+                    // Small delay to avoid overwhelming the device
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                } catch (error) {
+                    errorCount++;
+                    console.error(`Error measuring at ${frequencyMhz} MHz:`, error);
+                    
+                    // Check if we have too many consecutive errors
+                    if (errorCount > 5) {
+                        // Show error to user and abort measurement
+                        const statusEl = document.getElementById('test-status');
+                        statusEl.textContent = `Too many measurement errors. Stopping measurement process.`;
+                        statusEl.classList.add('error');
+                        shouldStopMeasurement = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Update progress to 100% when complete
+            if (!shouldStopMeasurement) {
+                document.getElementById('measurement-progress').value = 100;
+                document.getElementById('progress-text').textContent = '100%';
+            }
+            
+            // Show warning if we had some errors
+            if (errorCount > 0 && !shouldStopMeasurement) {
+                const statusEl = document.getElementById('test-status');
+                statusEl.textContent += ` (Completed with ${errorCount} measurement errors)`;
+            }
+        }
+        
+        // Measure power at a specific frequency
+        async function measureFrequency(frequencyMhz, measurementType) {
+            try {
+                // Validate frequency range before sending to server (1 MHz to 6 GHz)
+                if (frequencyMhz < 1 || frequencyMhz > 6000) {
+                    console.warn(`Skipping invalid frequency ${frequencyMhz} MHz (outside valid range 1-6000 MHz)`);
+                    return null;
+                }
+                
+                const response = await fetch('/test/measure_frequency', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        frequency: frequencyMhz,
+                        measurement_type: measurementType
+                    })
+                });
+                
+                // Check for HTTP error status
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error(`HTTP error ${response.status}: ${errorData.message || 'Unknown error'}`);
+                    return null;
+                }
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    return result.data;
+                } else {
+                    console.error('Error in frequency measurement:', result.message);
+                    return null;
+                }
+            } catch (error) {
+                console.error('Error measuring frequency:', error);
+                return null;
+            }
+        }
+        
+        // Update chart with baseline data
+        function updateChartLabels() {
+            // Convert Hz to MHz for display
+            const freqLabels = allFrequencies.map(f => (f / 1e6).toFixed(2));
+            spectrumChart.data.labels = freqLabels;
+            spectrumChart.update();
+        }
+        
+        // Update chart with current data
+        function updateChartData() {
+            // Create data arrays for chart
+            const baselineChartData = [];
+            const hatChartData = [];
+            const attenuationChartData = [];
+            
+            for (const freqHz of allFrequencies) {
+                // Add baseline data point if available, or null
+                baselineChartData.push(baselineData[freqHz] !== undefined ? baselineData[freqHz] : null);
+                
+                // Add hat data point if available, or null
+                hatChartData.push(hatData[freqHz] !== undefined ? hatData[freqHz] : null);
+                
+                // Add attenuation data point if available, or null
+                attenuationChartData.push(attenuationData[freqHz] !== undefined ? attenuationData[freqHz] : null);
+            }
+            
+            // Update chart datasets
+            spectrumChart.data.datasets[0].data = baselineChartData;
+            spectrumChart.data.datasets[1].data = hatChartData;
+            spectrumChart.data.datasets[2].data = attenuationChartData;
+            
+            // Update chart
+            spectrumChart.update();
+        }
+        
+        // Calculate statistics and display them
+        function calculateAndDisplayStats() {
+            // Calculate average attenuation
+            let totalAttenuation = 0;
+            let countAttenuation = 0;
+            let maxAttenuation = -Infinity;
+            let maxAttenuationFreq = 0;
+            let minAttenuation = Infinity;
+            let minAttenuationFreq = 0;
+            
+            // Frequency band totals
+            let lowFreqTotal = 0;
+            let lowFreqCount = 0;
+            let midFreqTotal = 0;
+            let midFreqCount = 0;
+            let highFreqTotal = 0;
+            let highFreqCount = 0;
+            
+            for (const freqHz of allFrequencies) {
+                if (attenuationData[freqHz] !== undefined) {
+                    const att = attenuationData[freqHz];
+                    totalAttenuation += att;
+                    countAttenuation++;
+                    
+                    // Track max/min
+                    if (att > maxAttenuation) {
+                        maxAttenuation = att;
+                        maxAttenuationFreq = freqHz;
+                    }
+                    
+                    if (att < minAttenuation) {
+                        minAttenuation = att;
+                        minAttenuationFreq = freqHz;
+                    }
+                    
+                    // Track by frequency band
+                    if (freqHz < 1e9) {
+                        // Low frequency (< 1 GHz)
+                        lowFreqTotal += att;
+                        lowFreqCount++;
+                    } else if (freqHz < 3e9) {
+                        // Mid frequency (1-3 GHz)
+                        midFreqTotal += att;
+                        midFreqCount++;
+                    } else {
+                        // High frequency (> 3 GHz)
+                        highFreqTotal += att;
+                        highFreqCount++;
+                    }
+                }
+            }
+            
+            // Calculate averages
+            const avgAttenuation = countAttenuation > 0 ? totalAttenuation / countAttenuation : 0;
+            const lowFreqAvg = lowFreqCount > 0 ? lowFreqTotal / lowFreqCount : 0;
+            const midFreqAvg = midFreqCount > 0 ? midFreqTotal / midFreqCount : 0;
+            const highFreqAvg = highFreqCount > 0 ? highFreqTotal / highFreqCount : 0;
+            
+            // Update UI
+            document.getElementById('average-attenuation').textContent = avgAttenuation.toFixed(2);
+            document.getElementById('low-freq-att').textContent = lowFreqAvg.toFixed(2);
+            document.getElementById('mid-freq-att').textContent = midFreqAvg.toFixed(2);
+            document.getElementById('high-freq-att').textContent = highFreqAvg.toFixed(2);
+            
+            if (maxAttenuation > -Infinity) {
+                document.getElementById('max-freq').textContent = (maxAttenuationFreq / 1e6).toFixed(2);
+                document.getElementById('max-att').textContent = maxAttenuation.toFixed(2);
+            }
+            
+            if (minAttenuation < Infinity) {
+                document.getElementById('min-freq').textContent = (minAttenuationFreq / 1e6).toFixed(2);
+                document.getElementById('min-att').textContent = minAttenuation.toFixed(2);
+            }
+        }
+        
+        // Save test results to database
+        async function saveResults() {
+            const contestantId = document.getElementById('contestant_id').value;
+            
+            if (!contestantId) {
+                alert('Please select a contestant before saving results.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/test/save_results', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contestant_id: contestantId
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // Show best score message if applicable
+                    const bestScoreMsg = document.getElementById('best-score-message');
+                    if (result.data.is_best_score) {
+                        bestScoreMsg.classList.remove('hidden');
+                        bestScoreMsg.textContent = `This is the best score for team "${result.data.contestant_name}"! The leaderboard has been updated.`;
+                        
+                        // Update the leaderboard
+                        updateLeaderboard(result.data.contestant_name);
+                    } else {
+                        bestScoreMsg.classList.add('hidden');
+                    }
+                    
+                    document.getElementById('test-status').textContent = result.message;
+                    document.getElementById('save-results-button').style.display = 'none';
+                } else {
+                    document.getElementById('test-status').textContent = 'Error: ' + result.message;
+                    document.getElementById('test-status').classList.add('error');
+                }
+            } catch (error) {
+                document.getElementById('test-status').textContent = 'Error saving results: ' + error.message;
+                document.getElementById('test-status').classList.add('error');
+            }
         }
         
         // Fetch and update the leaderboard
@@ -313,193 +788,15 @@
             }
         }
         
-        // Run baseline test
-        async function runBaseline() {
-            const statusEl = document.getElementById('test-status');
-            statusEl.textContent = 'Running baseline test...';
-            statusEl.classList.remove('hidden');
-            
-            try {
-                const response = await fetch('/test/baseline', {
-                    method: 'POST',
-                });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    statusEl.textContent = result.message || 'Baseline test completed successfully.';
-                    
-                    // Save baseline data for later use
-                    baselineData = result.data;
-                    
-                    // Update chart with baseline data
-                    updateChart(baselineData.frequencies, baselineData.baseline);
-                    
-                    // Show samples per frequency
-                    document.getElementById('samples-per-frequency').textContent = 
-                        baselineData.samples_per_frequency || 1;
-                    
-                    // Enable measure button
-                    document.getElementById('measure-button').disabled = false;
-                } else {
-                    statusEl.textContent = 'Error: ' + result.message;
-                    statusEl.classList.add('error');
-                }
-            } catch (error) {
-                statusEl.textContent = 'Error running baseline test: ' + error.message;
-                statusEl.classList.add('error');
-            }
-        }
-        
-        // Measure hat attenuation
-        async function measureHat() {
-            const contestantId = document.getElementById('contestant_id').value;
-            
-            if (!contestantId) {
-                alert('Please select a contestant before measuring.');
-                return;
-            }
-            
-            const statusEl = document.getElementById('test-status');
-            statusEl.textContent = 'Measuring hat attenuation...';
-            statusEl.classList.remove('hidden');
-            
-            try {
-                const formData = new FormData();
-                formData.append('contestant_id', contestantId);
-                
-                const response = await fetch('/test/measure', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.status === 'success') {
-                    statusEl.textContent = result.message || 'Hat measurement completed successfully.';
-                    
-                    // Update chart with both baseline and hat data
-                    updateChartWithComparison(
-                        result.data.frequencies,
-                        result.data.baseline,
-                        result.data.hat_measurements,
-                        result.data.attenuation
-                    );
-                    
-                    // Show results
-                    document.getElementById('test-results').classList.remove('hidden');
-                    document.getElementById('average-attenuation').textContent = 
-                        result.data.average_attenuation.toFixed(2);
-                    document.getElementById('samples-per-frequency').textContent = 
-                        result.data.samples_per_frequency || 1;
-                        
-                    // Update frequency band effectiveness
-                    document.getElementById('low-freq-att').textContent = 
-                        result.data.effectiveness.low_freq.toFixed(2);
-                    document.getElementById('mid-freq-att').textContent = 
-                        result.data.effectiveness.mid_freq.toFixed(2);
-                    document.getElementById('high-freq-att').textContent = 
-                        result.data.effectiveness.high_freq.toFixed(2);
-                        
-                    // Update key frequencies
-                    document.getElementById('max-freq').textContent = 
-                        result.data.max_attenuation.frequency_mhz.toFixed(2);
-                    document.getElementById('max-att').textContent = 
-                        result.data.max_attenuation.value.toFixed(2);
-                    document.getElementById('min-freq').textContent = 
-                        result.data.min_attenuation.frequency_mhz.toFixed(2);
-                    document.getElementById('min-att').textContent = 
-                        result.data.min_attenuation.value.toFixed(2);
-                    
-                    // Show best score message if applicable
-                    const bestScoreMsg = document.getElementById('best-score-message');
-                    if (result.data.is_best_score) {
-                        bestScoreMsg.classList.remove('hidden');
-                        bestScoreMsg.textContent = `This is the best score for team "${result.data.contestant_name}"! The leaderboard has been updated.`;
-                        
-                        // Update the leaderboard if this is a new best score
-                        updateLeaderboard(result.data.contestant_name);  // Pass the team name to highlight
-                    } else {
-                        bestScoreMsg.classList.add('hidden');
-                    }
-                } else {
-                    statusEl.textContent = 'Error: ' + result.message;
-                    statusEl.classList.add('error');
-                }
-            } catch (error) {
-                statusEl.textContent = 'Error measuring hat: ' + error.message;
-                statusEl.classList.add('error');
-            }
-        }
-        
-        // Update chart with baseline data
-        function updateChart(frequencies, baseline) {
-            // Convert Hz to MHz for display
-            const freqLabels = frequencies.map(f => (f / 1e6).toFixed(2));
-            
-            spectrumChart.data.labels = freqLabels;
-            spectrumChart.data.datasets = [{
-                label: 'Baseline',
-                data: baseline,
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                tension: 0.1
-            }];
-            
-            spectrumChart.update();
-        }
-        
-        // Update chart with comparison data
-        function updateChartWithComparison(frequencies, baseline, hatData, attenuation) {
-            // Convert Hz to MHz for display
-            const freqLabels = frequencies.map(f => (f / 1e6).toFixed(2));
-            
-            spectrumChart.data.labels = freqLabels;
-            spectrumChart.data.datasets = [
-                {
-                    label: 'Baseline',
-                    data: baseline,
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                    tension: 0.1
-                },
-                {
-                    label: 'Hat Measurement',
-                    data: hatData,
-                    borderColor: 'rgb(255, 99, 132)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                    tension: 0.1
-                },
-                {
-                    label: 'Attenuation',
-                    data: attenuation,
-                    borderColor: 'rgb(54, 162, 235)',
-                    backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                    tension: 0.1,
-                    yAxisID: 'attenuation'
-                }
-            ];
-            
-            // Add a second y-axis for attenuation
-            spectrumChart.options.scales.attenuation = {
-                position: 'right',
-                title: {
-                    display: true,
-                    text: 'Attenuation (dB)'
-                },
-                min: 0,
-                max: 30
-            };
-            
-            spectrumChart.update();
-        }
-        
         // Initialize the chart when the page loads
         document.addEventListener('DOMContentLoaded', function() {
             initChart();
             
             // Also fetch the initial leaderboard data
             updateLeaderboard();
+            
+            // Fetch the list of frequencies
+            getFrequencies();
             
             // Add event listener for contestant registration form
             const registrationForm = document.getElementById('new-contestant-form');

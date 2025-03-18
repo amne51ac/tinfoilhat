@@ -187,20 +187,17 @@ class Scanner:
         # Calculate power in dBm
         power_dbm = 10 * np.log10(power_linear + 1e-10) + correction_factor
         
-        # Add small random variation to simulate real-world noise
-        power_dbm += np.random.normal(0, 0.5)  # Add noise with 0.5 dB standard deviation
-        
         # Round to 2 decimal places
         power_dbm = round(power_dbm, 2)
         
         return power_dbm
     
-    def _measure_power_at_frequency(self, freq_mhz: float) -> float:
+    def _measure_power_at_frequency(self, freq_hz: float) -> float:
         """
         Measure power at a specific frequency.
         
-        :param freq_mhz: Frequency in MHz
-        :type freq_mhz: float
+        :param freq_hz: Frequency in Hz
+        :type freq_hz: float
         :return: Power level in dBm
         :rtype: float
         """
@@ -208,10 +205,14 @@ class Scanner:
         if not self.hackrf_available:
             print("HackRF not available during measurement. Attempting to refresh connection...")
             if not self.refresh_hackrf():
-                raise RuntimeError("HackRF device is not available and reconnection failed. Cannot measure at {freq_mhz} MHz.")
+                raise RuntimeError(f"HackRF device is not available and reconnection failed. Cannot measure at {freq_hz/1e6} MHz.")
                 
-        # Convert MHz to Hz for HackRF
-        freq_hz = int(freq_mhz * 1e6)
+        # Ensure freq_hz is within valid range for HackRF (1 MHz to 6 GHz)
+        if freq_hz < 1e6 or freq_hz > 6e9:
+            raise RuntimeError(f"Frequency {freq_hz/1e6} MHz is outside the supported range (1 MHz to 6 GHz)")
+                
+        # Convert to MHz for display/debugging purposes only
+        freq_mhz = freq_hz / 1e6
         
         # Set appropriate gain based on frequency range
         # Lower frequencies often need less gain to avoid overloading
@@ -242,7 +243,7 @@ class Scanner:
         cmd = [
             "hackrf_transfer",
             "-r", output_file,
-            "-f", str(freq_hz),
+            "-f", str(int(freq_hz)),  # HackRF expects integer Hz
             "-l", str(lna_gain),
             "-g", str(vga_gain),
             "-a", "1",  # Enable amp
@@ -334,7 +335,7 @@ class Scanner:
             readings = []
             for i in range(self.samples_per_freq):
                 try:
-                    reading = self._measure_power_at_frequency(freq)
+                    reading = self._measure_power_at_frequency(freq * 1e6)
                     readings.append(reading)
                     time.sleep(0.5)  # Short delay between measurements
                 except Exception as e:
@@ -381,7 +382,7 @@ class Scanner:
             readings = []
             for i in range(self.samples_per_freq):
                 try:
-                    reading = self._measure_power_at_frequency(freq)
+                    reading = self._measure_power_at_frequency(freq * 1e6)
                     # For testing: Uncomment to add artificial attenuation if testing without a real hat
                     # reading -= 5 + freq % 10  # artificial attenuation that varies with frequency
                     readings.append(reading)
