@@ -7,176 +7,418 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/billboard.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+        
         body {
-            background-color: #121212;
-            color: #e0e0e0;
-            font-family: 'Arial', sans-serif;
+            background-color: #0a0a0a;
+            color: #33ff33;
+            font-family: 'VT323', monospace;
             margin: 0;
             padding: 0;
             overflow: hidden;
+            position: relative;
         }
+        
+        /* CRT screen effect with scanlines */
+        body::before {
+            content: "";
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0.1;
+        }
+        
+        /* CRT flicker animation */
+        body::after {
+            content: "";
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 1001;
+            pointer-events: none;
+            animation: flicker 0.15s infinite alternate;
+        }
+        
+        @keyframes flicker {
+            0% { opacity: 0.025; }
+            100% { opacity: 0.05; }
+        }
+        
         .billboard-container {
             display: flex;
             flex-direction: column;
             height: 100vh;
             padding: 20px;
             box-sizing: border-box;
+            position: relative;
+            z-index: 1;
         }
+        
         .billboard-header {
             text-align: center;
             margin-bottom: 20px;
+            border-bottom: 2px solid #33ff33;
+            padding-bottom: 10px;
+            position: relative;
         }
+        
+        .billboard-header::after {
+            content: "";
+            position: absolute;
+            bottom: -2px;
+            left: 30%;
+            right: 30%;
+            height: 2px;
+            background: #33ff33;
+            box-shadow: 0 0 5px #33ff33;
+            animation: glow 2s infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { opacity: 0.7; box-shadow: 0 0 3px #33ff33; }
+            to { opacity: 1; box-shadow: 0 0 8px #33ff33; }
+        }
+        
         .billboard-header h1 {
-            font-size: 3em;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 2.2em;
             margin: 0;
-            color: #ffd700;
+            color: #33ff33;
+            letter-spacing: 2px;
+            text-shadow: 0 0 3px #33ff33;
+            text-transform: uppercase;
         }
+        
         .billboard-content {
             display: flex;
             flex: 1;
             gap: 20px;
         }
+        
         .leaderboards-container {
             display: flex;
             flex: 1;
             gap: 20px;
         }
+        
         .leaderboard {
             flex: 1;
-            background-color: #1e1e1e;
-            border-radius: 10px;
+            background-color: #111;
+            border: 2px solid #33ff33;
+            border-radius: 5px;
             padding: 15px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
+            position: relative;
+            overflow: hidden;
         }
+        
+        .leaderboard::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #33ff33;
+            box-shadow: 0 0 3px #33ff33;
+        }
+        
         .leaderboard h2 {
             text-align: center;
             margin-top: 0;
-            color: #ffd700;
-            font-size: 2em;
-            border-bottom: 2px solid #333;
+            color: #33ff33;
+            border-bottom: 1px solid #33ff33;
             padding-bottom: 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.4em;
+            text-shadow: 0 0 2px #33ff33;
         }
+        
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
         }
+        
         .leaderboard-table th, .leaderboard-table td {
-            padding: 12px 10px;
+            padding: 10px;
             text-align: left;
-            font-size: 1.2em;
+            font-size: 1.5em;
+            border-bottom: 1px solid rgba(51, 255, 51, 0.3);
         }
+        
         .leaderboard-table th {
-            border-bottom: 1px solid #333;
-            color: #ccc;
+            border-bottom: 1px solid #33ff33;
+            color: #fff;
+            text-shadow: 0 0 2px #33ff33;
+            font-size: 1.3em;
         }
-        .leaderboard-table tbody tr:nth-child(odd) {
-            background-color: #252525;
+        
+        .leaderboard-table tbody tr:hover {
+            background-color: rgba(51, 255, 51, 0.1);
         }
+        
         .rank {
             font-weight: bold;
             width: 40px;
             text-align: center;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1em;
         }
+        
         .attenuation {
             text-align: right;
             font-weight: bold;
+            font-family: monospace;
+            font-size: 1.3em;
         }
+        
         .first-place {
-            background-color: rgba(255, 215, 0, 0.3) !important;
+            background-color: rgba(255, 215, 0, 0.2) !important;
+            position: relative;
         }
+        
+        .first-place td {
+            color: #ffdd00;
+            text-shadow: 0 0 2px rgba(255, 215, 0, 0.7);
+        }
+        
         .second-place {
-            background-color: rgba(192, 192, 192, 0.3) !important;
+            background-color: rgba(192, 192, 192, 0.2) !important;
         }
+        
+        .second-place td {
+            color: #cccccc;
+        }
+        
         .third-place {
-            background-color: rgba(205, 127, 50, 0.3) !important;
+            background-color: rgba(205, 127, 50, 0.2) !important;
         }
+        
+        .third-place td {
+            color: #cc9966;
+        }
+        
         .negative-attenuation {
-            color: #ff4d4d;
+            color: #ff5555;
+            text-shadow: 0 0 2px rgba(255, 0, 0, 0.7);
         }
+        
         .testing-container {
             flex: 1;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
+        
         #recent-test {
-            flex: 0 0 auto;
-            background-color: #1e1e1e;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-        #recent-test .contestant-name {
-            font-size: 2.5em;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        #recent-test .hat-type {
-            font-size: 1.8em;
-            color: #aaa;
-            margin-bottom: 15px;
-        }
-        #recent-test .attenuation {
-            font-size: 3em;
-            font-weight: bold;
-            margin-bottom: 10px;
-        }
-        #recent-test .test-date {
-            font-size: 1.2em;
-            color: #888;
-        }
-        .spectrum-container {
             flex: 1;
-            background-color: #1e1e1e;
-            border-radius: 10px;
+            background-color: #111;
+            border: 2px solid #33ff33;
+            border-radius: 5px;
             padding: 20px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
+            position: relative;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
-        .spectrum-container h2 {
-            text-align: center;
-            margin-top: 0;
-            color: #ffd700;
-            font-size: 2em;
-            margin-bottom: 15px;
+        
+        #recent-test::before {
+            content: "LATEST TEST & SPECTRUM";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #33ff33;
+            color: #000;
+            font-size: 0.8em;
+            padding: 2px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-weight: bold;
         }
+        
+        .test-info {
+            text-align: center;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(51, 255, 51, 0.3);
+        }
+
+        #recent-test .contestant-name {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            margin-top: 15px;
+            text-shadow: 0 0 2px #33ff33;
+        }
+        
+        #recent-test .hat-type {
+            font-size: 1.8em;
+            color: #bbffbb;
+            margin-bottom: 10px;
+        }
+        
+        #recent-test .attenuation {
+            font-size: 2.8em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-family: 'VT323', monospace;
+            text-shadow: 0 0 5px #33ff33;
+        }
+        
+        #recent-test .test-date {
+            font-size: 1.2em;
+            color: #99ee99;
+        }
+        
         .chart-container {
             flex: 1;
             position: relative;
-            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            border: 1px solid rgba(51, 255, 51, 0.5);
+            padding: 20px 10px;
+            min-height: 300px;
         }
         
         /* Styles for the measurement in progress indicator */
         .test-in-progress {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: rgba(50, 50, 50, 0.8);
+            margin-top: 5px;
+            padding: 5px;
+            background-color: rgba(0, 0, 0, 0.5);
             border-radius: 5px;
-            border: 1px solid #555;
+            border: 1px solid #33ff33;
         }
+        
         .measuring-indicator {
-            color: #ff9900;
+            color: #ffcc00;
             font-weight: bold;
-            font-size: 1.2em;
             text-align: center;
             animation: blink 1s infinite alternate;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.7em;
         }
+        
         @keyframes blink {
             from { opacity: 0.7; }
             to { opacity: 1; }
         }
+        
+        /* Terminal effects */
+        .terminal-effects {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 999;
+            pointer-events: none;
+        }
+        
+        /* Vignette effect */
+        .terminal-effects::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, transparent 75%, rgba(0, 0, 0, 0.6) 100%);
+            z-index: -1;
+        }
+        
+        /* Terminal header elements */
+        .terminal-header {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-family: 'VT323', monospace;
+            color: #33ff33;
+            display: flex;
+            gap: 20px;
+            opacity: 0.7;
+        }
+        
+        /* Blinking cursor */
+        .terminal-cursor {
+            display: inline-block;
+            background-color: #33ff33;
+            width: 10px;
+            height: 18px;
+            margin-left: 2px;
+            animation: cursor-blink 1s step-end infinite;
+        }
+        
+        @keyframes cursor-blink {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        
+        /* Terminal command line */
+        .terminal-command {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-family: 'VT323', monospace;
+            color: #33ff33;
+            opacity: 0.7;
+            display: flex;
+            align-items: center;
+        }
+        
+        .terminal-command::before {
+            content: "root@tinfoilhat:~$ ";
+            margin-right: 5px;
+        }
+        
+        /* Labels on boxes for enhanced terminal aesthetic */
+        .leaderboard::after {
+            content: attr(data-label);
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: #0a0a0a;
+            padding: 0 10px;
+            font-size: 0.8em;
+            color: #33ff33;
+            font-family: 'VT323', monospace;
+        }
+
+        /* Add crisp border style */
+        .leaderboard, #recent-test, .spectrum-container {
+            border: 2px solid #33ff33;
+            box-shadow: inset 0 0 7px rgba(51, 255, 51, 0.2);
+        }
     </style>
 </head>
 <body>
+<div class="terminal-effects"></div>
+<div class="terminal-header">
+    <span>TINFOIL_HAT OS v2.0</span>
+    <span id="terminal-time"></span>
+</div>
+<div class="terminal-command">
+    ./run_billboard.sh <span class="terminal-cursor"></span>
+</div>
+
 <div class="billboard-container">
     <div class="billboard-header">
         <h1>TINFOIL HAT COMPETITION</h1>
     </div>
     <div class="billboard-content">
         <div class="leaderboards-container">
-            <div class="leaderboard">
+            <div class="leaderboard" data-label="CLASSIC.TXT">
                 <h2>Classic Hats</h2>
                 <table id="classic-leaderboard" class="leaderboard-table">
                     <thead>
@@ -205,7 +447,7 @@
                     </tbody>
                 </table>
             </div>
-            <div class="leaderboard">
+            <div class="leaderboard" data-label="HYBRID.TXT">
                 <h2>Hybrid Hats</h2>
                 <table id="hybrid-leaderboard" class="leaderboard-table">
                     <thead>
@@ -236,23 +478,22 @@
             </div>
         </div>
         <div class="testing-container">
-            <div id="recent-test">
-                {% if recent_test and recent_test['max_id'] %}
-                    <div class="contestant-name">{{ recent_test['name'] }}</div>
-                    <div class="hat-type">{{ recent_test['hat_type']|capitalize }} Hat</div>
-                    <div class="attenuation {% if recent_test['attenuation'] < 0 %}negative-attenuation{% endif %}">
-                        {{ "%.2f"|format(recent_test['attenuation']) }} dB
-                    </div>
-                    <div class="test-date">{{ recent_test['date'] }}</div>
-                {% else %}
-                    <div class="contestant-name">No Tests Yet</div>
-                    <div class="hat-type">Waiting for data...</div>
-                    <div class="attenuation">0.00 dB</div>
-                    <div class="test-date">-</div>
-                {% endif %}
-            </div>
-            <div class="spectrum-container">
-                <h2>Spectrum Analyzer</h2>
+            <div id="recent-test" data-label="SPECTRUM.DAT">
+                <div class="test-info">
+                    {% if recent_test and recent_test['max_id'] %}
+                        <div class="contestant-name">{{ recent_test['name'] }}</div>
+                        <div class="hat-type">{{ recent_test['hat_type']|capitalize }} Hat</div>
+                        <div class="attenuation {% if recent_test['attenuation'] < 0 %}negative-attenuation{% endif %}">
+                            {{ "%.2f"|format(recent_test['attenuation']) }} dB
+                        </div>
+                        <div class="test-date">{{ recent_test['date'] }}</div>
+                    {% else %}
+                        <div class="contestant-name">No Tests Yet</div>
+                        <div class="hat-type">Waiting for data...</div>
+                        <div class="attenuation">0.00 dB</div>
+                        <div class="test-date">-</div>
+                    {% endif %}
+                </div>
                 <div class="chart-container">
                     <canvas id="powerChart"></canvas>
                 </div>
@@ -263,6 +504,22 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Terminal time display
+        function updateTerminalTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('terminal-time').textContent = timeStr;
+        }
+        
+        // Update time every second
+        updateTerminalTime();
+        setInterval(updateTerminalTime, 1000);
+
         // Initialize charts
         const powerCtx = document.getElementById('powerChart').getContext('2d');
         
@@ -281,8 +538,8 @@
                     {
                         label: 'Baseline (dBm)',
                         data: [],
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(51, 255, 51, 0.8)',
+                        backgroundColor: 'rgba(51, 255, 51, 0.1)',
                         tension: 0.2,
                         borderWidth: 2,
                         yAxisID: 'y'
@@ -290,8 +547,8 @@
                     {
                         label: 'With Hat (dBm)',
                         data: [],
-                        borderColor: 'rgba(153, 102, 255, 1)',
-                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        borderColor: 'rgba(0, 200, 255, 0.8)',
+                        backgroundColor: 'rgba(0, 200, 255, 0.1)',
                         tension: 0.2,
                         borderWidth: 2,
                         yAxisID: 'y'
@@ -299,8 +556,8 @@
                     {
                         label: 'Attenuation (dB)',
                         data: [],
-                        borderColor: 'rgba(255, 159, 64, 1)',
-                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                        borderColor: 'rgba(255, 204, 0, 0.8)',
+                        backgroundColor: 'rgba(255, 204, 0, 0.1)',
                         tension: 0.2,
                         borderWidth: 2,
                         yAxisID: 'attenuation'
@@ -313,18 +570,42 @@
                 plugins: {
                     title: {
                         display: true,
-                        text: 'RF Spectrum Analysis',
-                        color: '#e0e0e0',
+                        text: 'RF SPECTRUM ANALYSIS',
+                        color: '#33ff33',
                         font: {
-                            size: 16
+                            size: 18,
+                            family: "'Press Start 2P', cursive",
+                            weight: 'bold'
+                        },
+                        padding: {
+                            top: 10,
+                            bottom: 20
                         }
                     },
                     legend: {
                         labels: {
-                            color: '#e0e0e0'
+                            color: '#33ff33',
+                            font: {
+                                family: "'VT323', monospace",
+                                size: 18
+                            },
+                            boxWidth: 15,
+                            padding: 15
                         }
                     },
                     tooltip: {
+                        titleFont: {
+                            family: "'VT323', monospace",
+                            size: 18
+                        },
+                        bodyFont: {
+                            family: "'VT323', monospace",
+                            size: 17
+                        },
+                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                        borderColor: '#33ff33',
+                        borderWidth: 1,
+                        padding: 12,
                         callbacks: {
                             label: function(context) {
                                 let label = context.dataset.label || '';
@@ -363,11 +644,24 @@
                     x: {
                         title: {
                             display: true,
-                            text: 'Frequency (MHz)',
-                            color: '#e0e0e0'
+                            text: 'FREQUENCY (MHz)',
+                            color: '#33ff33',
+                            font: {
+                                family: "'VT323', monospace",
+                                size: 18
+                            },
+                            padding: {
+                                top: 10
+                            }
                         },
                         ticks: {
-                            color: '#e0e0e0',
+                            color: '#33ff33',
+                            font: {
+                                family: "'VT323', monospace",
+                                size: 16
+                            },
+                            maxRotation: 45,
+                            minRotation: 45,
                             callback: function(value, index, values) {
                                 // Get the frequency from labels array
                                 const freq = powerChart.data.labels[index];
@@ -387,20 +681,33 @@
                             }
                         },
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            color: 'rgba(51, 255, 51, 0.08)',
+                            tickBorderDash: [4, 4]
                         }
                     },
                     y: {
                         title: {
                             display: true,
-                            text: 'Signal Level (dBm)',
-                            color: '#e0e0e0'
+                            text: 'SIGNAL LEVEL (dBm)',
+                            color: '#33ff33',
+                            font: {
+                                family: "'VT323', monospace",
+                                size: 18
+                            },
+                            padding: {
+                                bottom: 10
+                            }
                         },
                         ticks: {
-                            color: '#e0e0e0'
+                            color: '#33ff33',
+                            font: {
+                                family: "'VT323', monospace",
+                                size: 16
+                            }
                         },
                         grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            color: 'rgba(51, 255, 51, 0.08)',
+                            tickBorderDash: [4, 4]
                         },
                         min: -100,
                         max: -60
@@ -409,15 +716,27 @@
                         position: 'right',
                         title: {
                             display: true,
-                            text: 'Attenuation (dB)',
-                            color: '#e0e0e0'
+                            text: 'ATTENUATION (dB)',
+                            color: '#ffcc00',
+                            font: {
+                                family: "'VT323', monospace",
+                                size: 18
+                            },
+                            padding: {
+                                bottom: 10
+                            }
                         },
                         ticks: {
-                            color: '#e0e0e0'
+                            color: '#ffcc00',
+                            font: {
+                                family: "'VT323', monospace",
+                                size: 16
+                            }
                         },
                         grid: {
                             drawOnChartArea: false,
-                            color: 'rgba(255, 255, 255, 0.1)'
+                            color: 'rgba(255, 204, 0, 0.08)',
+                            tickBorderDash: [4, 4]
                         },
                         min: -10,
                         max: 10
@@ -604,9 +923,26 @@
             updateChartsWithLiveData();
         }
         
+        // Function to update the recent test display
+        function updateRecentTest(testData) {
+            const recentTest = document.getElementById('recent-test');
+            const testInfo = recentTest.querySelector('.test-info');
+            
+            // No animation class, just update content
+            testInfo.innerHTML = `
+                <div class="contestant-name">${testData.name}</div>
+                <div class="hat-type">${testData.hat_type.charAt(0).toUpperCase() + testData.hat_type.slice(1)} Hat</div>
+                <div class="attenuation ${testData.attenuation < 0 ? 'negative-attenuation' : ''}">
+                    ${testData.attenuation.toFixed(2)} dB
+                </div>
+                <div class="test-date">${testData.date}</div>
+            `;
+        }
+        
         // Function to update the recent test display with current test data
         function updateRecentTestWithCurrentData() {
             const recentTest = document.getElementById('recent-test');
+            const testInfo = recentTest.querySelector('.test-info');
             
             // Set contestant name (use "Baseline" if in baseline measurement mode)
             let displayName = "Unknown";
@@ -620,7 +956,7 @@
             let hatTypeDisplay = "Measuring...";
             if (currentTestData.hat_type) {
                 hatTypeDisplay = currentTestData.hat_type.charAt(0).toUpperCase() + 
-                                 currentTestData.hat_type.slice(1) + " Hat";
+                                currentTestData.hat_type.slice(1) + " Hat";
             } else if (currentTestData.measurement_type === 'baseline') {
                 hatTypeDisplay = "Baseline Measurement";
             }
@@ -633,7 +969,7 @@
             }
             
             // Create HTML for recent test
-            recentTest.innerHTML = `
+            testInfo.innerHTML = `
                 <div class="contestant-name">${displayName}</div>
                 <div class="hat-type">${hatTypeDisplay}</div>
                 <div class="attenuation ${avgAttenuation < 0 ? 'negative-attenuation' : ''}">
@@ -643,11 +979,11 @@
             `;
             
             // Add the "measurement in progress" indicator if it doesn't exist
-            if (!document.querySelector('.test-in-progress')) {
+            if (!recentTest.querySelector('.test-in-progress')) {
                 const testInProgress = document.createElement('div');
                 testInProgress.className = 'test-in-progress';
                 testInProgress.innerHTML = '<div class="measuring-indicator">MEASUREMENT IN PROGRESS</div>';
-                recentTest.appendChild(testInProgress);
+                testInfo.appendChild(testInProgress);
             }
         }
         
@@ -692,21 +1028,6 @@
             }
             
             pollForUpdates();
-        }
-        
-        // Function to update the recent test display
-        function updateRecentTest(testData) {
-            const recentTest = document.getElementById('recent-test');
-            
-            // No animation class, just update content
-            recentTest.innerHTML = `
-                <div class="contestant-name">${testData.name}</div>
-                <div class="hat-type">${testData.hat_type.charAt(0).toUpperCase() + testData.hat_type.slice(1)} Hat</div>
-                <div class="attenuation ${testData.attenuation < 0 ? 'negative-attenuation' : ''}">
-                    ${testData.attenuation.toFixed(2)} dB
-                </div>
-                <div class="test-date">${testData.date}</div>
-            `;
         }
         
         // Function to update a leaderboard table
