@@ -1313,16 +1313,6 @@
                     document.getElementById('uhf-band-att').textContent = result.data.effectiveness.uhf_band.toFixed(2);
                     document.getElementById('shf-band-att').textContent = result.data.effectiveness.shf_band.toFixed(2);
                     
-                    if (result.data.max_attenuation) {
-                        document.getElementById('max-freq').textContent = (result.data.max_attenuation.frequency / 1e6).toFixed(2);
-                        document.getElementById('max-att').textContent = result.data.max_attenuation.value.toFixed(2);
-                    }
-                    
-                    if (result.data.min_attenuation) {
-                        document.getElementById('min-freq').textContent = (result.data.min_attenuation.frequency / 1e6).toFixed(2);
-                        document.getElementById('min-att').textContent = result.data.min_attenuation.value.toFixed(2);
-                    }
-                    
                     // Show test results section
                     document.getElementById('test-results').classList.remove('hidden');
                     
