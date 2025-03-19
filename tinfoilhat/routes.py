@@ -265,7 +265,18 @@ def add_contestant():
         flash("Contestant name is required.")
         return redirect(url_for("tinfoilhat.index"))
 
+    # Check for duplicate contestant names
     db = get_db()
+    existing_contestant = db.execute(
+        "SELECT id FROM contestant WHERE name = ?", (name,)
+    ).fetchone()
+    
+    if existing_contestant:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"status": "error", "message": f"A contestant with the name '{name}' already exists."}), 400
+        flash(f"A contestant with the name '{name}' already exists.")
+        return redirect(url_for("tinfoilhat.index"))
+
     cursor = db.execute(
         "INSERT INTO contestant (name, phone_number, email, notes) VALUES (?, ?, ?, ?)",
         (name, phone_number, email, notes),
