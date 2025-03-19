@@ -215,11 +215,29 @@
         /* Animation for leaderboard updates */
         @keyframes highlight {
             0% { background-color: rgba(82, 196, 26, 0.8); }
-            100% { background-color: transparent; }
+            100% { background-color: rgba(82, 196, 26, 0.2); }
         }
         
         .highlight-row {
             animation: highlight 2s ease-in-out;
+            animation-fill-mode: forwards;
+        }
+        
+        /* Persistent highlight for latest score */
+        .latest-score-row {
+            background-color: rgba(82, 196, 26, 0.2);
+        }
+        
+        /* Latest score badge */
+        .latest-badge {
+            display: inline-block;
+            background: var(--secondary-button);
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            vertical-align: middle;
         }
         
         /* Additional styles for Select2 integration */
@@ -1253,6 +1271,9 @@
                     // Show test results section
                     document.getElementById('test-results').classList.remove('hidden');
                     
+                    // Always store the latest contestant name for persistent highlighting
+                    localStorage.setItem('latestContestant', result.data.contestant_name);
+                    
                     // Show best score message if applicable
                     const bestScoreMsg = document.getElementById('best-score-message');
                     if (result.data.is_best_score) {
@@ -1265,6 +1286,9 @@
                     } else {
                         bestScoreMsg.classList.add('hidden');
                         statusEl.textContent = `Test completed and saved. Not the best score for contestant "${result.data.contestant_name}".`;
+                        
+                        // Update the leaderboard with the latest contestant name, even if not best score
+                        updateLeaderboard(result.data.contestant_name);
                     }
                 } else {
                     statusEl.textContent = 'Error: ' + result.message;
@@ -1291,6 +1315,14 @@
                 const leaderboardBody = document.querySelector('#leaderboard tbody');
                 leaderboardBody.innerHTML = ''; // Clear existing rows
                 
+                // Get the stored latest contestant (if any)
+                const latestContestant = localStorage.getItem('latestContestant');
+                
+                // If a new highlightTeam is provided, update the latest contestant
+                if (highlightTeam) {
+                    localStorage.setItem('latestContestant', highlightTeam);
+                }
+                
                 if (data.leaderboard.length === 0) {
                     // No results found
                     const emptyRow = document.createElement('tr');
@@ -1311,9 +1343,19 @@
                             row.classList.add('highlight-row');
                         }
                         
+                        // Add persistent highlighting class if this is the latest contestant
+                        // (but not if we're already highlighting a new one with animation)
+                        const isLatest = !highlightTeam && latestContestant && entry.name === latestContestant;
+                        if (isLatest) {
+                            row.classList.add('latest-score-row');
+                        }
+                        
+                        // Add "Latest" badge if this is the latest contestant
+                        const latestBadge = isLatest ? `<span class="latest-badge">Latest</span>` : '';
+                        
                         row.innerHTML = `
                             <td>${entry.rank}</td>
-                            <td>${entry.name}</td>
+                            <td>${entry.name} ${latestBadge}</td>
                             <td>${entry.hat_type.charAt(0).toUpperCase() + entry.hat_type.slice(1)}</td>
                             <td>${entry.average_attenuation.toFixed(2)}</td>
                             <td>${entry.test_date}</td>
@@ -1339,7 +1381,8 @@
             });
             document.getElementById('filter-all').classList.add('filter-active');
             
-            // Update leaderboard without filter
+            // Update leaderboard without filter, but maintain latest highlighting
+            // Pass null as highlightTeam to make it use the stored latest contestant
             updateLeaderboard();
         }
         
