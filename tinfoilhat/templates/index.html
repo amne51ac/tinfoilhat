@@ -84,10 +84,38 @@
             color: var(--heading-color);
         }
         
+        /* Header section styling */
+        .page-header {
+            max-width: 1200px;
+            margin: 0 auto 30px auto;
+            position: relative;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--table-border);
+        }
+        
+        .page-header h1 {
+            margin-top: 10px;
+            margin-bottom: 25px;
+        }
+        
+        .page-header .nav-links {
+            text-align: right;
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+        
+        /* Container for main content */
         .container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .container > h1 {
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
         
         .card {
@@ -465,20 +493,50 @@
             font-size: 12px;
             color: var(--text-color);
         }
+
+        .billboard-button:hover {
+            background-color: var(--button-hover);
+        }
+
+        .nav-link {
+            display: inline-block;
+            padding: 4px 8px;
+            color: var(--button-color);
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: color 0.3s;
+        }
+
+        .nav-link:hover {
+            color: var(--button-hover);
+            text-decoration: underline;
+        }
+
+        /* Responsive styles for mobile */
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <h1>Tinfoil Hat Competition - Cypher Con</h1>
-    
-    <!-- Theme Switch -->
-    <div class="theme-switch-wrapper">
-        <span>Light</span>
-        <label class="theme-switch" for="theme-toggle" title="Toggle dark mode">
-            <input type="checkbox" id="theme-toggle" />
-            <span class="slider"></span>
-        </label>
-        <span>Dark</span>
+    <div class="page-header">
+        <h1>Tinfoil Hat Competition - Cypher Con</h1>
+        
+        <!-- Theme Switch -->
+        <div class="theme-switch-wrapper">
+            <span>Light</span>
+            <label class="theme-switch" for="theme-toggle" title="Toggle dark mode">
+                <input type="checkbox" id="theme-toggle" />
+                <span class="slider"></span>
+            </label>
+            <span>Dark</span>
+        </div>
+        
+        <!-- Navigation Links -->
+        <div class="nav-links">
+            <a href="/" class="nav-link">Home</a> | 
+            <a href="/admin" class="nav-link">Admin Panel</a> | 
+            <a href="/billboard" class="nav-link">Billboard</a>
+        </div>
     </div>
     
     <div id="messages">

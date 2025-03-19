@@ -1708,3 +1708,291 @@ def billboard_updates():
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['X-Accel-Buffering'] = 'no'  # Disable proxy buffering
     return response
+
+
+def format_datetime(dt_str):
+    """
+    Format a datetime string from the database to a more readable format.
+    
+    :param dt_str: Datetime string from database
+    :type dt_str: str
+    :return: Formatted datetime string
+    :rtype: str
+    """
+    if not dt_str:
+        return ""
+    
+    # If it's already a datetime object, just format it
+    if isinstance(dt_str, datetime):
+        return dt_str.strftime("%Y-%m-%d %H:%M:%S")
+        
+    # Handle string datetime formats
+    try:
+        # For SQLite default format (YYYY-MM-DD HH:MM:SS)
+        if isinstance(dt_str, str) and ' ' in dt_str:
+            # No need to replace space with T, parse directly
+            dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+        else:
+            # Try to parse as ISO format
+            dt = datetime.fromisoformat(str(dt_str))
+            
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except (ValueError, TypeError):
+        # If parsing fails, return the original string
+        return str(dt_str)
+
+
+@bp.route("/admin")
+def admin():
+    """
+    Admin page for viewing and editing database information.
+
+    :return: Rendered admin template
+    :rtype: str
+    """
+    db = get_db()
+
+    # Get all contestants
+    contestants_rows = db.execute(
+        "SELECT id, name, phone_number, email, notes, created FROM contestant ORDER BY name"
+    ).fetchall()
+    
+    # Convert Row objects to dictionaries for JSON serialization
+    contestants = []
+    for row in contestants_rows:
+        contestants.append({
+            "id": row["id"],
+            "name": row["name"],
+            "phone_number": row["phone_number"],
+            "email": row["email"],
+            "notes": row["notes"],
+            "created": format_datetime(row["created"])
+        })
+
+    # Get all test results with contestant names
+    test_results_rows = db.execute(
+        """
+        SELECT 
+            tr.id, 
+            tr.contestant_id, 
+            c.name as contestant_name, 
+            tr.test_date, 
+            tr.average_attenuation, 
+            tr.is_best_score, 
+            tr.hat_type
+        FROM test_result tr
+        JOIN contestant c ON tr.contestant_id = c.id
+        ORDER BY tr.test_date DESC
+        """
+    ).fetchall()
+    
+    # Convert Row objects to dictionaries for JSON serialization
+    test_results = []
+    for row in test_results_rows:
+        test_results.append({
+            "id": row["id"],
+            "contestant_id": row["contestant_id"],
+            "contestant_name": row["contestant_name"],
+            "test_date": format_datetime(row["test_date"]),
+            "average_attenuation": row["average_attenuation"],
+            "is_best_score": row["is_best_score"],
+            "hat_type": row["hat_type"] or "classic"
+        })
+
+    return render_template("admin.html", contestants=contestants, test_results=test_results)
+
+
+@bp.route("/admin/contestants", methods=["POST"])
+def add_contestant_admin():
+    """
+    Add a new contestant from the admin page.
+
+    :return: JSON response
+    :rtype: Response
+    """
+    db = get_db()
+    data = request.get_json()
+
+    try:
+        cursor = db.execute(
+            """
+            INSERT INTO contestant (name, phone_number, email, notes)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                data.get("name", ""),
+                data.get("phone_number", ""),
+                data.get("email", ""),
+                data.get("notes", ""),
+            ),
+        )
+        db.commit()
+        return jsonify({"success": True, "id": cursor.lastrowid})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/admin/contestants/<int:contestant_id>", methods=["PUT"])
+def update_contestant_admin(contestant_id):
+    """
+    Update a contestant from the admin page.
+
+    :param contestant_id: ID of the contestant to update
+    :type contestant_id: int
+    :return: JSON response
+    :rtype: Response
+    """
+    db = get_db()
+    data = request.get_json()
+
+    try:
+        db.execute(
+            """
+            UPDATE contestant
+            SET name = ?, phone_number = ?, email = ?, notes = ?
+            WHERE id = ?
+            """,
+            (
+                data.get("name", ""),
+                data.get("phone_number", ""),
+                data.get("email", ""),
+                data.get("notes", ""),
+                contestant_id,
+            ),
+        )
+        db.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/admin/contestants/<int:contestant_id>", methods=["DELETE"])
+def delete_contestant_admin(contestant_id):
+    """
+    Delete a contestant from the admin page.
+
+    :param contestant_id: ID of the contestant to delete
+    :type contestant_id: int
+    :return: JSON response
+    :rtype: Response
+    """
+    db = get_db()
+
+    try:
+        # First delete all test results for this contestant
+        db.execute("DELETE FROM test_result WHERE contestant_id = ?", (contestant_id,))
+        
+        # Then delete the contestant
+        db.execute("DELETE FROM contestant WHERE id = ?", (contestant_id,))
+        db.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/admin/test-results", methods=["POST"])
+def add_test_result_admin():
+    """
+    Add a new test result from the admin page.
+
+    :return: JSON response
+    :rtype: Response
+    """
+    db = get_db()
+    data = request.get_json()
+
+    try:
+        # If setting this as best score, update existing best scores for this contestant
+        if data.get("is_best_score"):
+            db.execute(
+                "UPDATE test_result SET is_best_score = 0 WHERE contestant_id = ?",
+                (data.get("contestant_id"),),
+            )
+
+        cursor = db.execute(
+            """
+            INSERT INTO test_result (contestant_id, average_attenuation, is_best_score, hat_type)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                data.get("contestant_id"),
+                data.get("average_attenuation"),
+                data.get("is_best_score", False),
+                data.get("hat_type", "classic"),
+            ),
+        )
+        db.commit()
+        return jsonify({"success": True, "id": cursor.lastrowid})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/admin/test-results/<int:result_id>", methods=["PUT"])
+def update_test_result_admin(result_id):
+    """
+    Update a test result from the admin page.
+
+    :param result_id: ID of the test result to update
+    :type result_id: int
+    :return: JSON response
+    :rtype: Response
+    """
+    db = get_db()
+    data = request.get_json()
+
+    try:
+        # If setting this as best score, update existing best scores for this contestant
+        if data.get("is_best_score"):
+            db.execute(
+                "UPDATE test_result SET is_best_score = 0 WHERE contestant_id = ?",
+                (data.get("contestant_id"),),
+            )
+
+        db.execute(
+            """
+            UPDATE test_result
+            SET contestant_id = ?, average_attenuation = ?, is_best_score = ?, hat_type = ?
+            WHERE id = ?
+            """,
+            (
+                data.get("contestant_id"),
+                data.get("average_attenuation"),
+                data.get("is_best_score", False),
+                data.get("hat_type", "classic"),
+                result_id,
+            ),
+        )
+        db.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/admin/test-results/<int:result_id>", methods=["DELETE"])
+def delete_test_result_admin(result_id):
+    """
+    Delete a test result from the admin page.
+
+    :param result_id: ID of the test result to delete
+    :type result_id: int
+    :return: JSON response
+    :rtype: Response
+    """
+    db = get_db()
+
+    try:
+        # First delete any test data associated with this result
+        db.execute("DELETE FROM test_data WHERE test_result_id = ?", (result_id,))
+        
+        # Then delete the test result itself
+        db.execute("DELETE FROM test_result WHERE id = ?", (result_id,))
+        db.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500
