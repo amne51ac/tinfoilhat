@@ -157,6 +157,51 @@
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             line-height: 28px;
         }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 80%;
+            max-width: 600px;
+        }
+        
+        .close-modal {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close-modal:hover,
+        .close-modal:focus {
+            color: black;
+            text-decoration: none;
+        }
+        
+        .add-contestant-btn {
+            margin-left: 10px;
+            padding: 5px 10px;
+            font-size: 14px;
+            vertical-align: middle;
+            float: right;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -173,7 +218,10 @@
         <div>
             <!-- Left Side: Leaderboard and Registration -->
             <div class="card">
-                <h2>Leaderboard</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2>Leaderboard</h2>
+                    <button id="open-registration-modal" class="button-secondary">Add Contestant</button>
+                </div>
                 <table id="leaderboard">
                     <thead>
                         <tr>
@@ -195,35 +243,25 @@
                     </tbody>
                 </table>
             </div>
-            
-            <div class="card">
-                <h2>Contestant Registration</h2>
-                <form id="new-contestant-form" action="{{ url_for('tinfoilhat.add_contestant') }}" method="post">
-                    <div class="form-group">
-                        <label for="name">Team Name:</label>
-                        <input type="text" id="name" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="phone_number">Phone Number (optional):</label>
-                        <input type="tel" id="phone_number" name="phone_number">
-                    </div>
-                    <div class="form-group">
-                        <label for="email">Email Address (optional):</label>
-                        <input type="email" id="email" name="email">
-                    </div>
-                    <div class="form-group">
-                        <label for="notes">Notes:</label>
-                        <textarea id="notes" name="notes" rows="3"></textarea>
-                    </div>
-                    <button type="submit">Register New Contestant</button>
-                </form>
-                <div id="registration-messages" class="message info hidden"></div>
-            </div>
         </div>
         
         <div>
             <!-- Right Side: Test Controls and Results -->
+            
             <div class="card">
+                <h2>Spectrum Analyzer</h2>
+                <div class="chart-container">
+                    <canvas id="spectrum-chart"></canvas>
+                </div>
+                
+                <div id="progress-container" style="margin-top: 15px; display: none;">
+                    <label>Measurement Progress:</label>
+                    <div style="display: flex; align-items: center;">
+                        <progress id="measurement-progress" value="0" max="100" style="flex-grow: 1;"></progress>
+                        <span id="progress-text" style="margin-left: 10px;">0%</span>
+                    </div>
+                    <p id="current-freq-text">Measuring at: <span id="current-frequency">0</span> MHz</p>
+                </div>
                 <h2>Test Controls</h2>
                 <div class="form-group">
                     <label for="contestant_id">Select Contestant:</label>
@@ -238,15 +276,6 @@
                 <div class="form-group">
                     <button id="test-button" onclick="runCompleteTest()">Run Test</button>
                     <button id="stop-button" class="button-stop" onclick="stopMeasurement()" style="background-color: #e74c3c; display: none;">Stop Measurement</button>
-                </div>
-                
-                <div id="progress-container" style="margin-top: 15px; display: none;">
-                    <label>Measurement Progress:</label>
-                    <div style="display: flex; align-items: center;">
-                        <progress id="measurement-progress" value="0" max="100" style="flex-grow: 1;"></progress>
-                        <span id="progress-text" style="margin-left: 10px;">0%</span>
-                    </div>
-                    <p id="current-freq-text">Measuring at: <span id="current-frequency">0</span> MHz</p>
                 </div>
                 
                 <div id="test-status" class="message info hidden"></div>
@@ -270,13 +299,6 @@
                     </div>
                     
                     <p id="best-score-message" class="message success hidden">This is the best score for this team!</p>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>Spectrum Analyzer</h2>
-                <div class="chart-container">
-                    <canvas id="spectrum-chart"></canvas>
                 </div>
             </div>
         </div>
@@ -335,6 +357,28 @@
                 event.preventDefault(); // Prevent default form submission
                 submitRegistrationForm(registrationForm);
             });
+            
+            // Modal functionality
+            const modal = document.getElementById('registration-modal');
+            const openModalBtn = document.getElementById('open-registration-modal');
+            const closeModalBtn = document.querySelector('.close-modal');
+            
+            // Open the modal when the button is clicked
+            openModalBtn.addEventListener('click', function() {
+                modal.style.display = 'block';
+            });
+            
+            // Close the modal when the close button is clicked
+            closeModalBtn.addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            // Close the modal when clicking outside of it
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
         });
         
         // Handle contestant registration form submission
@@ -370,6 +414,11 @@
                         const newOption = new Option(result.contestant.name, result.contestant.id, true, true);
                         $('#contestant_id').append(newOption).trigger('change');
                     }
+                    
+                    // Close the modal after a short delay
+                    setTimeout(() => {
+                        document.getElementById('registration-modal').style.display = 'none';
+                    }, 1000);
                 } else {
                     // Display error message from server
                     messagesContainer.textContent = result.message || 'Error registering contestant.';
@@ -962,5 +1011,33 @@
             $('#contestant_id').trigger('change');
         }
     </script>
+    
+    <!-- Registration Modal -->
+    <div id="registration-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Contestant Registration</h2>
+            <form id="new-contestant-form" action="{{ url_for('tinfoilhat.add_contestant') }}" method="post">
+                <div class="form-group">
+                    <label for="name">Team Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone_number">Phone Number (optional):</label>
+                    <input type="tel" id="phone_number" name="phone_number">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address (optional):</label>
+                    <input type="email" id="email" name="email">
+                </div>
+                <div class="form-group">
+                    <label for="notes">Notes:</label>
+                    <textarea id="notes" name="notes" rows="3"></textarea>
+                </div>
+                <button type="submit">Register New Contestant</button>
+            </form>
+            <div id="registration-messages" class="message info hidden"></div>
+        </div>
+    </div>
 </body>
 </html> 
