@@ -111,12 +111,12 @@ Then open your browser and navigate to http://localhost:8000
 
 2. **Testing Process**:
    - Select a contestant from the dropdown menu
-   - Click "Run Baseline Test" - watch as measurements happen in real-time
-   - Place the tinfoil hat on the mannequin/test subject
-   - Click "Measure Hat" - track the progress with the progress bar
-   - Stop the measurement at any time if needed
-   - Review the results and save them to the database
-   - The application will calculate the RF attenuation and update the leaderboard
+   - Click "Run Test" to begin the testing process
+   - The system will first run a baseline test automatically
+   - When prompted, place the tinfoil hat on the mannequin/test subject
+   - Click "Continue to Hat Measurement" to proceed with hat measurement
+   - The system will complete the test and automatically save the results
+   - Review the results on screen - the application will calculate the RF attenuation and update the leaderboard
 
 ## Leaderboard
 

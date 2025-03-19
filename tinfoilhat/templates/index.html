@@ -211,8 +211,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <button id="baseline-button" onclick="runBaselineRealtime()">1. Run Baseline Test</button>
-                    <button id="measure-button" class="button-secondary" onclick="measureHatRealtime()" disabled>2. Measure Hat</button>
+                    <button id="test-button" onclick="runCompleteTest()">Run Test</button>
                     <button id="stop-button" class="button-stop" onclick="stopMeasurement()" style="background-color: #e74c3c; display: none;">Stop Measurement</button>
                 </div>
                 
@@ -434,27 +433,39 @@
             spectrumChart.update();
         }
         
-        // Run baseline test with real-time updates
-        async function runBaselineRealtime() {
+        // Run the complete test flow: baseline followed by hat measurement
+        async function runCompleteTest() {
+            const contestantId = document.getElementById('contestant_id').value;
+            
+            if (!contestantId) {
+                alert('Please select a contestant before running the test.');
+                return;
+            }
+            
             if (measurementInProgress) {
                 return;
             }
             
-            // Reset data
+            // Reset all data
             baselineData = {};
             hatData = {};
             attenuationData = {};
-            currentTestType = 'baseline';
             shouldStopMeasurement = false;
+            
+            // Disable the test button during the entire process
+            document.getElementById('test-button').disabled = true;
+            
+            // PHASE 1: BASELINE TEST
+            // -----------------------------
+            currentTestType = 'baseline';
             
             // Show progress elements
             document.getElementById('progress-container').style.display = 'block';
-            document.getElementById('stop-button').style.display = 'inline-block';
-            document.getElementById('baseline-button').disabled = true;
+            document.getElementById('stop-button').style.display = 'none'; // No stopping during the test flow
             document.getElementById('test-results').classList.add('hidden');
             
             const statusEl = document.getElementById('test-status');
-            statusEl.textContent = 'Running baseline test...';
+            statusEl.textContent = 'PHASE 1: Running baseline test...';
             statusEl.classList.remove('hidden');
             statusEl.classList.remove('error');
             
@@ -465,8 +476,7 @@
                     statusEl.textContent = 'Error: Could not fetch frequencies to test.';
                     statusEl.classList.add('error');
                     document.getElementById('progress-container').style.display = 'none';
-                    document.getElementById('stop-button').style.display = 'none';
-                    document.getElementById('baseline-button').disabled = false;
+                    document.getElementById('test-button').disabled = false;
                     return;
                 }
             }
@@ -474,82 +484,61 @@
             // Prepare chart
             updateChartLabels();
             
-            // Start measuring
+            // Start measuring baseline
             measurementInProgress = true;
             await measureAllFrequencies('baseline');
             
-            // Measurement complete or stopped
-            if (!shouldStopMeasurement) {
-                statusEl.textContent = 'Baseline test completed. You can now measure with a hat.';
-                document.getElementById('measure-button').disabled = false;
-            } else {
-                statusEl.textContent = 'Baseline test stopped.';
-            }
-            
-            document.getElementById('baseline-button').disabled = false;
-            document.getElementById('stop-button').style.display = 'none';
-            document.getElementById('progress-container').style.display = 'none';
-            measurementInProgress = false;
-        }
-        
-        // Measure hat attenuation with real-time updates
-        async function measureHatRealtime() {
-            const contestantId = document.getElementById('contestant_id').value;
-            
-            if (!contestantId) {
-                alert('Please select a contestant before measuring.');
+            // If measurement was stopped or had errors, end the test
+            if (shouldStopMeasurement) {
+                statusEl.textContent = 'Test stopped during baseline phase.';
+                document.getElementById('test-button').disabled = false;
+                document.getElementById('progress-container').style.display = 'none';
+                measurementInProgress = false;
                 return;
             }
             
-            if (measurementInProgress) {
-                return;
-            }
+            // PHASE 2: PROMPT USER TO PLACE HAT
+            // -----------------------------
+            statusEl.textContent = 'PHASE 1 COMPLETE! Please place the hat on the measurement device, then click "Continue" to start measuring the hat.';
             
-            // Reset hat data
-            hatData = {};
-            attenuationData = {};
+            // Show continue button and wait for user to click it
+            const continueButton = document.createElement('button');
+            continueButton.textContent = 'Continue to Hat Measurement';
+            continueButton.className = 'button-secondary';
+            continueButton.id = 'continue-button';
+            continueButton.style.marginTop = '10px';
+            statusEl.parentNode.insertBefore(continueButton, statusEl.nextSibling);
+            
+            await new Promise(resolve => {
+                continueButton.onclick = resolve;
+            });
+            
+            // Remove the continue button
+            continueButton.remove();
+            
+            // PHASE 3: HAT MEASUREMENT
+            // -----------------------------
             currentTestType = 'hat';
-            shouldStopMeasurement = false;
+            statusEl.textContent = 'PHASE 2: Measuring hat attenuation...';
             
-            // Show progress elements
-            document.getElementById('progress-container').style.display = 'block';
-            document.getElementById('stop-button').style.display = 'inline-block';
-            document.getElementById('measure-button').disabled = true;
-            document.getElementById('test-results').classList.add('hidden');
+            // Reset progress bar
+            document.getElementById('measurement-progress').value = 0;
+            document.getElementById('progress-text').textContent = '0%';
             
-            const statusEl = document.getElementById('test-status');
-            statusEl.textContent = 'Measuring hat attenuation...';
-            statusEl.classList.remove('hidden');
-            statusEl.classList.remove('error');
-            
-            // Make sure we have the frequencies
-            if (allFrequencies.length === 0) {
-                allFrequencies = await getFrequencies();
-                if (allFrequencies.length === 0) {
-                    statusEl.textContent = 'Error: Could not fetch frequencies to test.';
-                    statusEl.classList.add('error');
-                    document.getElementById('progress-container').style.display = 'none';
-                    document.getElementById('stop-button').style.display = 'none';
-                    document.getElementById('measure-button').disabled = false;
-                    return;
-                }
-            }
-            
-            // Start measuring
-            measurementInProgress = true;
+            // Measure hat
             await measureAllFrequencies('hat');
             
-            // Measurement complete or stopped
+            // If measurement completed successfully
             if (!shouldStopMeasurement) {
-                statusEl.textContent = 'Hat measurement completed. Saving results...';
-                // Automatically save results instead of showing the save button
+                statusEl.textContent = 'Test completed! Saving results...';
+                // Automatically save results
                 await saveResults();
             } else {
-                statusEl.textContent = 'Hat measurement stopped.';
+                statusEl.textContent = 'Test stopped during hat measurement phase.';
             }
             
-            document.getElementById('measure-button').disabled = false;
-            document.getElementById('stop-button').style.display = 'none';
+            // Clean up
+            document.getElementById('test-button').disabled = false;
             document.getElementById('progress-container').style.display = 'none';
             measurementInProgress = false;
         }
