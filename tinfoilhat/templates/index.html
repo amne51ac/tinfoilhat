@@ -546,6 +546,10 @@
                 return;
             }
             
+            // Remove any existing continue buttons from previous test runs
+            const existingContinueButtons = document.querySelectorAll('#continue-button');
+            existingContinueButtons.forEach(button => button.remove());
+            
             // Reset all data
             baselineData = {};
             hatData = {};
@@ -599,7 +603,18 @@
             
             // PHASE 2: PROMPT USER TO PLACE HAT
             // -----------------------------
-            statusEl.textContent = 'PHASE 1 COMPLETE! Please place the hat on the measurement device, then click "Continue" to start measuring the hat.';
+            statusEl.textContent = 'PHASE 1 COMPLETE! Please place the hat on the measurement device, then click "Continue" to start measuring the hat. You can also re-run the baseline test if needed.';
+            
+            // Reset measurement in progress flag to allow re-running the baseline
+            measurementInProgress = false;
+            
+            // Re-enable the test button to allow rebaselining if necessary
+            document.getElementById('test-button').disabled = false;
+            console.log('Baseline completed - Test button re-enabled for rebaselining if needed');
+            
+            // Remove any existing continue buttons before creating a new one
+            const oldContinueButtons = document.querySelectorAll('#continue-button');
+            oldContinueButtons.forEach(button => button.remove());
             
             // Show continue button and wait for user to click it
             const continueButton = document.createElement('button');
@@ -618,6 +633,9 @@
             
             // PHASE 3: HAT MEASUREMENT
             // -----------------------------
+            // Disable the test button again during hat measurement
+            document.getElementById('test-button').disabled = true;
+            
             currentTestType = 'hat';
             statusEl.textContent = 'PHASE 2: Measuring hat attenuation...';
             
