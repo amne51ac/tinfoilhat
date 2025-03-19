@@ -422,8 +422,9 @@ def measure_hat():
         # Check if the contestant has any previous entries
         has_previous_entries = best_score_result and best_score_result["best"] is not None
         
-        # If this is their first test, it's automatically the best
-        # Otherwise, compare with their previous best
+        # First score is always the best
+        # Otherwise, compare with previous best - higher attenuation values are better
+        # We want positive values (good shielding) to be considered better than negative values
         is_best = not has_previous_entries or (has_previous_entries and average_attenuation > best_score_result["best"])
         
         previous_best_score = best_score_result["best"] if has_previous_entries else None
@@ -473,6 +474,19 @@ def measure_hat():
         contestant_result = db.execute("SELECT name FROM contestant WHERE id = ?", (contestant_id,)).fetchone()
         contestant_name = contestant_result["name"] if contestant_result else "Unknown"
 
+        # Prepare a message about the score
+        if average_attenuation < 0:
+            score_message = f"Warning: The hat shows negative attenuation ({average_attenuation:.2f} dB), which means it's amplifying signals instead of blocking them."
+            if is_best:
+                score_message += " This is still your best score so far."
+            else:
+                score_message += f" Your previous best score of {previous_best_score:.2f} dB is better."
+        else:
+            if is_best:
+                score_message = f"This is the best score for {contestant_name} with an attenuation of {average_attenuation:.2f} dB."
+            else:
+                score_message = f"Not the best score for {contestant_name}. Previous best: {previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
+
         # Convert frequencies to standard Python list to ensure JSON serialization
         frequencies_json = [float(f) for f in scanner.frequencies]
         baseline_json = [float(b) for b in baseline_data]
@@ -483,7 +497,7 @@ def measure_hat():
         return jsonify(
             {
                 "status": "success",
-                "message": f"Hat measurement completed with {scanner.samples_per_freq} samples per frequency.",
+                "message": score_message,
                 "data": {
                     "frequencies": frequencies_json,
                     "baseline": baseline_json,
@@ -804,8 +818,9 @@ def save_results():
         # Check if the contestant has any previous entries
         has_previous_entries = best_score_result and best_score_result["best"] is not None
         
-        # If this is their first test, it's automatically the best
-        # Otherwise, compare with their previous best
+        # First score is always the best
+        # Otherwise, compare with previous best - higher attenuation values are better
+        # We want positive values (good shielding) to be considered better than negative values
         is_best = not has_previous_entries or (has_previous_entries and average_attenuation > best_score_result["best"])
         
         previous_best_score = best_score_result["best"] if has_previous_entries else None
@@ -855,6 +870,19 @@ def save_results():
         contestant_result = db.execute("SELECT name FROM contestant WHERE id = ?", (contestant_id,)).fetchone()
         contestant_name = contestant_result["name"] if contestant_result else "Unknown"
 
+        # Prepare a message about the score
+        if average_attenuation < 0:
+            score_message = f"Warning: The hat shows negative attenuation ({average_attenuation:.2f} dB), which means it's amplifying signals instead of blocking them."
+            if is_best:
+                score_message += " This is still your best score so far."
+            else:
+                score_message += f" Your previous best score of {previous_best_score:.2f} dB is better."
+        else:
+            if is_best:
+                score_message = f"This is the best score for {contestant_name} with an attenuation of {average_attenuation:.2f} dB."
+            else:
+                score_message = f"Not the best score for {contestant_name}. Previous best: {previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
+
         # Clear stored data to prevent contaminating future tests
         clear_measurements()
 
@@ -862,7 +890,7 @@ def save_results():
         return jsonify(
             {
                 "status": "success",
-                "message": f"Test results saved for contestant {contestant_name}",
+                "message": score_message,
                 "data": {
                     "frequencies": [float(f) for f in scanner.frequencies],
                     "baseline": [float(b) for b in baseline_readings],
