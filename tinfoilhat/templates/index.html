@@ -9,73 +9,18 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <style>
-        :root {
-            /* Light theme (default) */
-            --bg-color: #f4f4f4;
-            --text-color: #333;
-            --heading-color: #2c3e50;
-            --card-bg: white;
-            --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            --border-color: #ddd;
-            --button-bg: #3498db;
-            --button-bg-hover: #2980b9;
-            --button-text: white;
-            --button-secondary-bg: #2ecc71;
-            --button-secondary-hover: #27ae60;
-            --table-header-bg: #f2f2f2;
-            --table-hover-bg: #f5f5f5;
-            --success-bg: #d4edda;
-            --success-text: #155724;
-            --error-bg: #f8d7da;
-            --error-text: #721c24;
-            --info-bg: #d1ecf1;
-            --info-text: #0c5460;
-            --filter-button-bg: #f0f0f0;
-            --filter-button-color: #333;
-            --modal-bg: #fefefe;
-            --close-modal-color: #aaa;
-        }
-
-        /* Dark theme */
-        [data-theme="dark"] {
-            --bg-color: #121212;
-            --text-color: #e0e0e0;
-            --heading-color: #81a1c1;
-            --card-bg: #1e1e1e;
-            --card-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            --border-color: #444;
-            --button-bg: #5294e2;
-            --button-bg-hover: #3a75c4;
-            --button-text: #fff;
-            --button-secondary-bg: #4caf50;
-            --button-secondary-hover: #388e3c;
-            --table-header-bg: #2e2e2e;
-            --table-hover-bg: #2a2a2a;
-            --success-bg: #1b5e20;
-            --success-text: #a5d6a7;
-            --error-bg: #b71c1c;
-            --error-text: #ef9a9a;
-            --info-bg: #01579b;
-            --info-text: #81d4fa;
-            --filter-button-bg: #333;
-            --filter-button-color: #ddd;
-            --modal-bg: #2e2e2e;
-            --close-modal-color: #ccc;
-        }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: var(--text-color);
+            color: #333;
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: var(--bg-color);
-            transition: background-color 0.3s ease, color 0.3s ease;
+            background-color: #f4f4f4;
         }
         
         h1, h2, h3 {
-            color: var(--heading-color);
+            color: #2c3e50;
         }
         
         .container {
@@ -85,9 +30,9 @@
         }
         
         .card {
-            background: var(--card-bg);
+            background: white;
             border-radius: 8px;
-            box-shadow: var(--card-shadow);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             padding: 20px;
             margin-bottom: 20px;
         }
@@ -105,16 +50,14 @@
         input, select, textarea {
             width: 100%;
             padding: 8px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 16px;
-            background-color: var(--card-bg);
-            color: var(--text-color);
         }
         
         button {
-            background-color: var(--button-bg);
-            color: var(--button-text);
+            background-color: #3498db;
+            color: white;
             border: none;
             padding: 10px 15px;
             border-radius: 4px;
@@ -124,15 +67,15 @@
         }
         
         button:hover {
-            background-color: var(--button-bg-hover);
+            background-color: #2980b9;
         }
         
         .button-secondary {
-            background-color: var(--button-secondary-bg);
+            background-color: #2ecc71;
         }
         
         .button-secondary:hover {
-            background-color: var(--button-secondary-hover);
+            background-color: #27ae60;
         }
         
         table {
@@ -143,15 +86,15 @@
         th, td {
             text-align: left;
             padding: 12px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid #ddd;
         }
         
         th {
-            background-color: var(--table-header-bg);
+            background-color: #f2f2f2;
         }
         
         tr:hover {
-            background-color: var(--table-hover-bg);
+            background-color: #f5f5f5;
         }
         
         .chart-container {
@@ -168,9 +111,9 @@
         }
         
         .filter-button {
-            background-color: var(--filter-button-bg);
-            color: var(--filter-button-color);
-            border: 1px solid var(--border-color);
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
             padding: 5px 10px;
             border-radius: 4px;
             cursor: pointer;
@@ -178,29 +121,28 @@
         }
         
         .filter-button:hover {
-            background-color: var(--filter-button-hover-bg, var(--filter-button-bg));
-            filter: brightness(90%);
+            background-color: #e0e0e0;
         }
         
         .filter-active {
-            background-color: var(--button-bg);
-            color: var(--button-text);
-            border-color: var(--button-bg-hover);
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
         }
         
         .success {
-            background-color: var(--success-bg);
-            color: var(--success-text);
+            background-color: #d4edda;
+            color: #155724;
         }
         
         .error {
-            background-color: var(--error-bg);
-            color: var(--error-text);
+            background-color: #f8d7da;
+            color: #721c24;
         }
         
         .info {
-            background-color: var(--info-bg);
-            color: var(--info-text);
+            background-color: #d1ecf1;
+            color: #0c5460;
         }
         
         .hidden {
@@ -225,10 +167,8 @@
         .select2-container--default .select2-selection--single {
             height: 40px;
             padding: 5px;
-            border: 1px solid var(--border-color);
+            border: 1px solid #ddd;
             border-radius: 4px;
-            background-color: var(--card-bg);
-            color: var(--text-color);
         }
         
         .select2-container--default .select2-selection--single .select2-selection__arrow {
@@ -237,33 +177,6 @@
         
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             line-height: 28px;
-            color: var(--text-color);
-        }
-        
-        /* Select2 dropdown styling for dark mode */
-        .select2-dropdown {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-        }
-        
-        .select2-container--default .select2-search--dropdown .select2-search__field {
-            background-color: var(--card-bg);
-            color: var(--text-color);
-            border: 1px solid var(--border-color);
-        }
-        
-        .select2-container--default .select2-results__option {
-            color: var(--text-color);
-        }
-        
-        .select2-container--default .select2-results__option--highlighted[aria-selected] {
-            background-color: var(--button-bg);
-            color: var(--button-text);
-        }
-        
-        .select2-container--default .select2-results__option[aria-selected=true] {
-            background-color: var(--button-bg-hover);
-            color: var(--button-text);
         }
         
         /* Modal styles */
@@ -280,7 +193,7 @@
         }
         
         .modal-content {
-            background-color: var(--modal-bg);
+            background-color: #fefefe;
             margin: 10% auto;
             padding: 20px;
             border-radius: 8px;
@@ -290,7 +203,7 @@
         }
         
         .close-modal {
-            color: var(--close-modal-color);
+            color: #aaa;
             float: right;
             font-size: 28px;
             font-weight: bold;
@@ -299,7 +212,7 @@
         
         .close-modal:hover,
         .close-modal:focus {
-            color: var(--text-color);
+            color: black;
             text-decoration: none;
         }
         
@@ -310,104 +223,11 @@
             vertical-align: middle;
             float: right;
         }
-
-        /* Theme toggle styling */
-        .theme-toggle-container {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            align-items: center;
-        }
-
-        .theme-toggle {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 30px;
-            margin-left: 10px;
-        }
-
-        .theme-toggle input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 30px;
-        }
-
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 22px;
-            width: 22px;
-            left: 4px;
-            bottom: 4px;
-            background-color: white;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        input:checked + .slider {
-            background-color: var(--button-bg);
-        }
-
-        input:checked + .slider:before {
-            transform: translateX(30px);
-        }
-
-        .slider .icon {
-            position: absolute;
-            top: 6px;
-            font-size: 14px;
-            color: white;
-            transition: .4s;
-        }
-
-        .slider .sun {
-            left: 8px;
-            opacity: 1;
-        }
-
-        .slider .moon {
-            right: 8px;
-            opacity: 0;
-        }
-
-        input:checked + .slider .sun {
-            opacity: 0;
-        }
-
-        input:checked + .slider .moon {
-            opacity: 1;
-        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>Tinfoil Hat Competition - Cypher Con</h1>
-    
-    <!-- Theme toggle button -->
-    <div class="theme-toggle-container">
-        <span>Dark Mode</span>
-        <label class="theme-toggle">
-            <input type="checkbox" id="theme-toggle">
-            <span class="slider">
-                <span class="icon sun">☀️</span>
-                <span class="icon moon">🌙</span>
-            </span>
-        </label>
-    </div>
     
     <div id="messages">
         {% for message in get_flashed_messages() %}
@@ -705,9 +525,6 @@
         // Initialize the chart
         function initChart() {
             const ctx = document.getElementById('spectrum-chart').getContext('2d');
-            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
-            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-            const textColor = isDarkMode ? '#e0e0e0' : '#666';
             
             spectrumChart = new Chart(ctx, {
                 type: 'line',
@@ -755,11 +572,9 @@
                         x: {
                             title: {
                                 display: true,
-                                text: 'Frequency (MHz)',
-                                color: textColor
+                                text: 'Frequency (MHz)'
                             },
                             ticks: {
-                                color: textColor,
                                 callback: function(value, index, values) {
                                     // Display frequency with label if available
                                     const freq = allFrequencies[index];
@@ -769,41 +584,24 @@
                                     }
                                     return (freq / 1e6).toFixed(2);
                                 }
-                            },
-                            grid: {
-                                color: gridColor
                             }
                         },
                         y: {
                             title: {
                                 display: true,
-                                text: 'Signal Level (dBm)',
-                                color: textColor
+                                text: 'Signal Level (dBm)'
                             },
                             min: -100,
-                            max: -60,
-                            ticks: {
-                                color: textColor
-                            },
-                            grid: {
-                                color: gridColor
-                            }
+                            max: -60
                         },
                         attenuation: {
                             position: 'right',
                             title: {
                                 display: true,
-                                text: 'Attenuation (dB)',
-                                color: textColor
+                                text: 'Attenuation (dB)'
                             },
                             min: -10,
-                            max: 30,
-                            ticks: {
-                                color: textColor
-                            },
-                            grid: {
-                                color: gridColor
-                            }
+                            max: 30
                         }
                     },
                     plugins: {
@@ -820,19 +618,6 @@
                                     }
                                     
                                     return `${freqMHz} MHz`;
-                                }
-                            },
-                            backgroundColor: isDarkMode ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                            titleColor: isDarkMode ? '#fff' : '#000',
-                            bodyColor: isDarkMode ? '#e0e0e0' : '#333',
-                            borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-                            borderWidth: 1
-                        },
-                        legend: {
-                            labels: {
-                                color: textColor,
-                                font: {
-                                    size: 12
                                 }
                             }
                         }
@@ -1205,36 +990,6 @@
                     // Add debug logging to see the full response data
                     console.log("Server response data:", result.data);
                     
-                    // Debug helper function to list all properties and their types in the response
-                    function debugResponseStructure(obj, prefix = '') {
-                        if (!obj || typeof obj !== 'object') return;
-                        
-                        Object.keys(obj).forEach(key => {
-                            const value = obj[key];
-                            const fullPath = prefix ? `${prefix}.${key}` : key;
-                            
-                            if (value === null) {
-                                console.log(`${fullPath}: null`);
-                            } else if (Array.isArray(value)) {
-                                console.log(`${fullPath}: Array[${value.length}]`);
-                                // Log first element's type if array is not empty
-                                if (value.length > 0) {
-                                    console.log(`  ${fullPath}[0]: ${typeof value[0]}`);
-                                }
-                            } else if (typeof value === 'object') {
-                                console.log(`${fullPath}: Object`);
-                                debugResponseStructure(value, fullPath);
-                            } else {
-                                console.log(`${fullPath}: ${typeof value} = ${value}`);
-                            }
-                        });
-                    }
-                    
-                    // Call debug function to output structured info
-                    console.log("=== RESPONSE STRUCTURE ANALYSIS ===");
-                    debugResponseStructure(result.data);
-                    console.log("=== END STRUCTURE ANALYSIS ===");
-                    
                     // Update the UI with server-calculated values
                     document.getElementById('average-attenuation').textContent = result.data.average_attenuation.toFixed(2);
                     
@@ -1255,275 +1010,14 @@
                     document.getElementById('uhf-band-att').textContent = result.data.effectiveness.uhf_band.toFixed(2);
                     document.getElementById('shf-band-att').textContent = result.data.effectiveness.shf_band.toFixed(2);
                     
-                    // Add more detailed logging to diagnose the max/min frequency issue
-                    console.log("Max attenuation data:", result.data.max_attenuation);
-                    console.log("Min attenuation data:", result.data.min_attenuation);
-                    console.log("Full result data structure:", JSON.stringify(result.data, null, 2));
-                    
-                    // More robust handling for max_attenuation that covers different possible data structures
-                    try {
-                        let maxFreq = null;
-                        let maxAtt = null;
-                        
-                        // Check for nested objects first
-                        const nestedObjects = ['performance', 'metrics', 'statistics', 'best', 'max', 'results'];
-                        for (const objName of nestedObjects) {
-                            if (result.data[objName] && typeof result.data[objName] === 'object') {
-                                console.log(`Found nested object: ${objName}`);
-                                // If there's a nested object, check its fields
-                                const nestedObj = result.data[objName];
-                                
-                                // Look for frequency in the nested object
-                                if (nestedObj.frequency !== undefined) {
-                                    maxFreq = nestedObj.frequency;
-                                    console.log(`Found max frequency in nested object ${objName}.frequency`);
-                                }
-                                
-                                // Look for a value field
-                                if (nestedObj.value !== undefined) {
-                                    maxAtt = nestedObj.value;
-                                    console.log(`Found max attenuation in nested object ${objName}.value`);
-                                } else if (nestedObj.attenuation !== undefined) {
-                                    maxAtt = nestedObj.attenuation;
-                                    console.log(`Found max attenuation in nested object ${objName}.attenuation`);
-                                }
-                                
-                                // Look for best frequency specifically
-                                if (nestedObj.best_frequency !== undefined) {
-                                    maxFreq = nestedObj.best_frequency;
-                                    console.log(`Found max frequency in nested object ${objName}.best_frequency`);
-                                }
-                                
-                                // Look for best attenuation specifically
-                                if (nestedObj.best_attenuation !== undefined) {
-                                    maxAtt = nestedObj.best_attenuation;
-                                    console.log(`Found max attenuation in nested object ${objName}.best_attenuation`);
-                                }
-                            }
-                        }
-                        
-                        // Handle different possible data structures
-                        if (result.data.max_attenuation) {
-                            if (result.data.max_attenuation.frequency !== undefined) {
-                                maxFreq = result.data.max_attenuation.frequency;
-                                maxAtt = result.data.max_attenuation.value;
-                            } else if (Array.isArray(result.data.max_attenuation) && result.data.max_attenuation.length >= 2) {
-                                maxFreq = result.data.max_attenuation[0];
-                                maxAtt = result.data.max_attenuation[1];
-                            } else if (typeof result.data.max_attenuation === 'object') {
-                                const keys = Object.keys(result.data.max_attenuation);
-                                if (keys.length > 0) {
-                                    maxFreq = parseFloat(keys[0]);
-                                    maxAtt = result.data.max_attenuation[keys[0]];
-                                }
-                            }
-                        }
-                        
-                        // Check if we found values in the response
-                        if (maxFreq === null && result.data.best_frequency !== undefined) {
-                            maxFreq = result.data.best_frequency;
-                        }
-                        
-                        // Try additional possible field names
-                        if (maxFreq === null) {
-                            // Check various possible field names for the best frequency
-                            const possibleFields = [
-                                'best_freq', 'bestFrequency', 'best_frequency_hz', 'max_freq',
-                                'maxFrequency', 'max_frequency', 'max_frequency_hz', 'peak_frequency'
-                            ];
-                            
-                            for (const field of possibleFields) {
-                                if (result.data[field] !== undefined) {
-                                    maxFreq = result.data[field];
-                                    console.log(`Found max frequency in field: ${field}`);
-                                    break;
-                                }
-                            }
-                            
-                            // Check if frequency might be buried deeper in the response
-                            if (maxFreq === null && result.data.frequencies && result.data.max_index !== undefined) {
-                                // If we have a frequencies array and a max_index, use that
-                                maxFreq = result.data.frequencies[result.data.max_index];
-                            }
-                        }
-                        
-                        if (maxAtt === null && result.data.best_attenuation !== undefined) {
-                            maxAtt = result.data.best_attenuation;
-                        }
-                        
-                        // Try additional possible field names for attenuation
-                        if (maxAtt === null) {
-                            const possibleFields = [
-                                'best_att', 'bestAttenuation', 'max_att', 'maxAttenuation',
-                                'peak_attenuation', 'highest_attenuation'
-                            ];
-                            
-                            for (const field of possibleFields) {
-                                if (result.data[field] !== undefined) {
-                                    maxAtt = result.data[field];
-                                    console.log(`Found max attenuation in field: ${field}`);
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        // Output the frequency if found
-                        if (maxFreq !== null) {
-                            const maxFreqMHz = (parseFloat(maxFreq) / 1e6).toFixed(2);
-                            
-                            // Add frequency label if available
-                            let maxFreqDisplay = maxFreqMHz;
-                            if (frequencyLabels[maxFreq] && frequencyLabels[maxFreq].name) {
-                                maxFreqDisplay = `${maxFreqMHz} (${frequencyLabels[maxFreq].name})`;
-                            }
-                            
-                            document.getElementById('max-freq').textContent = maxFreqDisplay;
-                            
-                            if (maxAtt !== null) {
-                                document.getElementById('max-att').textContent = parseFloat(maxAtt).toFixed(2);
-                            }
-                        } else {
-                            // Set fallback values if no frequency found
-                            document.getElementById('max-freq').textContent = "N/A";
-                            document.getElementById('max-att').textContent = maxAtt !== null ? parseFloat(maxAtt).toFixed(2) : "N/A";
-                        }
-                    } catch (error) {
-                        console.error("Error processing max attenuation data:", error);
-                        document.getElementById('max-freq').textContent = "Error";
-                        document.getElementById('max-att').textContent = "Error";
+                    if (result.data.max_attenuation) {
+                        document.getElementById('max-freq').textContent = (result.data.max_attenuation.frequency / 1e6).toFixed(2);
+                        document.getElementById('max-att').textContent = result.data.max_attenuation.value.toFixed(2);
                     }
                     
-                    // More robust handling for min_attenuation
-                    try {
-                        let minFreq = null;
-                        let minAtt = null;
-                        
-                        // Check for nested objects first
-                        const nestedObjects = ['performance', 'metrics', 'statistics', 'worst', 'min', 'results'];
-                        for (const objName of nestedObjects) {
-                            if (result.data[objName] && typeof result.data[objName] === 'object') {
-                                console.log(`Found nested object for min values: ${objName}`);
-                                // If there's a nested object, check its fields
-                                const nestedObj = result.data[objName];
-                                
-                                // Look for frequency in the nested object
-                                if (nestedObj.frequency !== undefined) {
-                                    minFreq = nestedObj.frequency;
-                                    console.log(`Found min frequency in nested object ${objName}.frequency`);
-                                }
-                                
-                                // Look for a value field
-                                if (nestedObj.value !== undefined) {
-                                    minAtt = nestedObj.value;
-                                    console.log(`Found min attenuation in nested object ${objName}.value`);
-                                } else if (nestedObj.attenuation !== undefined) {
-                                    minAtt = nestedObj.attenuation;
-                                    console.log(`Found min attenuation in nested object ${objName}.attenuation`);
-                                }
-                                
-                                // Look for worst frequency specifically
-                                if (nestedObj.worst_frequency !== undefined) {
-                                    minFreq = nestedObj.worst_frequency;
-                                    console.log(`Found min frequency in nested object ${objName}.worst_frequency`);
-                                }
-                                
-                                // Look for worst attenuation specifically
-                                if (nestedObj.worst_attenuation !== undefined) {
-                                    minAtt = nestedObj.worst_attenuation;
-                                    console.log(`Found min attenuation in nested object ${objName}.worst_attenuation`);
-                                }
-                            }
-                        }
-                        
-                        // Handle different possible data structures
-                        if (result.data.min_attenuation) {
-                            if (result.data.min_attenuation.frequency !== undefined) {
-                                minFreq = result.data.min_attenuation.frequency;
-                                minAtt = result.data.min_attenuation.value;
-                            } else if (Array.isArray(result.data.min_attenuation) && result.data.min_attenuation.length >= 2) {
-                                minFreq = result.data.min_attenuation[0];
-                                minAtt = result.data.min_attenuation[1];
-                            } else if (typeof result.data.min_attenuation === 'object') {
-                                const keys = Object.keys(result.data.min_attenuation);
-                                if (keys.length > 0) {
-                                    minFreq = parseFloat(keys[0]);
-                                    minAtt = result.data.min_attenuation[keys[0]];
-                                }
-                            }
-                        }
-                        
-                        // Check if we found values in the response
-                        if (minFreq === null && result.data.worst_frequency !== undefined) {
-                            minFreq = result.data.worst_frequency;
-                        }
-                        
-                        // Try additional possible field names
-                        if (minFreq === null) {
-                            // Check various possible field names for the worst frequency
-                            const possibleFields = [
-                                'worst_freq', 'worstFrequency', 'worst_frequency_hz', 'min_freq',
-                                'minFrequency', 'min_frequency', 'min_frequency_hz', 'low_frequency'
-                            ];
-                            
-                            for (const field of possibleFields) {
-                                if (result.data[field] !== undefined) {
-                                    minFreq = result.data[field];
-                                    console.log(`Found min frequency in field: ${field}`);
-                                    break;
-                                }
-                            }
-                            
-                            // Check if frequency might be buried deeper in the response
-                            if (minFreq === null && result.data.frequencies && result.data.min_index !== undefined) {
-                                // If we have a frequencies array and a min_index, use that
-                                minFreq = result.data.frequencies[result.data.min_index];
-                            }
-                        }
-                        
-                        if (minAtt === null && result.data.worst_attenuation !== undefined) {
-                            minAtt = result.data.worst_attenuation;
-                        }
-                        
-                        // Try additional possible field names for attenuation
-                        if (minAtt === null) {
-                            const possibleFields = [
-                                'worst_att', 'worstAttenuation', 'min_att', 'minAttenuation',
-                                'lowest_attenuation', 'minimum_attenuation'
-                            ];
-                            
-                            for (const field of possibleFields) {
-                                if (result.data[field] !== undefined) {
-                                    minAtt = result.data[field];
-                                    console.log(`Found min attenuation in field: ${field}`);
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        // Output the frequency if found
-                        if (minFreq !== null) {
-                            const minFreqMHz = (parseFloat(minFreq) / 1e6).toFixed(2);
-                            
-                            // Add frequency label if available
-                            let minFreqDisplay = minFreqMHz;
-                            if (frequencyLabels[minFreq] && frequencyLabels[minFreq].name) {
-                                minFreqDisplay = `${minFreqMHz} (${frequencyLabels[minFreq].name})`;
-                            }
-                            
-                            document.getElementById('min-freq').textContent = minFreqDisplay;
-                            
-                            if (minAtt !== null) {
-                                document.getElementById('min-att').textContent = parseFloat(minAtt).toFixed(2);
-                            }
-                        } else {
-                            // Set fallback values if no frequency found
-                            document.getElementById('min-freq').textContent = "N/A";
-                            document.getElementById('min-att').textContent = minAtt !== null ? parseFloat(minAtt).toFixed(2) : "N/A";
-                        }
-                    } catch (error) {
-                        console.error("Error processing min attenuation data:", error);
-                        document.getElementById('min-freq').textContent = "Error";
-                        document.getElementById('min-att').textContent = "Error";
+                    if (result.data.min_attenuation) {
+                        document.getElementById('min-freq').textContent = (result.data.min_attenuation.frequency / 1e6).toFixed(2);
+                        document.getElementById('min-att').textContent = result.data.min_attenuation.value.toFixed(2);
                     }
                     
                     // Show test results section
@@ -1644,55 +1138,6 @@
             // Refresh Select2 to show the changes
             $('#modal-contestant-id').trigger('change');
         }
-
-        // Dark mode toggle functionality
-        document.addEventListener('DOMContentLoaded', function() {
-            const themeToggle = document.getElementById('theme-toggle');
-            
-            // Check for saved theme preference or use system preference
-            const savedTheme = localStorage.getItem('theme');
-            const prefersDarkScheme = window.matchMedia('(prefers-color-scheme: dark)');
-            
-            // Set initial theme based on saved preference or system preference
-            if (savedTheme === 'dark' || (!savedTheme && prefersDarkScheme.matches)) {
-                document.documentElement.setAttribute('data-theme', 'dark');
-                themeToggle.checked = true;
-            }
-            
-            // Handle theme toggle click
-            themeToggle.addEventListener('change', function() {
-                if (this.checked) {
-                    document.documentElement.setAttribute('data-theme', 'dark');
-                    localStorage.setItem('theme', 'dark');
-                } else {
-                    document.documentElement.setAttribute('data-theme', 'light');
-                    localStorage.setItem('theme', 'light');
-                }
-                
-                // If Chart.js is being used, update chart colors
-                if (typeof spectrumChart !== 'undefined') {
-                    updateChartColors();
-                }
-            });
-            
-            // Function to update chart colors based on current theme
-            function updateChartColors() {
-                const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
-                const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-                const textColor = isDarkMode ? '#e0e0e0' : '#666';
-                
-                spectrumChart.options.scales.x.grid.color = gridColor;
-                spectrumChart.options.scales.y.grid.color = gridColor;
-                spectrumChart.options.scales.x.ticks.color = textColor;
-                spectrumChart.options.scales.y.ticks.color = textColor;
-                spectrumChart.update();
-            }
-            
-            // Update chart colors on initial load if chart exists
-            if (typeof spectrumChart !== 'undefined') {
-                updateChartColors();
-            }
-        });
     </script>
     
     <!-- Registration Modal -->
