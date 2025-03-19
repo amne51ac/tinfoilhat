@@ -1,6 +1,6 @@
 # Tinfoil Hat Competition
 
-![CI Status](https://github.com/markmilhouse/tinfoilhat/actions/workflows/ci.yml/badge.svg)
+![CI Status](https://github.com/amne51ac/tinfoilhat/actions/workflows/ci.yml/badge.svg)
 
 A Flask web application for running and tracking the Tinfoil Hat Competition at Cypher Con in Milwaukee on April 9-10.
 
