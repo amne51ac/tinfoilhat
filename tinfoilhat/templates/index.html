@@ -9,18 +9,79 @@
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <style>
+        :root {
+            --background-color: #f4f4f4;
+            --text-color: #333;
+            --card-background: white;
+            --heading-color: #2c3e50;
+            --input-border: #ddd;
+            --input-background: white;
+            --table-head-background: #f2f2f2;
+            --table-row-hover: #f5f5f5;
+            --table-border: #ddd;
+            --button-color: #3498db;
+            --button-hover: #2980b9;
+            --secondary-button: #2ecc71;
+            --secondary-button-hover: #27ae60;
+            --filter-button: #f0f0f0;
+            --filter-button-text: #333;
+            --filter-button-hover: #e0e0e0;
+            --modal-background: #fefefe;
+            --modal-shadow: rgba(0, 0, 0, 0.2);
+            --close-button: #aaa;
+            --close-button-hover: black;
+            --dropdown-background: white;
+            --success-background: #d4edda;
+            --success-text: #155724;
+            --error-background: #f8d7da;
+            --error-text: #721c24;
+            --info-background: #d1ecf1;
+            --info-text: #0c5460;
+        }
+
+        [data-theme="dark"] {
+            --background-color: #1a1a1a;
+            --text-color: #e0e0e0;
+            --card-background: #2c2c2c;
+            --heading-color: #79b8ff;
+            --input-border: #444;
+            --input-background: #333;
+            --table-head-background: #333;
+            --table-row-hover: #3a3a3a;
+            --table-border: #444;
+            --button-color: #2980b9;
+            --button-hover: #3498db;
+            --secondary-button: #27ae60;
+            --secondary-button-hover: #2ecc71;
+            --filter-button: #444;
+            --filter-button-text: #e0e0e0;
+            --filter-button-hover: #555;
+            --modal-background: #2c2c2c;
+            --modal-shadow: rgba(0, 0, 0, 0.4);
+            --close-button: #888;
+            --close-button-hover: #ccc;
+            --dropdown-background: #333;
+            --success-background: #113b1d;
+            --success-text: #90ee90;
+            --error-background: #4c1818;
+            --error-text: #ffb8b8;
+            --info-background: #0f3a43;
+            --info-text: #8cdee9;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: var(--text-color);
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: var(--background-color);
+            transition: background-color 0.3s, color 0.3s;
         }
         
         h1, h2, h3 {
-            color: #2c3e50;
+            color: var(--heading-color);
         }
         
         .container {
@@ -30,7 +91,7 @@
         }
         
         .card {
-            background: white;
+            background: var(--card-background);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             padding: 20px;
@@ -50,13 +111,15 @@
         input, select, textarea {
             width: 100%;
             padding: 8px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--input-border);
             border-radius: 4px;
             font-size: 16px;
+            background-color: var(--input-background);
+            color: var(--text-color);
         }
         
         button {
-            background-color: #3498db;
+            background-color: var(--button-color);
             color: white;
             border: none;
             padding: 10px 15px;
@@ -67,15 +130,15 @@
         }
         
         button:hover {
-            background-color: #2980b9;
+            background-color: var(--button-hover);
         }
         
         .button-secondary {
-            background-color: #2ecc71;
+            background-color: var(--secondary-button);
         }
         
         .button-secondary:hover {
-            background-color: #27ae60;
+            background-color: var(--secondary-button-hover);
         }
         
         table {
@@ -86,15 +149,15 @@
         th, td {
             text-align: left;
             padding: 12px;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid var(--table-border);
         }
         
         th {
-            background-color: #f2f2f2;
+            background-color: var(--table-head-background);
         }
         
         tr:hover {
-            background-color: #f5f5f5;
+            background-color: var(--table-row-hover);
         }
         
         .chart-container {
@@ -111,9 +174,9 @@
         }
         
         .filter-button {
-            background-color: #f0f0f0;
-            color: #333;
-            border: 1px solid #ddd;
+            background-color: var(--filter-button);
+            color: var(--filter-button-text);
+            border: 1px solid var(--input-border);
             padding: 5px 10px;
             border-radius: 4px;
             cursor: pointer;
@@ -121,28 +184,28 @@
         }
         
         .filter-button:hover {
-            background-color: #e0e0e0;
+            background-color: var(--filter-button-hover);
         }
         
         .filter-active {
-            background-color: #3498db;
+            background-color: var(--button-color);
             color: white;
-            border-color: #2980b9;
+            border-color: var(--button-hover);
         }
         
         .success {
-            background-color: #d4edda;
-            color: #155724;
+            background-color: var(--success-background);
+            color: var(--success-text);
         }
         
         .error {
-            background-color: #f8d7da;
-            color: #721c24;
+            background-color: var(--error-background);
+            color: var(--error-text);
         }
         
         .info {
-            background-color: #d1ecf1;
-            color: #0c5460;
+            background-color: var(--info-background);
+            color: var(--info-text);
         }
         
         .hidden {
@@ -167,8 +230,10 @@
         .select2-container--default .select2-selection--single {
             height: 40px;
             padding: 5px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--input-border);
             border-radius: 4px;
+            background-color: var(--input-background);
+            color: var(--text-color);
         }
         
         .select2-container--default .select2-selection--single .select2-selection__arrow {
@@ -177,6 +242,46 @@
         
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             line-height: 28px;
+            color: var(--text-color);
+        }
+        
+        /* Dark mode styles for Select2 dropdown */
+        [data-theme="dark"] .select2-dropdown,
+        [data-theme="dark"] .select2-search,
+        [data-theme="dark"] .select2-results {
+            background-color: var(--dropdown-background);
+            color: var(--text-color);
+        }
+        
+        [data-theme="dark"] .select2-results__option {
+            color: var(--text-color);
+        }
+        
+        [data-theme="dark"] .select2-results__option--highlighted[aria-selected] {
+            background-color: var(--button-color);
+            color: white;
+        }
+        
+        [data-theme="dark"] .select2-search__field {
+            background-color: var(--input-background);
+            color: var(--text-color);
+            border-color: var(--input-border);
+        }
+        
+        /* Additional class for Select2 dropdown in dark mode */
+        .select2-dropdown-dark {
+            background-color: var(--dropdown-background) !important;
+            color: var(--text-color) !important;
+        }
+        
+        .select2-dropdown-dark .select2-results__option {
+            color: var(--text-color) !important;
+        }
+        
+        .select2-dropdown-dark .select2-search__field {
+            background-color: var(--input-background) !important;
+            color: var(--text-color) !important;
+            border-color: var(--input-border) !important;
         }
         
         /* Modal styles */
@@ -193,17 +298,17 @@
         }
         
         .modal-content {
-            background-color: #fefefe;
+            background-color: var(--modal-background);
             margin: 10% auto;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 8px var(--modal-shadow);
             width: 80%;
             max-width: 600px;
         }
         
         .close-modal {
-            color: #aaa;
+            color: var(--close-button);
             float: right;
             font-size: 28px;
             font-weight: bold;
@@ -212,7 +317,7 @@
         
         .close-modal:hover,
         .close-modal:focus {
-            color: black;
+            color: var(--close-button-hover);
             text-decoration: none;
         }
         
@@ -223,11 +328,96 @@
             vertical-align: middle;
             float: right;
         }
+
+        /* Theme toggle switch styles */
+        .theme-switch-wrapper {
+            display: flex;
+            align-items: center;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            gap: 8px;
+            z-index: 10;
+        }
+        
+        /* Responsive adjustment for theme toggle on small screens */
+        @media (max-width: 768px) {
+            .theme-switch-wrapper {
+                position: relative;
+                top: 0;
+                right: 0;
+                justify-content: flex-end;
+                margin-bottom: 10px;
+            }
+            
+            h1 {
+                margin-top: 5px;
+            }
+        }
+        
+        .theme-switch {
+            display: inline-block;
+            height: 20px;
+            position: relative;
+            width: 40px;
+            vertical-align: middle;
+        }
+        
+        .theme-switch input {
+            display: none;
+        }
+        
+        .slider {
+            background-color: #ccc;
+            bottom: 0;
+            cursor: pointer;
+            left: 0;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        
+        .slider:before {
+            background-color: white;
+            bottom: 2px;
+            content: "";
+            height: 16px;
+            left: 2px;
+            position: absolute;
+            transition: .4s;
+            width: 16px;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--button-color);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        
+        .theme-switch-wrapper span {
+            font-size: 12px;
+            color: var(--text-color);
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <h1>Tinfoil Hat Competition - Cypher Con</h1>
+    
+    <!-- Theme Switch -->
+    <div class="theme-switch-wrapper">
+        <span>Light</span>
+        <label class="theme-switch" for="theme-toggle" title="Toggle dark mode">
+            <input type="checkbox" id="theme-toggle" />
+            <span class="slider"></span>
+        </label>
+        <span>Dark</span>
+    </div>
     
     <div id="messages">
         {% for message in get_flashed_messages() %}
@@ -368,7 +558,15 @@
                     noResults: function() {
                         return 'No contestants found';
                     }
-                }
+                },
+                templateResult: function(data) {
+                    if (!data.id) return data.text;
+                    // Apply dark mode styling to dropdown items
+                    const $result = $('<span></span>');
+                    $result.text(data.text);
+                    return $result;
+                },
+                dropdownCssClass: document.documentElement.getAttribute('data-theme') === 'dark' ? 'select2-dropdown-dark' : ''
             });
             
             // Fetch the initial leaderboard data
@@ -526,6 +724,11 @@
         function initChart() {
             const ctx = document.getElementById('spectrum-chart').getContext('2d');
             
+            // Check if dark mode is active
+            const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDarkMode ? '#e0e0e0' : '#333';
+            const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            
             spectrumChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -568,43 +771,15 @@
                             bottom: 0 // Minimize bottom padding
                         }
                     },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Frequency (MHz)'
-                            },
-                            ticks: {
-                                callback: function(value, index, values) {
-                                    // Display frequency with label if available
-                                    const freq = allFrequencies[index];
-                                    if (freq && frequencyLabels[freq]) {
-                                        const freqMHz = (freq / 1e6).toFixed(0);
-                                        return `${freqMHz} (${frequencyLabels[freq].name})`;
-                                    }
-                                    return (freq / 1e6).toFixed(2);
-                                }
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: textColor
                             }
                         },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Signal Level (dBm)'
-                            },
-                            min: -100,
-                            max: -60
+                        title: {
+                            color: textColor
                         },
-                        attenuation: {
-                            position: 'right',
-                            title: {
-                                display: true,
-                                text: 'Attenuation (dB)'
-                            },
-                            min: -10,
-                            max: 30
-                        }
-                    },
-                    plugins: {
                         tooltip: {
                             callbacks: {
                                 title: function(tooltipItems) {
@@ -620,6 +795,61 @@
                                     return `${freqMHz} MHz`;
                                 }
                             }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Frequency (MHz)',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                callback: function(value, index, values) {
+                                    // Display frequency with label if available
+                                    const freq = allFrequencies[index];
+                                    if (freq && frequencyLabels[freq]) {
+                                        const freqMHz = (freq / 1e6).toFixed(0);
+                                        return `${freqMHz} (${frequencyLabels[freq].name})`;
+                                    }
+                                    return (freq / 1e6).toFixed(2);
+                                }
+                            },
+                            grid: {
+                                color: gridColor
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Signal Level (dBm)',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            min: -100,
+                            max: -60
+                        },
+                        attenuation: {
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Attenuation (dB)',
+                                color: textColor
+                            },
+                            ticks: {
+                                color: textColor
+                            },
+                            grid: {
+                                color: gridColor
+                            },
+                            min: -10,
+                            max: 30
                         }
                     }
                 }
@@ -1206,5 +1436,102 @@
             </div>
         </div>
     </div>
+    
+    <script>
+        // Dark Mode Toggle Functionality
+        const toggleSwitch = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('theme');
+        
+        // Check for saved theme preference
+        if (currentTheme) {
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+                updateChartTheme('dark');
+            }
+        }
+        
+        // Theme toggle event handler
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                updateChartTheme('dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                updateChartTheme('light');
+            }
+        }
+        
+        // Function to update Chart.js theme
+        function updateChartTheme(theme) {
+            if (!spectrumChart || !spectrumChart.options) return;
+            
+            try {
+                const textColor = theme === 'dark' ? '#e0e0e0' : '#333';
+                const gridColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                
+                // Update chart options
+                if (spectrumChart.options.scales.x) {
+                    spectrumChart.options.scales.x.grid.color = gridColor;
+                    spectrumChart.options.scales.x.ticks.color = textColor;
+                    spectrumChart.options.scales.x.title.color = textColor;
+                }
+                
+                if (spectrumChart.options.scales.y) {
+                    spectrumChart.options.scales.y.grid.color = gridColor;
+                    spectrumChart.options.scales.y.ticks.color = textColor;
+                    spectrumChart.options.scales.y.title.color = textColor;
+                }
+                
+                if (spectrumChart.options.scales.attenuation) {
+                    spectrumChart.options.scales.attenuation.grid.color = gridColor;
+                    spectrumChart.options.scales.attenuation.ticks.color = textColor;
+                    spectrumChart.options.scales.attenuation.title.color = textColor;
+                }
+                
+                if (spectrumChart.options.plugins) {
+                    if (spectrumChart.options.plugins.legend) {
+                        spectrumChart.options.plugins.legend.labels.color = textColor;
+                    }
+                    
+                    if (spectrumChart.options.plugins.title) {
+                        spectrumChart.options.plugins.title.color = textColor;
+                    }
+                }
+                
+                // Update chart
+                spectrumChart.update();
+            } catch (err) {
+                console.error('Error updating chart theme:', err);
+            }
+        }
+        
+        // Add event listener to the toggle
+        toggleSwitch.addEventListener('change', switchTheme, false);
+        
+        // Update Select2 theme when dropdown opens
+        $(document).on('select2:open', () => {
+            const theme = document.documentElement.getAttribute('data-theme');
+            if (theme === 'dark') {
+                // Add dark theme class to all Select2 dropdowns
+                setTimeout(() => {
+                    $('.select2-dropdown').attr('data-theme', 'dark');
+                    $('.select2-search').attr('data-theme', 'dark');
+                    $('.select2-results').attr('data-theme', 'dark');
+                }, 0);
+            }
+        });
+        
+        // Initialize chart with theme
+        document.addEventListener('DOMContentLoaded', () => {
+            const theme = document.documentElement.getAttribute('data-theme');
+            if (theme === 'dark' && spectrumChart) {
+                updateChartTheme('dark');
+            }
+        });
+    </script>
 </body>
 </html> 
