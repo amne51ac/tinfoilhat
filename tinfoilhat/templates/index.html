@@ -227,7 +227,7 @@
                 
                 <div id="test-status" class="message info hidden"></div>
                 <div id="test-results" class="hidden">
-                    <h3>Test Results</h3>
+                    <h3>Test Results:</h3>
                     <p><strong>Average Attenuation:</strong> <span id="average-attenuation">0.00</span> dB</p>
                     <p><strong>Samples per Frequency:</strong> <span id="samples-per-frequency">1</span></p>
 
@@ -245,8 +245,6 @@
                     </div>
                     
                     <p id="best-score-message" class="message success hidden">This is the best score for this team!</p>
-                    
-                    <button id="save-results-button" class="button-secondary" onclick="saveResults()" style="margin-top: 15px; display: none;">Save Results</button>
                 </div>
             </div>
             
@@ -370,7 +368,6 @@
             document.getElementById('stop-button').style.display = 'inline-block';
             document.getElementById('baseline-button').disabled = true;
             document.getElementById('test-results').classList.add('hidden');
-            document.getElementById('save-results-button').style.display = 'none';
             
             const statusEl = document.getElementById('test-status');
             statusEl.textContent = 'Running baseline test...';
@@ -462,9 +459,10 @@
             if (!shouldStopMeasurement) {
                 // Calculate and display stats
                 calculateAndDisplayStats();
-                statusEl.textContent = 'Hat measurement completed successfully.';
+                statusEl.textContent = 'Hat measurement completed. Saving results...';
                 document.getElementById('test-results').classList.remove('hidden');
-                document.getElementById('save-results-button').style.display = 'inline-block';
+                // Automatically save results instead of showing the save button
+                await saveResults();
             } else {
                 statusEl.textContent = 'Hat measurement stopped.';
             }
@@ -714,9 +712,11 @@
         // Save test results to database
         async function saveResults() {
             const contestantId = document.getElementById('contestant_id').value;
+            const statusEl = document.getElementById('test-status');
             
             if (!contestantId) {
-                alert('Please select a contestant before saving results.');
+                statusEl.textContent = 'Error: No contestant selected';
+                statusEl.classList.add('error');
                 return;
             }
             
@@ -742,19 +742,18 @@
                         
                         // Update the leaderboard
                         updateLeaderboard(result.data.contestant_name);
+                        statusEl.textContent = `Test completed and saved. This is the best score for team "${result.data.contestant_name}"!`;
                     } else {
                         bestScoreMsg.classList.add('hidden');
+                        statusEl.textContent = `Test completed and saved. Not the best score for team "${result.data.contestant_name}".`;
                     }
-                    
-                    document.getElementById('test-status').textContent = result.message;
-                    document.getElementById('save-results-button').style.display = 'none';
                 } else {
-                    document.getElementById('test-status').textContent = 'Error: ' + result.message;
-                    document.getElementById('test-status').classList.add('error');
+                    statusEl.textContent = 'Error: ' + result.message;
+                    statusEl.classList.add('error');
                 }
             } catch (error) {
-                document.getElementById('test-status').textContent = 'Error saving results: ' + error.message;
-                document.getElementById('test-status').classList.add('error');
+                statusEl.textContent = 'Error saving results: ' + error.message;
+                statusEl.classList.add('error');
             }
         }
         

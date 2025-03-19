@@ -311,13 +311,25 @@ def measure_hat():
         # Save results to database
         db = get_db()
 
+        # Check if this is the best score for this contestant BEFORE inserting the new result
+        best_score_result = db.execute(
+            """
+            SELECT MAX(average_attenuation) as best
+            FROM test_result
+            WHERE contestant_id = ?
+            """,
+            (contestant_id,),
+        ).fetchone()
+        previous_best_score = best_score_result["best"] if best_score_result and best_score_result["best"] is not None else 0
+        is_best = average_attenuation > previous_best_score
+
         # Add test result
         cursor = db.execute(
             """
-            INSERT INTO test_result (contestant_id, average_attenuation)
-            VALUES (?, ?)
+            INSERT INTO test_result (contestant_id, average_attenuation, is_best_score)
+            VALUES (?, ?, ?)
             """,
-            (contestant_id, average_attenuation),
+            (contestant_id, average_attenuation, 1 if is_best else 0),
         )
         test_result_id = cursor.lastrowid
 
@@ -338,38 +350,16 @@ def measure_hat():
                 ),
             )
 
-        # Check if this is the best score for this contestant
-        best_score_result = db.execute(
-            """
-            SELECT MAX(average_attenuation) as best
-            FROM test_result
-            WHERE contestant_id = ?
-            """,
-            (contestant_id,),
-        ).fetchone()
-        best_score = best_score_result["best"] if best_score_result else 0
-
-        # Update is_best_score flag
-        is_best = average_attenuation >= best_score
+        # If this is the best score, reset previous best scores
         if is_best:
-            # Reset previous best scores
+            # Reset previous best scores (exclude the one we just added)
             db.execute(
                 """
                 UPDATE test_result
                 SET is_best_score = 0
-                WHERE contestant_id = ?
+                WHERE contestant_id = ? AND id != ?
                 """,
-                (contestant_id,),
-            )
-
-            # Set this as the best score
-            db.execute(
-                """
-                UPDATE test_result
-                SET is_best_score = 1
-                WHERE id = ?
-                """,
-                (test_result_id,),
+                (contestant_id, test_result_id),
             )
 
         db.commit()
@@ -510,26 +500,30 @@ def measure_frequency():
             if "BASELINE_DATA" not in current_app.config:
                 current_app.config["BASELINE_DATA"] = {}
 
-            # Store the measurement
-            current_app.config["BASELINE_DATA"][str(freq_hz)] = power
+            # Store the measurement - use int(freq_hz) as key for consistent lookup
+            current_app.config["BASELINE_DATA"][str(int(freq_hz))] = power
+            print(f"DEBUG - Stored baseline for {freq_mhz} MHz: {power} dBm with key {str(int(freq_hz))}")
 
         elif measurement_type == "hat":
             # Initialize hat data dictionary if it doesn't exist
             if "HAT_DATA" not in current_app.config:
                 current_app.config["HAT_DATA"] = {}
 
-            # Store the measurement
-            current_app.config["HAT_DATA"][str(freq_hz)] = power
+            # Store the measurement - use int(freq_hz) as key for consistent lookup
+            current_app.config["HAT_DATA"][str(int(freq_hz))] = power
+            print(f"DEBUG - Stored hat for {freq_mhz} MHz: {power} dBm with key {str(int(freq_hz))}")
 
         # Calculate attenuation if we have both baseline and hat measurements for this frequency
         attenuation = None
+        freq_key = str(int(freq_hz))  # Consistent key format
         if (
             measurement_type == "hat"
             and "BASELINE_DATA" in current_app.config
-            and str(freq_hz) in current_app.config["BASELINE_DATA"]
+            and freq_key in current_app.config["BASELINE_DATA"]
         ):
-            baseline_power = current_app.config["BASELINE_DATA"][str(freq_hz)]
+            baseline_power = current_app.config["BASELINE_DATA"][freq_key]
             attenuation = baseline_power - power  # Allow negative attenuation values
+            print(f"DEBUG - Calculated attenuation for {freq_mhz} MHz: {attenuation} dB (baseline: {baseline_power} dBm, hat: {power} dBm)")
 
         # Return the measurement results
         return jsonify(
@@ -584,11 +578,25 @@ def save_results():
     hat_data = current_app.config.get("HAT_DATA", {})
 
     if not baseline_data or not hat_data:
+        error_msg = "Baseline or hat measurements have not been completed."
+        
+        # Add more detailed error information
+        if not baseline_data:
+            error_msg += " Baseline data is missing."
+        if not hat_data:
+            error_msg += " Hat measurement data is missing."
+            
+        error_msg += " Please run both tests first."
+        
+        # Debug log what data we have
+        print(f"DEBUG - Save failed - Baseline data: {baseline_data}")
+        print(f"DEBUG - Save failed - Hat data: {hat_data}")
+        
         return (
             jsonify(
                 {
                     "status": "error",
-                    "message": "Baseline or hat measurements have not been completed. Please run both tests first.",
+                    "message": error_msg,
                 }
             ),
             400,
@@ -620,17 +628,35 @@ def save_results():
         baseline_readings = []
         hat_readings = []
         missing_frequencies = []
+        
+        # Debug: Print stored data
+        print("DEBUG - Baseline data in config:", current_app.config.get("BASELINE_DATA", {}))
+        print("DEBUG - Hat data in config:", current_app.config.get("HAT_DATA", {}))
 
         for freq in scanner.frequencies:
-            str_freq = str(freq)
-            if str_freq in baseline_data and str_freq in hat_data:
+            freq_hz = freq * 1e6  # Convert MHz to Hz
+            str_freq = str(int(freq_hz))  # Use full Hz frequency as key
+            
+            # Debug: Print what we're looking for
+            print(f"DEBUG - Looking for frequency {freq} MHz ({str_freq} Hz)")
+            
+            baseline_found = str_freq in baseline_data
+            hat_found = str_freq in hat_data
+            
+            if baseline_found and hat_found:
                 baseline_readings.append(baseline_data[str_freq])
                 hat_readings.append(hat_data[str_freq])
+                print(f"DEBUG - Found both: Baseline={baseline_data[str_freq]}, Hat={hat_data[str_freq]}")
             else:
                 missing_frequencies.append(freq)
                 # Use placeholder values if measurements are missing
                 baseline_readings.append(-80.0)
                 hat_readings.append(-80.0)
+                print(f"DEBUG - Missing data: baseline_found={baseline_found}, hat_found={hat_found}")
+                
+        # Debug: Print constructed measurement arrays
+        print("DEBUG - Baseline readings:", baseline_readings)
+        print("DEBUG - Hat readings:", hat_readings)
 
         # Calculate attenuation
         attenuation_data = scanner.calculate_attenuation(baseline_readings, hat_readings)
@@ -671,13 +697,25 @@ def save_results():
         # Save results to database
         db = get_db()
 
+        # Check if this is the best score for this contestant BEFORE inserting the new result
+        best_score_result = db.execute(
+            """
+            SELECT MAX(average_attenuation) as best
+            FROM test_result
+            WHERE contestant_id = ?
+            """,
+            (contestant_id,),
+        ).fetchone()
+        previous_best_score = best_score_result["best"] if best_score_result and best_score_result["best"] is not None else 0
+        is_best = average_attenuation > previous_best_score
+
         # Add test result
         cursor = db.execute(
             """
-            INSERT INTO test_result (contestant_id, average_attenuation)
-            VALUES (?, ?)
+            INSERT INTO test_result (contestant_id, average_attenuation, is_best_score)
+            VALUES (?, ?, ?)
             """,
-            (contestant_id, average_attenuation),
+            (contestant_id, average_attenuation, 1 if is_best else 0),
         )
         test_result_id = cursor.lastrowid
 
@@ -698,37 +736,16 @@ def save_results():
                 ),
             )
 
-        # Update best score flag
-        best_score_result = db.execute(
-            """
-            SELECT MAX(average_attenuation) as best
-            FROM test_result
-            WHERE contestant_id = ?
-            """,
-            (contestant_id,),
-        ).fetchone()
-        best_score = best_score_result["best"] if best_score_result else 0
-
-        is_best = average_attenuation >= best_score
+        # If this is the best score, reset previous best scores
         if is_best:
-            # Reset previous best scores
+            # Reset previous best scores (exclude the one we just added)
             db.execute(
                 """
                 UPDATE test_result
                 SET is_best_score = 0
-                WHERE contestant_id = ?
+                WHERE contestant_id = ? AND id != ?
                 """,
-                (contestant_id,),
-            )
-
-            # Set this as the best score
-            db.execute(
-                """
-                UPDATE test_result
-                SET is_best_score = 1
-                WHERE id = ?
-                """,
-                (test_result_id,),
+                (contestant_id, test_result_id),
             )
 
         db.commit()
