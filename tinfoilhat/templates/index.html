@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tinfoil Hat Competition - Cypher Con</title>
+    <!-- Add jQuery and Select2 CSS/JS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -133,6 +137,26 @@
         .highlight-row {
             animation: highlight 2s ease-in-out;
         }
+        
+        /* Additional styles for Select2 integration */
+        .select2-container {
+            width: 100% !important;
+        }
+        
+        .select2-container--default .select2-selection--single {
+            height: 40px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 38px;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 28px;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -203,7 +227,7 @@
                 <div class="form-group">
                     <label for="contestant_id">Select Contestant:</label>
                     <select id="contestant_id" name="contestant_id">
-                        <option value="">-- Select a team --</option>
+                        <option value="">-- Search or select a team --</option>
                         {% for contestant in contestants %}
                             <option value="{{ contestant.id }}">{{ contestant.name }}</option>
                         {% endfor %}
@@ -279,6 +303,13 @@
             
             // Update chart labels
             updateChartLabels();
+            
+            // Initialize searchable dropdown for contestant selection
+            $('#contestant_id').select2({
+                placeholder: "Search for a team...",
+                allowClear: true,
+                width: '100%'
+            });
             
             // Fetch the initial leaderboard data
             updateLeaderboard();
@@ -809,9 +840,39 @@
                     `;
                     leaderboardBody.appendChild(row);
                 });
+                
+                // If the data includes updated contestants list, refresh the dropdown
+                if (data.contestants) {
+                    refreshContestantDropdown(data.contestants);
+                }
             } catch (error) {
                 console.error('Error updating leaderboard:', error);
             }
+        }
+        
+        // Refresh the contestant dropdown with new data
+        function refreshContestantDropdown(contestants) {
+            const dropdown = document.getElementById('contestant_id');
+            const currentValue = dropdown.value;
+            
+            // Store current selection
+            dropdown.innerHTML = '<option value="">-- Search or select a team --</option>';
+            
+            // Add all contestants
+            contestants.forEach(contestant => {
+                const option = document.createElement('option');
+                option.value = contestant.id;
+                option.textContent = contestant.name;
+                dropdown.appendChild(option);
+            });
+            
+            // Restore previous selection if it still exists
+            if (currentValue) {
+                dropdown.value = currentValue;
+            }
+            
+            // Refresh Select2 to show the changes
+            $('#contestant_id').trigger('change');
         }
     </script>
 </body>
