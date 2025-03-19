@@ -1271,8 +1271,9 @@
                     // Show test results section
                     document.getElementById('test-results').classList.remove('hidden');
                     
-                    // Always store the latest contestant name for persistent highlighting
+                    // Always store the latest contestant name and hat type for persistent highlighting
                     localStorage.setItem('latestContestant', result.data.contestant_name);
+                    localStorage.setItem('latestHatType', window.currentHatType || 'classic');
                     
                     // Show best score message if applicable
                     const bestScoreMsg = document.getElementById('best-score-message');
@@ -1307,6 +1308,9 @@
                 let url = '/leaderboard';
                 if (hatTypeFilter && hatTypeFilter !== 'all') {
                     url += `?hat_type=${hatTypeFilter}`;
+                } else {
+                    // Add a parameter to show all types per contestant
+                    url += `?show_all_types=true`;
                 }
                 
                 const response = await fetch(url);
@@ -1317,6 +1321,8 @@
                 
                 // Get the stored latest contestant (if any)
                 const latestContestant = localStorage.getItem('latestContestant');
+                // Get stored latest hat type (if any)
+                const latestHatType = localStorage.getItem('latestHatType');
                 
                 // If a new highlightTeam is provided, update the latest contestant
                 if (highlightTeam) {
@@ -1338,14 +1344,19 @@
                     data.leaderboard.forEach(entry => {
                         const row = document.createElement('tr');
                         
+                        // Check if this is the latest score by contestant name and hat type
+                        const isLatestScore = latestContestant === entry.name && 
+                                            latestHatType === entry.hat_type;
+                        
                         // Add highlight class if this is the team we just updated
-                        if (highlightTeam && entry.name === highlightTeam) {
+                        if (highlightTeam && entry.name === highlightTeam && 
+                            (!latestHatType || latestHatType === entry.hat_type)) {
                             row.classList.add('highlight-row');
                         }
                         
-                        // Add persistent highlighting class if this is the latest contestant
+                        // Add persistent highlighting class if this is the latest contestant and hat type
                         // (but not if we're already highlighting a new one with animation)
-                        const isLatest = !highlightTeam && latestContestant && entry.name === latestContestant;
+                        const isLatest = !highlightTeam && isLatestScore;
                         if (isLatest) {
                             row.classList.add('latest-score-row');
                         }
