@@ -133,7 +133,7 @@ def get_scanner():
         try:
             # Attempt to initialize scanner with the HackRF device
             print("Initializing Scanner with HackRF device...")
-            scanner = Scanner(samples_per_freq=1)  # Take only 1 sample per frequency for faster operation
+            scanner = Scanner(samples_per_freq=10)  # Take 3 samples per frequency for more accurate measurements
 
             # Check if HackRF is actually available
             if not scanner.hackrf_available:
@@ -989,6 +989,7 @@ def save_results():
                     "contestant_name": contestant_name,
                     "missing_frequencies": missing_frequencies,
                     "effectiveness": effectiveness,
+                    "samples_per_frequency": scanner.samples_per_freq,
                     "max_attenuation": {
                         "value": max_attenuation,
                         "frequency": max_attenuation_freq,

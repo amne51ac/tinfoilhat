@@ -665,8 +665,20 @@
                 const result = await response.json();
                 
                 if (result.status === 'success') {
+                    // Add debug logging to see the full response data
+                    console.log("Server response data:", result.data);
+                    
                     // Update the UI with server-calculated values
                     document.getElementById('average-attenuation').textContent = result.data.average_attenuation.toFixed(2);
+                    
+                    // Update samples per frequency from server
+                    if (result.data.samples_per_frequency) {
+                        console.log("Setting samples_per_frequency to:", result.data.samples_per_frequency);
+                        document.getElementById('samples-per-frequency').textContent = result.data.samples_per_frequency;
+                    } else {
+                        console.log("samples_per_frequency not found in server response");
+                    }
+                    
                     document.getElementById('hf-band-att').textContent = result.data.effectiveness.hf_band.toFixed(2);
                     document.getElementById('vhf-band-att').textContent = result.data.effectiveness.vhf_band.toFixed(2);
                     document.getElementById('uhf-band-att').textContent = result.data.effectiveness.uhf_band.toFixed(2);
