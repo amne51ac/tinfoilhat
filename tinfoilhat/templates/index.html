@@ -99,8 +99,9 @@
         
         .chart-container {
             position: relative;
-            height: 400px;
+            height: 350px;
             width: 100%;
+            margin-bottom: 10px;
         }
         
         .message {
@@ -262,19 +263,8 @@
                     </div>
                     <p id="current-freq-text">Measuring at: <span id="current-frequency">0</span> MHz</p>
                 </div>
-                <h2>Test Controls</h2>
-                <div class="form-group">
-                    <label for="contestant_id">Select Contestant:</label>
-                    <select id="contestant_id" name="contestant_id">
-                        <option value="">-- Search or select a team --</option>
-                        {% for contestant in contestants %}
-                            <option value="{{ contestant.id }}">{{ contestant.name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <button id="test-button" onclick="runCompleteTest()">Run Test</button>
+                <div class="form-group" style="margin-top: 5px;">
+                    <button id="test-button" onclick="runCompleteTest()">Run Baseline Test</button>
                     <button id="stop-button" class="button-stop" onclick="stopMeasurement()" style="background-color: #e74c3c; display: none;">Stop Measurement</button>
                 </div>
                 
@@ -327,11 +317,12 @@
             // Update chart labels
             updateChartLabels();
             
-            // Initialize searchable dropdown for contestant selection
-            $('#contestant_id').select2({
+            // Initialize modal contestant selection dropdown
+            $('#modal-contestant-id').select2({
                 placeholder: "Search for a team...",
                 allowClear: true,
                 width: '100%',
+                dropdownParent: $('#continue-modal'),
                 language: {
                     searching: function() {
                         return 'Searching...';
@@ -339,12 +330,6 @@
                     noResults: function() {
                         return 'No teams found';
                     }
-                },
-                templateResult: function(data) {
-                    if (data.loading) {
-                        return 'Searching...';
-                    }
-                    return data.text;
                 }
             });
             
@@ -359,25 +344,50 @@
             });
             
             // Modal functionality
-            const modal = document.getElementById('registration-modal');
-            const openModalBtn = document.getElementById('open-registration-modal');
-            const closeModalBtn = document.querySelector('.close-modal');
+            const registrationModal = document.getElementById('registration-modal');
+            const openRegistrationModalBtn = document.getElementById('open-registration-modal');
+            const closeRegistrationModalBtn = registrationModal.querySelector('.close-modal');
             
             // Open the modal when the button is clicked
-            openModalBtn.addEventListener('click', function() {
-                modal.style.display = 'block';
+            openRegistrationModalBtn.addEventListener('click', function() {
+                registrationModal.style.display = 'block';
             });
             
             // Close the modal when the close button is clicked
-            closeModalBtn.addEventListener('click', function() {
-                modal.style.display = 'none';
+            closeRegistrationModalBtn.addEventListener('click', function() {
+                registrationModal.style.display = 'none';
             });
             
             // Close the modal when clicking outside of it
             window.addEventListener('click', function(event) {
-                if (event.target === modal) {
-                    modal.style.display = 'none';
+                if (event.target === registrationModal) {
+                    registrationModal.style.display = 'none';
                 }
+            });
+            
+            // Set up continue modal functionality
+            const continueModal = document.getElementById('continue-modal');
+            const closeContinueModalBtn = document.getElementById('close-continue-modal');
+            
+            // Close the continue modal when the close button is clicked
+            closeContinueModalBtn.addEventListener('click', function() {
+                continueModal.style.display = 'none';
+            });
+            
+            // Close the continue modal when clicking outside of it
+            window.addEventListener('click', function(event) {
+                if (event.target === continueModal) {
+                    continueModal.style.display = 'none';
+                }
+            });
+            
+            // Set up hat type buttons
+            document.getElementById('classic-hat-button').addEventListener('click', function() {
+                startHatMeasurement('classic');
+            });
+            
+            document.getElementById('hybrid-hat-button').addEventListener('click', function() {
+                startHatMeasurement('hybrid');
             });
         });
         
@@ -480,6 +490,12 @@
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            bottom: 0 // Minimize bottom padding
+                        }
+                    },
                     scales: {
                         x: {
                             title: {
@@ -584,13 +600,6 @@
         
         // Run the complete test flow: baseline followed by hat measurement
         async function runCompleteTest() {
-            const contestantId = document.getElementById('contestant_id').value;
-            
-            if (!contestantId) {
-                alert('Please select a contestant before running the test.');
-                return;
-            }
-            
             if (measurementInProgress) {
                 return;
             }
@@ -652,7 +661,7 @@
             
             // PHASE 2: PROMPT USER TO PLACE HAT
             // -----------------------------
-            statusEl.textContent = 'PHASE 1 COMPLETE! Please place the hat on the measurement device, then click "Continue" to start measuring the hat. You can also re-run the baseline test if needed.';
+            statusEl.textContent = 'PHASE 1 COMPLETE! Please place the hat on the measurement device and select options to continue.';
             
             // Reset measurement in progress flag to allow re-running the baseline
             measurementInProgress = false;
@@ -661,36 +670,46 @@
             document.getElementById('test-button').disabled = false;
             console.log('Baseline completed - Test button re-enabled for rebaselining if needed');
             
-            // Remove any existing continue buttons before creating a new one
-            const oldContinueButtons = document.querySelectorAll('#continue-button');
-            oldContinueButtons.forEach(button => button.remove());
+            // Show the continue modal
+            document.getElementById('continue-modal').style.display = 'block';
+        }
+        
+        // Start hat measurement after user selects hat type and contestant
+        async function startHatMeasurement(hatType) {
+            const modalContestantId = document.getElementById('modal-contestant-id').value;
             
-            // Show continue button and wait for user to click it
-            const continueButton = document.createElement('button');
-            continueButton.textContent = 'Continue to Hat Measurement';
-            continueButton.className = 'button-secondary';
-            continueButton.id = 'continue-button';
-            continueButton.style.marginTop = '10px';
-            statusEl.parentNode.insertBefore(continueButton, statusEl.nextSibling);
+            if (!modalContestantId) {
+                alert('Please select a contestant before continuing.');
+                return;
+            }
             
-            await new Promise(resolve => {
-                continueButton.onclick = resolve;
-            });
+            // Store contestant ID for saving results later
+            window.currentContestantId = modalContestantId;
             
-            // Remove the continue button
-            continueButton.remove();
+            // Close the continue modal
+            document.getElementById('continue-modal').style.display = 'none';
+            
+            // Get status element reference
+            const statusEl = document.getElementById('test-status');
             
             // PHASE 3: HAT MEASUREMENT
             // -----------------------------
-            // Disable the test button again during hat measurement
+            // Disable the test button during hat measurement
             document.getElementById('test-button').disabled = true;
             
+            // Update status message with hat type
             currentTestType = 'hat';
-            statusEl.textContent = 'PHASE 2: Measuring hat attenuation...';
+            statusEl.textContent = `PHASE 2: Measuring ${hatType} hat attenuation...`;
+            
+            // Store hat type for saving with results
+            window.currentHatType = hatType;
             
             // Reset progress bar
             document.getElementById('measurement-progress').value = 0;
             document.getElementById('progress-text').textContent = '0%';
+            
+            // Set measurement in progress flag
+            measurementInProgress = true;
             
             // Measure hat
             await measureAllFrequencies('hat');
@@ -873,7 +892,7 @@
         
         // Save test results to database
         async function saveResults() {
-            const contestantId = document.getElementById('contestant_id').value;
+            const contestantId = window.currentContestantId;
             const statusEl = document.getElementById('test-status');
             
             if (!contestantId) {
@@ -889,7 +908,8 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        contestant_id: contestantId
+                        contestant_id: contestantId,
+                        hat_type: window.currentHatType || 'classic' // Include hat type in the saved data
                     })
                 });
                 
@@ -988,27 +1008,28 @@
         
         // Refresh the contestant dropdown with new data
         function refreshContestantDropdown(contestants) {
-            const dropdown = document.getElementById('contestant_id');
-            const currentValue = dropdown.value;
+            // Update modal dropdown
+            const modalDropdown = document.getElementById('modal-contestant-id');
+            const modalCurrentValue = modalDropdown.value;
             
             // Store current selection
-            dropdown.innerHTML = '<option value="">-- Search or select a team --</option>';
+            modalDropdown.innerHTML = '<option value="">-- Search or select a team --</option>';
             
             // Add all contestants
             contestants.forEach(contestant => {
                 const option = document.createElement('option');
                 option.value = contestant.id;
                 option.textContent = contestant.name;
-                dropdown.appendChild(option);
+                modalDropdown.appendChild(option);
             });
             
             // Restore previous selection if it still exists
-            if (currentValue) {
-                dropdown.value = currentValue;
+            if (modalCurrentValue) {
+                modalDropdown.value = modalCurrentValue;
             }
             
             // Refresh Select2 to show the changes
-            $('#contestant_id').trigger('change');
+            $('#modal-contestant-id').trigger('change');
         }
     </script>
     
@@ -1037,6 +1058,39 @@
                 <button type="submit">Register New Contestant</button>
             </form>
             <div id="registration-messages" class="message info hidden"></div>
+        </div>
+    </div>
+    
+    <!-- Continue to Hat Measurement Modal -->
+    <div id="continue-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="close-continue-modal">&times;</span>
+            <h2>Continue to Hat Measurement</h2>
+            <div class="message info" style="margin-bottom: 20px;">
+                <strong>Important:</strong> Please place the hat on the measurement device before continuing.
+            </div>
+            
+            <div class="form-group">
+                <label for="modal-contestant-id">Select Contestant:</label>
+                <select id="modal-contestant-id" name="modal-contestant-id">
+                    <option value="">-- Search or select a team --</option>
+                    {% for contestant in contestants %}
+                        <option value="{{ contestant.id }}">{{ contestant.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <h3>Select Hat Type:</h3>
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button id="classic-hat-button" class="button-secondary" style="flex: 1; padding: 15px; background-color: #e67e22; transition: transform 0.2s, box-shadow 0.2s;">
+                    <strong>Classic</strong><br>
+                    <small>Tinfoil Only</small>
+                </button>
+                <button id="hybrid-hat-button" class="button-secondary" style="flex: 1; padding: 15px; background-color: #8e44ad; transition: transform 0.2s, box-shadow 0.2s;">
+                    <strong>Hybrid</strong><br>
+                    <small>Tinfoil Plus Other Materials</small>
+                </button>
+            </div>
         </div>
     </div>
 </body>
