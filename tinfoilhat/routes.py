@@ -181,22 +181,36 @@ def index():
     # Load any cached measurements into the app config
     load_measurements_to_config()
 
+    # Get hat_type filter parameter
+    hat_type = request.args.get("hat_type")
+    
     # Get leaderboard data - only the best scores per contestant
     db = get_db()
-    leaderboard = db.execute(
-        """
-        SELECT c.name, t.average_attenuation, t.test_date
+    
+    # Build the query based on filter
+    query = """
+        SELECT c.name, t.average_attenuation, t.test_date, t.hat_type
         FROM contestant c
         JOIN test_result t ON c.id = t.contestant_id
         WHERE t.is_best_score = 1
-        ORDER BY t.average_attenuation DESC
-        """
-    ).fetchall()
+    """
+    
+    # Add hat_type filter if provided
+    params = []
+    if hat_type and hat_type.lower() in ['classic', 'hybrid']:
+        query += " AND t.hat_type = ?"
+        params.append(hat_type.lower())
+    
+    # Add order by clause
+    query += " ORDER BY t.average_attenuation DESC"
+    
+    # Execute the query
+    leaderboard = db.execute(query, params).fetchall()
 
     # Get all contestants for the dropdown
     contestants = db.execute("SELECT id, name FROM contestant").fetchall()
 
-    return render_template("index.html", leaderboard=leaderboard, contestants=contestants)
+    return render_template("index.html", leaderboard=leaderboard, contestants=contestants, active_filter=hat_type)
 
 
 @bp.route("/leaderboard", methods=["GET"])
@@ -207,16 +221,30 @@ def get_leaderboard():
     :return: JSON response with leaderboard data and contestants list
     :rtype: Response
     """
+    # Get hat_type filter parameter
+    hat_type = request.args.get("hat_type")
+    
     db = get_db()
-    leaderboard = db.execute(
-        """
-        SELECT c.name, t.average_attenuation, t.test_date
+    
+    # Build the query based on filter
+    query = """
+        SELECT c.name, t.average_attenuation, t.test_date, t.hat_type
         FROM contestant c
         JOIN test_result t ON c.id = t.contestant_id
         WHERE t.is_best_score = 1
-        ORDER BY t.average_attenuation DESC
-        """
-    ).fetchall()
+    """
+    
+    # Add hat_type filter if provided
+    params = []
+    if hat_type and hat_type.lower() in ['classic', 'hybrid']:
+        query += " AND t.hat_type = ?"
+        params.append(hat_type.lower())
+    
+    # Add order by clause
+    query += " ORDER BY t.average_attenuation DESC"
+    
+    # Execute the query
+    leaderboard = db.execute(query, params).fetchall()
 
     # Convert to list of dictionaries for JSON serialization
     leaderboard_data = []
@@ -227,6 +255,7 @@ def get_leaderboard():
                 "name": row["name"],
                 "average_attenuation": row["average_attenuation"],
                 "test_date": row["test_date"],
+                "hat_type": row["hat_type"] or "classic"  # Default to 'classic' if NULL
             }
         )
 
@@ -500,13 +529,16 @@ def measure_hat():
 
         previous_best_score = best_score_result["best"] if has_previous_entries else None
 
+        # Get hat type from request
+        hat_type = request.form.get("hat_type", "classic")
+
         # Add test result
         cursor = db.execute(
             """
-            INSERT INTO test_result (contestant_id, average_attenuation, is_best_score)
-            VALUES (?, ?, ?)
+            INSERT INTO test_result (contestant_id, average_attenuation, is_best_score, hat_type)
+            VALUES (?, ?, ?, ?)
             """,
-            (contestant_id, average_attenuation, 1 if is_best else 0),
+            (contestant_id, average_attenuation, 1 if is_best else 0, hat_type),
         )
         test_result_id = cursor.lastrowid
 
@@ -942,13 +974,16 @@ def save_results():
 
         previous_best_score = best_score_result["best"] if has_previous_entries else None
 
+        # Get hat type from request
+        hat_type = request.json.get("hat_type", "classic")
+
         # Add test result
         cursor = db.execute(
             """
-            INSERT INTO test_result (contestant_id, average_attenuation, is_best_score)
-            VALUES (?, ?, ?)
+            INSERT INTO test_result (contestant_id, average_attenuation, is_best_score, hat_type)
+            VALUES (?, ?, ?, ?)
             """,
-            (contestant_id, average_attenuation, 1 if is_best else 0),
+            (contestant_id, average_attenuation, 1 if is_best else 0, hat_type),
         )
         test_result_id = cursor.lastrowid
 

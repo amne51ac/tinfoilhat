@@ -64,6 +64,23 @@ def ensure_measurement_cache_exists():
         db.commit()
 
 
+def ensure_hat_type_column_exists():
+    """
+    Ensure the hat_type column exists in the test_result table.
+    This is a migration for existing databases.
+    """
+    db = get_db()
+    
+    # Check if hat_type column exists in test_result table
+    try:
+        db.execute("SELECT hat_type FROM test_result LIMIT 1")
+    except Exception:
+        # Add hat_type column with default value 'classic'
+        db.execute("ALTER TABLE test_result ADD COLUMN hat_type TEXT DEFAULT 'classic'")
+        db.commit()
+        print("Added hat_type column to test_result table")
+
+
 def init_db():
     """
     Initialize the database with schema.
@@ -76,6 +93,9 @@ def init_db():
 
     # Make sure the measurement_cache table exists
     ensure_measurement_cache_exists()
+    
+    # Make sure the hat_type column exists in test_result
+    ensure_hat_type_column_exists()
 
 
 @click.command("init-db")

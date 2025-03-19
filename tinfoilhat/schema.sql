@@ -23,6 +23,7 @@ CREATE TABLE test_result (
   test_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   average_attenuation REAL NOT NULL,
   is_best_score BOOLEAN NOT NULL DEFAULT 0,
+  hat_type TEXT DEFAULT 'classic',
   FOREIGN KEY (contestant_id) REFERENCES contestant (id)
 );
 

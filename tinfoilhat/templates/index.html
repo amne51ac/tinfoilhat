@@ -110,6 +110,26 @@
             margin-bottom: 15px;
         }
         
+        .filter-button {
+            background-color: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .filter-button:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .filter-active {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
         .success {
             background-color: #d4edda;
             color: #155724;
@@ -223,11 +243,22 @@
                     <h2>Leaderboard</h2>
                     <button id="open-registration-modal" class="button-secondary">Add Contestant</button>
                 </div>
+                
+                <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div class="filter-label" style="display: flex; align-items: center; margin-right: 5px;">
+                        <strong>Filter by hat type:</strong>
+                    </div>
+                    <button id="filter-all" class="filter-button {% if not active_filter %}filter-active{% endif %}" data-filter="all">All Types</button>
+                    <button id="filter-classic" class="filter-button {% if active_filter == 'classic' %}filter-active{% endif %}" data-filter="classic">Classic</button>
+                    <button id="filter-hybrid" class="filter-button {% if active_filter == 'hybrid' %}filter-active{% endif %}" data-filter="hybrid">Hybrid</button>
+                </div>
+                
                 <table id="leaderboard">
                     <thead>
                         <tr>
                             <th>Rank</th>
                             <th>Contestant Name</th>
+                            <th>Hat Type</th>
                             <th>Attenuation Score</th>
                             <th>Test Date</th>
                         </tr>
@@ -237,10 +268,16 @@
                             <tr>
                                 <td>{{ loop.index }}</td>
                                 <td>{{ contestant.name }}</td>
+                                <td>{{ contestant.hat_type|title }}</td>
                                 <td>{{ "%.2f"|format(contestant.average_attenuation) }}</td>
                                 <td>{{ contestant.test_date }}</td>
                             </tr>
                         {% endfor %}
+                        {% if leaderboard|length == 0 %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">No results found with the current filter. <a href="/" style="color: #3498db;">Clear filter</a></td>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -272,6 +309,7 @@
                 <div id="test-results" class="hidden">
                     <h3>Test Results:</h3>
                     <p><strong>Average Attenuation:</strong> <span id="average-attenuation">0.00</span> dB</p>
+                    <p><strong>Hat Type:</strong> <span id="hat-type">Classic</span></p>
                     <p><strong>Samples per Frequency:</strong> <span id="samples-per-frequency">1</span></p>
 
                     <div>
@@ -335,6 +373,25 @@
             
             // Fetch the initial leaderboard data
             updateLeaderboard();
+            
+            // Set up leaderboard filter buttons
+            document.querySelectorAll('.filter-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    document.querySelectorAll('.filter-button').forEach(btn => {
+                        btn.classList.remove('filter-active');
+                    });
+                    
+                    // Add active class to clicked button
+                    this.classList.add('filter-active');
+                    
+                    // Get filter value
+                    const filterValue = this.getAttribute('data-filter');
+                    
+                    // Update leaderboard with filter
+                    updateLeaderboard(null, filterValue);
+                });
+            });
             
             // Add event listener for contestant registration form
             const registrationForm = document.getElementById('new-contestant-form');
@@ -936,6 +993,10 @@
                     // Update the UI with server-calculated values
                     document.getElementById('average-attenuation').textContent = result.data.average_attenuation.toFixed(2);
                     
+                    // Display hat type in results
+                    const hatType = window.currentHatType || 'classic';
+                    document.getElementById('hat-type').textContent = hatType.charAt(0).toUpperCase() + hatType.slice(1);
+                    
                     // Update samples per frequency from server
                     if (result.data.samples_per_frequency) {
                         console.log("Setting samples_per_frequency to:", result.data.samples_per_frequency);
@@ -986,30 +1047,50 @@
         }
         
         // Fetch and update the leaderboard
-        async function updateLeaderboard(highlightTeam = null) {
+        async function updateLeaderboard(highlightTeam = null, hatTypeFilter = null) {
             try {
-                const response = await fetch('/leaderboard');
+                // Build URL with filter if specified
+                let url = '/leaderboard';
+                if (hatTypeFilter && hatTypeFilter !== 'all') {
+                    url += `?hat_type=${hatTypeFilter}`;
+                }
+                
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 const leaderboardBody = document.querySelector('#leaderboard tbody');
                 leaderboardBody.innerHTML = ''; // Clear existing rows
                 
-                data.leaderboard.forEach(entry => {
-                    const row = document.createElement('tr');
-                    
-                    // Add highlight class if this is the team we just updated
-                    if (highlightTeam && entry.name === highlightTeam) {
-                        row.classList.add('highlight-row');
-                    }
-                    
-                    row.innerHTML = `
-                        <td>${entry.rank}</td>
-                        <td>${entry.name}</td>
-                        <td>${entry.average_attenuation.toFixed(2)}</td>
-                        <td>${entry.test_date}</td>
+                if (data.leaderboard.length === 0) {
+                    // No results found
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.innerHTML = `
+                        <td colspan="5" style="text-align: center; padding: 20px;">
+                            No results found with the current filter. 
+                            <a href="javascript:void(0)" onclick="resetFilter()" style="color: #3498db;">Clear filter</a>
+                        </td>
                     `;
-                    leaderboardBody.appendChild(row);
-                });
+                    leaderboardBody.appendChild(emptyRow);
+                } else {
+                    // Add each leaderboard entry
+                    data.leaderboard.forEach(entry => {
+                        const row = document.createElement('tr');
+                        
+                        // Add highlight class if this is the team we just updated
+                        if (highlightTeam && entry.name === highlightTeam) {
+                            row.classList.add('highlight-row');
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${entry.rank}</td>
+                            <td>${entry.name}</td>
+                            <td>${entry.hat_type.charAt(0).toUpperCase() + entry.hat_type.slice(1)}</td>
+                            <td>${entry.average_attenuation.toFixed(2)}</td>
+                            <td>${entry.test_date}</td>
+                        `;
+                        leaderboardBody.appendChild(row);
+                    });
+                }
                 
                 // If the data includes updated contestants list, refresh the dropdown
                 if (data.contestants) {
@@ -1018,6 +1099,18 @@
             } catch (error) {
                 console.error('Error updating leaderboard:', error);
             }
+        }
+        
+        // Reset the filter to show all hat types
+        function resetFilter() {
+            // Set active filter to 'all'
+            document.querySelectorAll('.filter-button').forEach(btn => {
+                btn.classList.remove('filter-active');
+            });
+            document.getElementById('filter-all').classList.add('filter-active');
+            
+            // Update leaderboard without filter
+            updateLeaderboard();
         }
         
         // Refresh the contestant dropdown with new data
