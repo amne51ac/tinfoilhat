@@ -181,6 +181,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            transition: background-color 0.1s ease, color 0.1s ease;
         }
         
         .filter-button:hover {
@@ -188,9 +189,19 @@
         }
         
         .filter-active {
-            background-color: var(--button-color);
-            color: white;
-            border-color: var(--button-hover);
+            background-color: var(--button-color) !important;
+            color: white !important;
+            border-color: var(--button-hover) !important;
+        }
+        
+        /* Override browser focus styles for filter buttons */
+        .filter-button:focus {
+            outline: none;
+        }
+        
+        /* Ensure active state doesn't interfere with our custom active class */
+        .filter-button:active:not(.filter-active) {
+            background-color: var(--filter-button-hover);
         }
         
         .success {
@@ -238,6 +249,39 @@
             border-radius: 10px;
             margin-left: 5px;
             vertical-align: middle;
+        }
+        
+        /* Hat type badges */
+        .hat-type-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            color: white;
+        }
+        
+        .hat-type-classic {
+            background-color: var(--button-color);
+        }
+        
+        .hat-type-hybrid {
+            background-color: #e58e14;
+        }
+        
+        [data-theme="dark"] .hat-type-hybrid {
+            background-color: #c67812;
+        }
+        
+        /* Filter indicator styles */
+        #filter-indicator {
+            font-size: 14px;
+            font-weight: normal;
+            color: var(--text-color);
+            opacity: 0.8;
+            margin-left: 10px;
+            font-style: italic;
         }
         
         /* Additional styles for Select2 integration */
@@ -448,7 +492,7 @@
             <!-- Left Side: Leaderboard and Registration -->
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h2>Leaderboard</h2>
+                    <h2>Leaderboard <span id="filter-indicator" style="font-size: 14px; font-weight: normal;"></span></h2>
                     <button id="open-registration-modal" class="button-secondary">Add Contestant</button>
                 </div>
                 
@@ -527,12 +571,6 @@
                         <p><strong>UHF (300 MHz-3 GHz):</strong> <span id="uhf-band-att">0.00</span> dB</p>
                         <p><strong>SHF (3-6 GHz):</strong> <span id="shf-band-att">0.00</span> dB</p>
                     </div>
-
-                    <div>
-                        <h4>Key Frequencies</h4>
-                        <p><strong>Best Performance at:</strong> <span id="max-freq">0.00</span> MHz (<span id="max-att">0.00</span> dB)</p>
-                        <p><strong>Worst Performance at:</strong> <span id="min-freq">0.00</span> MHz (<span id="min-att">0.00</span> dB)</p>
-                    </div>
                     
                     <p id="best-score-message" class="message success hidden">This is the best score for this team!</p>
                 </div>
@@ -592,7 +630,10 @@
             
             // Set up leaderboard filter buttons
             document.querySelectorAll('.filter-button').forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', function(e) {
+                    // Prevent default behavior to avoid focus issues
+                    e.preventDefault();
+                    
                     // Remove active class from all buttons
                     document.querySelectorAll('.filter-button').forEach(btn => {
                         btn.classList.remove('filter-active');
@@ -601,13 +642,27 @@
                     // Add active class to clicked button
                     this.classList.add('filter-active');
                     
+                    // Force browser repaint to ensure button color changes immediately
+                    // The following techniques help force an immediate repaint
+                    this.offsetHeight; // Force reflow
+                    window.getComputedStyle(this).backgroundColor; // Force style calculation
+                    
                     // Get filter value
                     const filterValue = this.getAttribute('data-filter');
                     
+                    // Update filter indicator text
+                    updateFilterIndicator(filterValue);
+                    
                     // Update leaderboard with filter
                     updateLeaderboard(null, filterValue);
+                    
+                    // Blur the button to remove focus
+                    this.blur();
                 });
             });
+            
+            // Initialize filter indicator
+            updateFilterIndicator('all');
             
             // Add event listener for contestant registration form
             const registrationForm = document.getElementById('new-contestant-form');
@@ -1335,13 +1390,16 @@
                     emptyRow.innerHTML = `
                         <td colspan="5" style="text-align: center; padding: 20px;">
                             No results found with the current filter. 
-                            <a href="javascript:void(0)" onclick="resetFilter()" style="color: #3498db;">Clear filter</a>
+                            <a href="javascript:void(0)" onclick="resetFilter()" style="color: var(--button-color);">Clear filter</a>
                         </td>
                     `;
                     leaderboardBody.appendChild(emptyRow);
                 } else {
+                    // Sort entries by attenuation (highest first)
+                    data.leaderboard.sort((a, b) => b.average_attenuation - a.average_attenuation);
+                    
                     // Add each leaderboard entry
-                    data.leaderboard.forEach(entry => {
+                    data.leaderboard.forEach((entry, index) => {
                         const row = document.createElement('tr');
                         
                         // Check if this is the latest score by contestant name and hat type
@@ -1350,7 +1408,7 @@
                         
                         // Add highlight class if this is the team we just updated
                         if (highlightTeam && entry.name === highlightTeam && 
-                            (!latestHatType || latestHatType === entry.hat_type)) {
+                            (hatTypeFilter === 'all' || !latestHatType || latestHatType === entry.hat_type)) {
                             row.classList.add('highlight-row');
                         }
                         
@@ -1364,10 +1422,16 @@
                         // Add "Latest" badge if this is the latest contestant
                         const latestBadge = isLatest ? `<span class="latest-badge">Latest</span>` : '';
                         
+                        // Create hat type badge
+                        const hatTypeBadge = `<span class="hat-type-badge hat-type-${entry.hat_type}">${entry.hat_type.charAt(0).toUpperCase() + entry.hat_type.slice(1)}</span>`;
+                        
+                        // Calculate actual rank (index + 1)
+                        const rank = index + 1;
+                        
                         row.innerHTML = `
-                            <td>${entry.rank}</td>
+                            <td>${rank}</td>
                             <td>${entry.name} ${latestBadge}</td>
-                            <td>${entry.hat_type.charAt(0).toUpperCase() + entry.hat_type.slice(1)}</td>
+                            <td>${hatTypeBadge}</td>
                             <td>${entry.average_attenuation.toFixed(2)}</td>
                             <td>${entry.test_date}</td>
                         `;
@@ -1384,6 +1448,19 @@
             }
         }
         
+        // Function to update filter indicator text
+        function updateFilterIndicator(filterValue) {
+            const indicator = document.getElementById('filter-indicator');
+            
+            if (filterValue === 'all' || !filterValue) {
+                indicator.textContent = '(Showing All Types)';
+            } else if (filterValue === 'classic') {
+                indicator.textContent = '(Classic Hats Only)';
+            } else if (filterValue === 'hybrid') {
+                indicator.textContent = '(Hybrid Hats Only)';
+            }
+        }
+        
         // Reset the filter to show all hat types
         function resetFilter() {
             // Set active filter to 'all'
@@ -1391,6 +1468,9 @@
                 btn.classList.remove('filter-active');
             });
             document.getElementById('filter-all').classList.add('filter-active');
+            
+            // Update filter indicator
+            updateFilterIndicator('all');
             
             // Update leaderboard without filter, but maintain latest highlighting
             // Pass null as highlightTeam to make it use the stored latest contestant

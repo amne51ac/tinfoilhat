@@ -223,25 +223,55 @@ def get_leaderboard():
     """
     # Get hat_type filter parameter
     hat_type = request.args.get("hat_type")
+    # Get show_all_types parameter
+    show_all_types = request.args.get("show_all_types") == "true"
     
     db = get_db()
     
     # Build the query based on filter
-    query = """
-        SELECT c.name, t.average_attenuation, t.test_date, t.hat_type
-        FROM contestant c
-        JOIN test_result t ON c.id = t.contestant_id
-        WHERE t.is_best_score = 1
-    """
-    
-    # Add hat_type filter if provided
-    params = []
-    if hat_type and hat_type.lower() in ['classic', 'hybrid']:
-        query += " AND t.hat_type = ?"
-        params.append(hat_type.lower())
-    
-    # Add order by clause
-    query += " ORDER BY t.average_attenuation DESC"
+    if show_all_types and not hat_type:
+        # Show both classic and hybrid best scores for each contestant
+        query = """
+            SELECT c.name, t.average_attenuation, t.test_date, t.hat_type
+            FROM contestant c
+            JOIN (
+                SELECT contestant_id, MAX(average_attenuation) as max_att, hat_type
+                FROM test_result
+                GROUP BY contestant_id, hat_type
+            ) best_scores ON c.id = best_scores.contestant_id
+            JOIN test_result t ON c.id = t.contestant_id 
+                AND t.average_attenuation = best_scores.max_att
+                AND t.hat_type = best_scores.hat_type
+            ORDER BY t.average_attenuation DESC
+        """
+        params = []
+    elif hat_type and hat_type.lower() in ['classic', 'hybrid']:
+        # Show best scores for the selected hat type for each contestant
+        query = """
+            SELECT c.name, t.average_attenuation, t.test_date, t.hat_type
+            FROM contestant c
+            JOIN (
+                SELECT contestant_id, MAX(average_attenuation) as max_att
+                FROM test_result
+                WHERE hat_type = ?
+                GROUP BY contestant_id
+            ) best_scores ON c.id = best_scores.contestant_id
+            JOIN test_result t ON c.id = t.contestant_id 
+                AND t.average_attenuation = best_scores.max_att
+                AND t.hat_type = ?
+            ORDER BY t.average_attenuation DESC
+        """
+        params = [hat_type.lower(), hat_type.lower()]
+    else:
+        # Original query - showing only best scores regardless of hat type
+        query = """
+            SELECT c.name, t.average_attenuation, t.test_date, t.hat_type
+            FROM contestant c
+            JOIN test_result t ON c.id = t.contestant_id
+            WHERE t.is_best_score = 1
+            ORDER BY t.average_attenuation DESC
+        """
+        params = []
     
     # Execute the query
     leaderboard = db.execute(query, params).fetchall()
