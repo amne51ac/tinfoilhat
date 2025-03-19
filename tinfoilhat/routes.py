@@ -183,10 +183,10 @@ def index():
 
     # Get hat_type filter parameter
     hat_type = request.args.get("hat_type")
-    
+
     # Get leaderboard data - only the best scores per contestant
     db = get_db()
-    
+
     # Build the query based on filter
     query = """
         SELECT c.name, t.average_attenuation, t.test_date, t.hat_type
@@ -194,16 +194,16 @@ def index():
         JOIN test_result t ON c.id = t.contestant_id
         WHERE t.is_best_score = 1
     """
-    
+
     # Add hat_type filter if provided
     params = []
-    if hat_type and hat_type.lower() in ['classic', 'hybrid']:
+    if hat_type and hat_type.lower() in ["classic", "hybrid"]:
         query += " AND t.hat_type = ?"
         params.append(hat_type.lower())
-    
+
     # Add order by clause
     query += " ORDER BY t.average_attenuation DESC"
-    
+
     # Execute the query
     leaderboard = db.execute(query, params).fetchall()
 
@@ -225,9 +225,9 @@ def get_leaderboard():
     hat_type = request.args.get("hat_type")
     # Get show_all_types parameter
     show_all_types = request.args.get("show_all_types") == "true"
-    
+
     db = get_db()
-    
+
     # Build the query based on filter
     if show_all_types and not hat_type:
         # Show both classic and hybrid best scores for each contestant
@@ -239,13 +239,13 @@ def get_leaderboard():
                 FROM test_result
                 GROUP BY contestant_id, hat_type
             ) best_scores ON c.id = best_scores.contestant_id
-            JOIN test_result t ON c.id = t.contestant_id 
+            JOIN test_result t ON c.id = t.contestant_id
                 AND t.average_attenuation = best_scores.max_att
                 AND t.hat_type = best_scores.hat_type
             ORDER BY t.average_attenuation DESC
         """
         params = []
-    elif hat_type and hat_type.lower() in ['classic', 'hybrid']:
+    elif hat_type and hat_type.lower() in ["classic", "hybrid"]:
         # Show best scores for the selected hat type for each contestant
         query = """
             SELECT c.name, t.average_attenuation, t.test_date, t.hat_type
@@ -256,7 +256,7 @@ def get_leaderboard():
                 WHERE hat_type = ?
                 GROUP BY contestant_id
             ) best_scores ON c.id = best_scores.contestant_id
-            JOIN test_result t ON c.id = t.contestant_id 
+            JOIN test_result t ON c.id = t.contestant_id
                 AND t.average_attenuation = best_scores.max_att
                 AND t.hat_type = ?
             ORDER BY t.average_attenuation DESC
@@ -272,7 +272,7 @@ def get_leaderboard():
             ORDER BY t.average_attenuation DESC
         """
         params = []
-    
+
     # Execute the query
     leaderboard = db.execute(query, params).fetchall()
 
@@ -285,7 +285,7 @@ def get_leaderboard():
                 "name": row["name"],
                 "average_attenuation": row["average_attenuation"],
                 "test_date": row["test_date"],
-                "hat_type": row["hat_type"] or "classic"  # Default to 'classic' if NULL
+                "hat_type": row["hat_type"] or "classic",  # Default to 'classic' if NULL
             }
         )
 
@@ -326,10 +326,8 @@ def add_contestant():
 
     # Check for duplicate contestant names
     db = get_db()
-    existing_contestant = db.execute(
-        "SELECT id FROM contestant WHERE name = ?", (name,)
-    ).fetchone()
-    
+    existing_contestant = db.execute("SELECT id FROM contestant WHERE name = ?", (name,)).fetchone()
+
     if existing_contestant:
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
             return jsonify({"status": "error", "message": f"A contestant with the name '{name}' already exists."}), 400

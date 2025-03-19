@@ -11,23 +11,23 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from tinfoilhat.app import create_app
-from tinfoilhat.db import get_db, ensure_hat_type_column_exists
+from tinfoilhat.db import ensure_hat_type_column_exists
 
 
 def migrate_database():
     """Run database migrations."""
     app = create_app()
-    
+
     with app.app_context():
-        db = get_db()
-        
+        # db = get_db()  # Removed unused variable
+
         print("Checking for required migrations...")
-        
+
         # Add hat_type column to test_result table
         ensure_hat_type_column_exists()
-        
+
         print("Database migration completed successfully!")
 
 
 if __name__ == "__main__":
-    migrate_database() 
+    migrate_database()

@@ -70,7 +70,7 @@ def ensure_hat_type_column_exists():
     This is a migration for existing databases.
     """
     db = get_db()
-    
+
     # Check if hat_type column exists in test_result table
     try:
         db.execute("SELECT hat_type FROM test_result LIMIT 1")
@@ -93,7 +93,7 @@ def init_db():
 
     # Make sure the measurement_cache table exists
     ensure_measurement_cache_exists()
-    
+
     # Make sure the hat_type column exists in test_result
     ensure_hat_type_column_exists()
 
