@@ -507,7 +507,8 @@
                                     // Display frequency with label if available
                                     const freq = allFrequencies[index];
                                     if (freq && frequencyLabels[freq]) {
-                                        return frequencyLabels[freq].name;
+                                        const freqMHz = (freq / 1e6).toFixed(0);
+                                        return `${freqMHz} (${frequencyLabels[freq].name})`;
                                     }
                                     return (freq / 1e6).toFixed(2);
                                 }
@@ -537,18 +538,14 @@
                                 title: function(tooltipItems) {
                                     const freq = allFrequencies[tooltipItems[0].dataIndex];
                                     const freqMHz = (freq / 1e6).toFixed(2);
-                                    let title = `${freqMHz} MHz`;
                                     
                                     // Add label name and description if available
                                     if (freq && frequencyLabels[freq]) {
                                         const label = frequencyLabels[freq];
-                                        title += ` - ${label.name}`;
-                                        if (label.description) {
-                                            title += ` (${label.description})`;
-                                        }
+                                        return `${freqMHz} MHz (${label.name})${label.description ? ` - ${label.description}` : ''}`;
                                     }
                                     
-                                    return title;
+                                    return `${freqMHz} MHz`;
                                 }
                             }
                         }
@@ -589,7 +586,8 @@
             const freqLabels = allFrequencies.map(f => {
                 // Use label if available, otherwise just display frequency
                 if (frequencyLabels[f]) {
-                    return `${(f / 1e6).toFixed(2)} - ${frequencyLabels[f].name}`;
+                    const freqMHz = (f / 1e6).toFixed(0);
+                    return `${freqMHz} (${frequencyLabels[f].name})`;
                 }
                 return (f / 1e6).toFixed(2);
             });
