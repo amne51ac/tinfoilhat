@@ -843,6 +843,22 @@ def measure_frequency():
         if request.json.get("contestant_id"):
             measurement_data["contestant_id"] = request.json.get("contestant_id")
             
+            # Get contestant name and hat type if contestant_id is provided
+            if measurement_type == 'hat':
+                try:
+                    db = get_db()
+                    contestant = db.execute(
+                        "SELECT name FROM contestant WHERE id = ?", 
+                        (request.json.get("contestant_id"),)
+                    ).fetchone()
+                    
+                    if contestant:
+                        measurement_data["contestant_name"] = contestant["name"]
+                        # Use the hat_type from the request if available, otherwise use from database
+                        measurement_data["hat_type"] = request.json.get("hat_type", "classic")
+                except Exception as e:
+                    current_app.logger.error(f"Error fetching contestant info: {str(e)}")
+            
         # Update the global variable to notify SSE clients
         latest_frequency_measurement = measurement_data
 
@@ -1392,12 +1408,19 @@ def billboard():
                 'attenuations': attenuations
             }
     
+    # Get frequency labels from scanner
+    frequency_labels = {}
+    scanner = get_scanner()
+    if scanner and hasattr(scanner, "frequency_labels"):
+        frequency_labels = scanner.frequency_labels
+    
     return render_template(
         "billboard.html",
         recent_test=recent_test,
         leaderboard_classic=leaderboard_classic,
         leaderboard_hybrid=leaderboard_hybrid,
-        spectrum_data=spectrum_data
+        spectrum_data=spectrum_data,
+        frequency_labels=frequency_labels
     )
 
 
@@ -1537,22 +1560,29 @@ def billboard_updates():
                 'max_attenuation': max_attenuation,
                 'min_attenuation': min_attenuation
             }
-        
-        # Prepare data
-        data = {
-            'last_id': new_test["max_id"],
-            'new_test': {
-                'name': new_test["name"],
-                'hat_type': new_test["hat_type"],
-                'attenuation': new_test["attenuation"],
-                'date': formatted_date
-            },
-            'leaderboard_classic': leaderboard_classic,
-            'leaderboard_hybrid': leaderboard_hybrid,
-            'spectrum_data': spectrum_data
-        }
-        
-        return jsonify(data)
+            
+            # Get frequency labels from scanner
+            frequency_labels = {}
+            scanner = get_scanner()
+            if scanner and hasattr(scanner, "frequency_labels"):
+                frequency_labels = scanner.frequency_labels
+            
+            # Prepare and send the event data
+            event_data = {
+                'last_id': new_test["max_id"],
+                'new_test': {
+                    'name': new_test["name"],
+                    'hat_type': new_test["hat_type"],
+                    'attenuation': new_test["attenuation"],
+                    'date': formatted_date,
+                },
+                'leaderboard_classic': leaderboard_classic,
+                'leaderboard_hybrid': leaderboard_hybrid,
+                'spectrum_data': spectrum_data,
+                'frequency_labels': frequency_labels
+            }
+            
+            return jsonify(event_data)
         
     # For SSE connections:
     def generate():
@@ -1646,25 +1676,29 @@ def billboard_updates():
                         'min_attenuation': min_attenuation
                     }
                     
-                    # Update last_id for the next iteration
-                    last_id = new_test["max_id"]
+                    # Get frequency labels from scanner
+                    frequency_labels = {}
+                    scanner = get_scanner()
+                    if scanner and hasattr(scanner, "frequency_labels"):
+                        frequency_labels = scanner.frequency_labels
                     
-                    # Prepare data
-                    data = {
+                    # Prepare and send the event data
+                    event_data = {
                         'last_id': new_test["max_id"],
                         'new_test': {
                             'name': new_test["name"],
                             'hat_type': new_test["hat_type"],
                             'attenuation': new_test["attenuation"],
-                            'date': formatted_date
+                            'date': formatted_date,
                         },
                         'leaderboard_classic': leaderboard_classic,
                         'leaderboard_hybrid': leaderboard_hybrid,
-                        'spectrum_data': spectrum_data
+                        'spectrum_data': spectrum_data,
+                        'frequency_labels': frequency_labels
                     }
                     
                     # Convert to JSON and yield SSE format - use the DateTimeEncoder for datetime objects
-                    yield f'data: {json.dumps(data, cls=DateTimeEncoder)}\n\n'
+                    yield f'data: {json.dumps(event_data, cls=DateTimeEncoder)}\n\n'
                     
             # Add a delay to avoid hammering the database
             time.sleep(1)
