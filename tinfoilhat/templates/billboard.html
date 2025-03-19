@@ -263,8 +263,39 @@
                 <div class="chart-container">
                     <canvas id="powerChart"></canvas>
                 </div>
-                <div class="chart-container">
-                    <canvas id="attenuationChart"></canvas>
+                <div id="test-details" style="margin-top: 15px; padding: 10px; background-color: rgba(30, 30, 30, 0.6); border-radius: 5px;">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.2em; color: #ffd700;">Frequency Band Effectiveness</h3>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-top: 5px;">
+                                <div>
+                                    <span style="font-weight: bold; color: #aaa;">HF (2-30 MHz):</span>
+                                    <span id="hf-band-att">-</span> dB
+                                </div>
+                                <div>
+                                    <span style="font-weight: bold; color: #aaa;">VHF (30-300 MHz):</span>
+                                    <span id="vhf-band-att">-</span> dB
+                                </div>
+                                <div>
+                                    <span style="font-weight: bold; color: #aaa;">UHF (300-3000 MHz):</span>
+                                    <span id="uhf-band-att">-</span> dB
+                                </div>
+                                <div>
+                                    <span style="font-weight: bold; color: #aaa;">SHF (3-6 GHz):</span>
+                                    <span id="shf-band-att">-</span> dB
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; font-size: 1.2em; color: #ffd700;">Test Details</h3>
+                            <div style="margin-top: 5px;">
+                                <div><span style="font-weight: bold; color: #aaa;">Samples per frequency:</span> <span id="samples-per-frequency">1000</span></div>
+                                <div><span style="font-weight: bold; color: #aaa;">Frequencies tested:</span> <span id="frequencies-tested">-</span></div>
+                                <div><span style="font-weight: bold; color: #aaa;">Best frequency:</span> <span id="best-frequency">-</span></div>
+                                <div><span style="font-weight: bold; color: #aaa;">Worst frequency:</span> <span id="worst-frequency">-</span></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -275,7 +306,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize charts
         const powerCtx = document.getElementById('powerChart').getContext('2d');
-        const attenuationCtx = document.getElementById('attenuationChart').getContext('2d');
         
         // Initialize with empty data initially
         const emptyData = {
@@ -283,26 +313,40 @@
             datasets: []
         };
         
-        // Power Chart (showing both baseline and hat readings)
+        // Power Chart (showing both baseline and hat readings, along with attenuation)
         const powerChart = new Chart(powerCtx, {
             type: 'line',
             data: {
                 labels: [],
-                datasets: [{
-                    label: 'Baseline (dBm)',
-                    data: [],
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.2,
-                    borderWidth: 2
-                }, {
-                    label: 'With Hat (dBm)',
-                    data: [],
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    tension: 0.2,
-                    borderWidth: 2
-                }]
+                datasets: [
+                    {
+                        label: 'Baseline (dBm)',
+                        data: [],
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.2,
+                        borderWidth: 2,
+                        yAxisID: 'y'
+                    }, 
+                    {
+                        label: 'With Hat (dBm)',
+                        data: [],
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        tension: 0.2,
+                        borderWidth: 2,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Attenuation (dB)',
+                        data: [],
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                        tension: 0.2,
+                        borderWidth: 2,
+                        yAxisID: 'attenuation'
+                    }
+                ]
             },
             options: {
                 responsive: true,
@@ -310,75 +354,7 @@
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Signal Power (dBm)',
-                        color: '#e0e0e0',
-                        font: {
-                            size: 16
-                        }
-                    },
-                    legend: {
-                        labels: {
-                            color: '#e0e0e0'
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Frequency (MHz)',
-                            color: '#e0e0e0'
-                        },
-                        ticks: {
-                            color: '#e0e0e0'
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Power (dBm)',
-                            color: '#e0e0e0'
-                        },
-                        ticks: {
-                            color: '#e0e0e0'
-                        },
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.1)'
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Attenuation Chart
-        const attenuationChart = new Chart(attenuationCtx, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Attenuation (dB)',
-                    data: [],
-                    backgroundColor: function(context) {
-                        const value = context.dataset.data[context.dataIndex];
-                        return value < 0 ? 'rgba(255, 99, 132, 0.7)' : 'rgba(75, 192, 192, 0.7)';
-                    },
-                    borderColor: function(context) {
-                        const value = context.dataset.data[context.dataIndex];
-                        return value < 0 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)';
-                    },
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Attenuation (dB)',
+                        text: 'RF Spectrum Analysis',
                         color: '#e0e0e0',
                         font: {
                             size: 16
@@ -396,8 +372,14 @@
                                 if (label) {
                                     label += ': ';
                                 }
-                                label += context.parsed.y.toFixed(2) + ' dB';
-                                return label;
+                                if (context.datasetIndex === 2) {
+                                    // Attenuation dataset
+                                    const value = context.parsed.y;
+                                    const colorCode = value < 0 ? '🔴' : '🟢'; // Red for negative, green for positive
+                                    return `${label}${value.toFixed(2)} dB ${colorCode}`;
+                                } else {
+                                    return `${label}${context.parsed.y.toFixed(2)} dBm`;
+                                }
                             }
                         }
                     }
@@ -419,7 +401,7 @@
                     y: {
                         title: {
                             display: true,
-                            text: 'Attenuation (dB)',
+                            text: 'Signal Level (dBm)',
                             color: '#e0e0e0'
                         },
                         ticks: {
@@ -427,7 +409,26 @@
                         },
                         grid: {
                             color: 'rgba(255, 255, 255, 0.1)'
-                        }
+                        },
+                        min: -100,
+                        max: -60
+                    },
+                    attenuation: {
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Attenuation (dB)',
+                            color: '#e0e0e0'
+                        },
+                        ticks: {
+                            color: '#e0e0e0'
+                        },
+                        grid: {
+                            drawOnChartArea: false,
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        min: -10,
+                        max: 10
                     }
                 }
             }
@@ -444,12 +445,8 @@
             powerChart.data.labels = frequencyLabels;
             powerChart.data.datasets[0].data = baselineLevels;
             powerChart.data.datasets[1].data = hatLevels;
+            powerChart.data.datasets[2].data = attenuations;
             powerChart.update();
-            
-            // Update attenuation chart
-            attenuationChart.data.labels = frequencyLabels;
-            attenuationChart.data.datasets[0].data = attenuations;
-            attenuationChart.update();
         {% endif %}
         
         // Connect to SSE endpoint for real-time updates
@@ -516,6 +513,88 @@
             if (data.event_type === 'test_complete') {
                 // This is a final test result, update the complete spectrum
                 console.log('Test complete:', data);
+                
+                // Update band effectiveness metrics
+                if (data.effectiveness) {
+                    // Use the server-calculated effectiveness values
+                    document.getElementById('hf-band-att').textContent = data.effectiveness.hf_band.toFixed(2);
+                    document.getElementById('vhf-band-att').textContent = data.effectiveness.vhf_band.toFixed(2);
+                    document.getElementById('uhf-band-att').textContent = data.effectiveness.uhf_band.toFixed(2);
+                    document.getElementById('shf-band-att').textContent = data.effectiveness.shf_band.toFixed(2);
+                    
+                    // Update frequencies tested
+                    if (data.frequencies) {
+                        document.getElementById('frequencies-tested').textContent = data.frequencies.length;
+                    }
+                    
+                    // Update best/worst frequencies if max/min attenuation data is available
+                    if (data.max_attenuation && data.min_attenuation) {
+                        document.getElementById('best-frequency').textContent = 
+                            `${data.max_attenuation.frequency.toFixed(1)} MHz (${data.max_attenuation.value.toFixed(2)} dB)`;
+                        document.getElementById('worst-frequency').textContent = 
+                            `${data.min_attenuation.frequency.toFixed(1)} MHz (${data.min_attenuation.value.toFixed(2)} dB)`;
+                    }
+                    // If max/min not available but we have frequencies and attenuations, calculate them
+                    else if (data.frequencies && data.attenuations && data.frequencies.length > 0) {
+                        const maxAtt = Math.max(...data.attenuations);
+                        const minAtt = Math.min(...data.attenuations);
+                        const maxIndex = data.attenuations.indexOf(maxAtt);
+                        const minIndex = data.attenuations.indexOf(minAtt);
+                        
+                        document.getElementById('best-frequency').textContent = 
+                            `${data.frequencies[maxIndex].toFixed(1)} MHz (${maxAtt.toFixed(2)} dB)`;
+                        document.getElementById('worst-frequency').textContent = 
+                            `${data.frequencies[minIndex].toFixed(1)} MHz (${minAtt.toFixed(2)} dB)`;
+                    }
+                }
+                // Fallback to old calculation method if effectiveness data not available
+                else if (data.frequencies && data.frequencies.length > 0 && data.attenuations && data.attenuations.length > 0) {
+                    // Calculate frequency band effectiveness based on the frequency ranges
+                    const bands = {
+                        hf: { min: 2, max: 30, values: [] },
+                        vhf: { min: 30, max: 300, values: [] },
+                        uhf: { min: 300, max: 3000, values: [] },
+                        shf: { min: 3000, max: 6000, values: [] }
+                    };
+                    
+                    // Group attenuations by frequency band
+                    for (let i = 0; i < data.frequencies.length; i++) {
+                        const freq = data.frequencies[i];
+                        const att = data.attenuations[i];
+                        
+                        if (freq >= bands.hf.min && freq < bands.hf.max) {
+                            bands.hf.values.push(att);
+                        } else if (freq >= bands.vhf.min && freq < bands.vhf.max) {
+                            bands.vhf.values.push(att);
+                        } else if (freq >= bands.uhf.min && freq < bands.uhf.max) {
+                            bands.uhf.values.push(att);
+                        } else if (freq >= bands.shf.min && freq < bands.shf.max) {
+                            bands.shf.values.push(att);
+                        }
+                    }
+                    
+                    // Calculate averages for each band
+                    document.getElementById('hf-band-att').textContent = calculateAverage(bands.hf.values).toFixed(2);
+                    document.getElementById('vhf-band-att').textContent = calculateAverage(bands.vhf.values).toFixed(2);
+                    document.getElementById('uhf-band-att').textContent = calculateAverage(bands.uhf.values).toFixed(2);
+                    document.getElementById('shf-band-att').textContent = calculateAverage(bands.shf.values).toFixed(2);
+                    
+                    // Update frequencies tested
+                    document.getElementById('frequencies-tested').textContent = data.frequencies.length;
+                    
+                    // Find best and worst frequencies (highest and lowest attenuation)
+                    if (data.attenuations.length > 0) {
+                        const maxAtt = Math.max(...data.attenuations);
+                        const minAtt = Math.min(...data.attenuations);
+                        const maxIndex = data.attenuations.indexOf(maxAtt);
+                        const minIndex = data.attenuations.indexOf(minAtt);
+                        
+                        document.getElementById('best-frequency').textContent = 
+                            `${data.frequencies[maxIndex].toFixed(1)} MHz (${maxAtt.toFixed(2)} dB)`;
+                        document.getElementById('worst-frequency').textContent = 
+                            `${data.frequencies[minIndex].toFixed(1)} MHz (${minAtt.toFixed(2)} dB)`;
+                    }
+                }
                 
                 // Reset the current test data
                 currentTestData = {
@@ -594,8 +673,71 @@
                 }
             }
             
+            // Update test details on the fly
+            if (currentTestData.frequencies.length > 0) {
+                document.getElementById('frequencies-tested').textContent = currentTestData.frequencies.length;
+                
+                // Calculate attenuation stats if we have any valid attenuation values
+                const validAttenuations = currentTestData.attenuations.filter(a => a !== null);
+                if (validAttenuations.length > 0) {
+                    const maxAtt = Math.max(...validAttenuations);
+                    const minAtt = Math.min(...validAttenuations);
+                    const maxIndex = currentTestData.attenuations.indexOf(maxAtt);
+                    const minIndex = currentTestData.attenuations.indexOf(minAtt);
+                    
+                    if (maxIndex >= 0) {
+                        document.getElementById('best-frequency').textContent = 
+                            `${currentTestData.frequencies[maxIndex].toFixed(1)} MHz (${maxAtt.toFixed(2)} dB)`;
+                    }
+                    
+                    if (minIndex >= 0) {
+                        document.getElementById('worst-frequency').textContent = 
+                            `${currentTestData.frequencies[minIndex].toFixed(1)} MHz (${minAtt.toFixed(2)} dB)`;
+                    }
+                    
+                    // Calculate frequency band effectiveness based on the frequency ranges
+                    const bands = {
+                        hf: { min: 2, max: 30, values: [] },
+                        vhf: { min: 30, max: 300, values: [] },
+                        uhf: { min: 300, max: 3000, values: [] },
+                        shf: { min: 3000, max: 6000, values: [] }
+                    };
+                    
+                    // Group attenuations by frequency band
+                    for (let i = 0; i < currentTestData.frequencies.length; i++) {
+                        const freq = currentTestData.frequencies[i];
+                        const att = currentTestData.attenuations[i];
+                        
+                        if (att !== null) {
+                            if (freq >= bands.hf.min && freq < bands.hf.max) {
+                                bands.hf.values.push(att);
+                            } else if (freq >= bands.vhf.min && freq < bands.vhf.max) {
+                                bands.vhf.values.push(att);
+                            } else if (freq >= bands.uhf.min && freq < bands.uhf.max) {
+                                bands.uhf.values.push(att);
+                            } else if (freq >= bands.shf.min && freq < bands.shf.max) {
+                                bands.shf.values.push(att);
+                            }
+                        }
+                    }
+                    
+                    // Calculate averages for each band
+                    document.getElementById('hf-band-att').textContent = calculateAverage(bands.hf.values).toFixed(2);
+                    document.getElementById('vhf-band-att').textContent = calculateAverage(bands.vhf.values).toFixed(2);
+                    document.getElementById('uhf-band-att').textContent = calculateAverage(bands.uhf.values).toFixed(2);
+                    document.getElementById('shf-band-att').textContent = calculateAverage(bands.shf.values).toFixed(2);
+                }
+            }
+            
             // Update the charts with the real-time data
             updateChartsWithLiveData();
+        }
+        
+        // Helper function to calculate average of an array
+        function calculateAverage(arr) {
+            if (!arr || arr.length === 0) return 0;
+            const sum = arr.reduce((a, b) => a + b, 0);
+            return sum / arr.length;
         }
         
         // Update charts with the current test data
@@ -620,14 +762,8 @@
             powerChart.data.labels = currentTestData.frequencies.map(f => f.toFixed(1));
             powerChart.data.datasets[0].data = currentTestData.baseline_levels;
             powerChart.data.datasets[1].data = currentTestData.hat_levels;
+            powerChart.data.datasets[2].data = currentTestData.attenuations;
             powerChart.update();
-            
-            // Only update attenuation chart if we have attenuation values
-            if (currentTestData.attenuations.some(a => a !== null)) {
-                attenuationChart.data.labels = currentTestData.frequencies.map(f => f.toFixed(1));
-                attenuationChart.data.datasets[0].data = currentTestData.attenuations;
-                attenuationChart.update();
-            }
         }
         
         // Polling fallback
@@ -736,12 +872,8 @@
             powerChart.data.labels = frequencyLabels;
             powerChart.data.datasets[0].data = spectrumData.baseline_levels;
             powerChart.data.datasets[1].data = spectrumData.hat_levels;
+            powerChart.data.datasets[2].data = spectrumData.attenuations;
             powerChart.update();
-            
-            // Update attenuation chart
-            attenuationChart.data.labels = frequencyLabels;
-            attenuationChart.data.datasets[0].data = spectrumData.attenuations;
-            attenuationChart.update();
         }
         
         // Common function to update the billboard with new data
@@ -780,6 +912,58 @@
             // Update charts with spectrum data
             if (data.spectrum_data && Object.keys(data.spectrum_data).length > 0) {
                 updateCharts(data.spectrum_data);
+                
+                // Update test details with the spectrum data
+                if (data.spectrum_data.frequencies && data.spectrum_data.frequencies.length > 0) {
+                    document.getElementById('frequencies-tested').textContent = data.spectrum_data.frequencies.length;
+                    document.getElementById('samples-per-frequency').textContent = "1000"; // Default value
+                    
+                    // Calculate frequency band effectiveness
+                    const bands = {
+                        hf: { min: 2, max: 30, values: [] },
+                        vhf: { min: 30, max: 300, values: [] },
+                        uhf: { min: 300, max: 3000, values: [] },
+                        shf: { min: 3000, max: 6000, values: [] }
+                    };
+                    
+                    // Group attenuations by frequency band
+                    for (let i = 0; i < data.spectrum_data.frequencies.length; i++) {
+                        const freq = data.spectrum_data.frequencies[i];
+                        const att = data.spectrum_data.attenuations[i];
+                        
+                        if (freq >= bands.hf.min && freq < bands.hf.max) {
+                            bands.hf.values.push(att);
+                        } else if (freq >= bands.vhf.min && freq < bands.vhf.max) {
+                            bands.vhf.values.push(att);
+                        } else if (freq >= bands.uhf.min && freq < bands.uhf.max) {
+                            bands.uhf.values.push(att);
+                        } else if (freq >= bands.shf.min && freq < bands.shf.max) {
+                            bands.shf.values.push(att);
+                        }
+                    }
+                    
+                    // Calculate averages for each band
+                    document.getElementById('hf-band-att').textContent = calculateAverage(bands.hf.values).toFixed(2);
+                    document.getElementById('vhf-band-att').textContent = calculateAverage(bands.vhf.values).toFixed(2);
+                    document.getElementById('uhf-band-att').textContent = calculateAverage(bands.uhf.values).toFixed(2);
+                    document.getElementById('shf-band-att').textContent = calculateAverage(bands.shf.values).toFixed(2);
+                    
+                    // Find best and worst frequencies
+                    if (data.spectrum_data.attenuations.length > 0) {
+                        const attenuations = data.spectrum_data.attenuations;
+                        const frequencies = data.spectrum_data.frequencies;
+                        
+                        const maxAtt = Math.max(...attenuations);
+                        const minAtt = Math.min(...attenuations);
+                        const maxIndex = attenuations.indexOf(maxAtt);
+                        const minIndex = attenuations.indexOf(minAtt);
+                        
+                        document.getElementById('best-frequency').textContent = 
+                            `${frequencies[maxIndex].toFixed(1)} MHz (${maxAtt.toFixed(2)} dB)`;
+                        document.getElementById('worst-frequency').textContent = 
+                            `${frequencies[minIndex].toFixed(1)} MHz (${minAtt.toFixed(2)} dB)`;
+                    }
+                }
             }
         }
         

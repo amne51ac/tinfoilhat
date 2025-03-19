@@ -584,28 +584,27 @@ def measure_hat():
         # Save results to database
         db = get_db()
 
-        # Check if this is the best score for this contestant BEFORE inserting the new result
-        best_score_result = db.execute(
-            """
-            SELECT MAX(average_attenuation) as best
-            FROM test_result
-            WHERE contestant_id = ?
-            """,
-            (contestant_id,),
-        ).fetchone()
-
-        # Check if the contestant has any previous entries
-        has_previous_entries = best_score_result and best_score_result["best"] is not None
-
-        # First score is always the best
-        # Otherwise, compare with previous best - higher attenuation values are better
-        # We want positive values (good shielding) to be considered better than negative values
-        is_best = not has_previous_entries or (has_previous_entries and average_attenuation > best_score_result["best"])
-
-        previous_best_score = best_score_result["best"] if has_previous_entries else None
-
         # Get hat type from request
         hat_type = request.form.get("hat_type", "classic")
+
+        # Check if this is the best score for this contestant BEFORE inserting the new result
+        # BUT make sure we only compare against scores of the same hat type
+        best_score_result = db.execute(
+            """
+            SELECT COUNT(*) as count, MAX(average_attenuation) as best
+            FROM test_result
+            WHERE contestant_id = ? AND hat_type = ?
+            """,
+            (contestant_id, hat_type),
+        ).fetchone()
+
+        # Check if the contestant has any previous entries of this hat type
+        has_previous_entries = best_score_result and best_score_result["count"] > 0
+
+        # First score for this hat type is always the best
+        # Otherwise, compare with previous best for this hat type
+        previous_best_score = best_score_result["best"] if has_previous_entries else None
+        is_best = not has_previous_entries or (has_previous_entries and average_attenuation > previous_best_score)
 
         # Add test result
         cursor = db.execute(
@@ -641,9 +640,9 @@ def measure_hat():
                 """
                 UPDATE test_result
                 SET is_best_score = 0
-                WHERE contestant_id = ? AND id != ?
+                WHERE contestant_id = ? AND id != ? AND hat_type = ?
                 """,
-                (contestant_id, test_result_id),
+                (contestant_id, test_result_id, hat_type),
             )
 
         db.commit()
@@ -659,18 +658,18 @@ def measure_hat():
                 f"which means it's amplifying signals instead of blocking them."
             )
             if is_best:
-                score_message += " This is still your best score so far."
+                score_message += f" This is still your best {hat_type} score so far."
             else:
-                score_message += f" Your previous best score of {previous_best_score:.2f} dB is better."
+                score_message += f" Your previous best {hat_type} score of {previous_best_score:.2f} dB is better."
         else:
             if is_best:
                 score_message = (
-                    f"This is the best score for {contestant_name} "
+                    f"This is the best {hat_type} score for {contestant_name} "
                     f"with an attenuation of {average_attenuation:.2f} dB."
                 )
             else:
                 score_message = (
-                    f"Not the best score for {contestant_name}. Previous best: "
+                    f"Not the best {hat_type} score for {contestant_name}. Previous best: "
                     f"{previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
                 )
 
@@ -959,8 +958,28 @@ def save_results():
         # Convert stored data to ordered lists matching scanner.frequencies
         baseline_readings = []
         hat_readings = []
-        valid_measurements = []  # Track which measurements are valid
+        valid_measurements = [False]  # Initialize with at least one element for safe sum() call
         missing_frequencies = []
+        
+        # Initialize variables that might be needed outside this try block
+        frequencies_mhz = []
+        attenuation_data = []
+        test_result_id = None  # Initialize test_result_id to None
+        average_attenuation = 0.0  # Default average attenuation
+
+        # Initialize effectiveness values to defaults
+        effectiveness = {
+            "hf_band": 0.0,
+            "vhf_band": 0.0,
+            "uhf_band": 0.0,
+            "shf_band": 0.0
+        }
+        
+        # Initialize min/max attenuation values
+        max_attenuation = 0.0
+        max_attenuation_freq = 0.0
+        min_attenuation = 0.0
+        min_attenuation_freq = 0.0
 
         # Debug: Print stored data
         print("DEBUG - Baseline data in config:", current_app.config.get("BASELINE_DATA", {}))
@@ -1055,28 +1074,27 @@ def save_results():
         # Save results to database
         db = get_db()
 
-        # Check if this is the best score for this contestant BEFORE inserting the new result
-        best_score_result = db.execute(
-            """
-            SELECT MAX(average_attenuation) as best
-            FROM test_result
-            WHERE contestant_id = ?
-            """,
-            (contestant_id,),
-        ).fetchone()
-
-        # Check if the contestant has any previous entries
-        has_previous_entries = best_score_result and best_score_result["best"] is not None
-
-        # First score is always the best
-        # Otherwise, compare with previous best - higher attenuation values are better
-        # We want positive values (good shielding) to be considered better than negative values
-        is_best = not has_previous_entries or (has_previous_entries and average_attenuation > best_score_result["best"])
-
-        previous_best_score = best_score_result["best"] if has_previous_entries else None
-
         # Get hat type from request
         hat_type = request.json.get("hat_type", "classic")
+
+        # Check if this is the best score for this contestant BEFORE inserting the new result
+        # BUT make sure we only compare against scores of the same hat type
+        best_score_result = db.execute(
+            """
+            SELECT COUNT(*) as count, MAX(average_attenuation) as best
+            FROM test_result
+            WHERE contestant_id = ? AND hat_type = ?
+            """,
+            (contestant_id, hat_type),
+        ).fetchone()
+
+        # Check if the contestant has any previous entries of this hat type
+        has_previous_entries = best_score_result and best_score_result["count"] > 0
+
+        # First score for this hat type is always the best
+        # Otherwise, compare with previous best for this hat type
+        previous_best_score = best_score_result["best"] if has_previous_entries else None
+        is_best = not has_previous_entries or (has_previous_entries and average_attenuation > previous_best_score)
 
         # Add test result
         cursor = db.execute(
@@ -1114,9 +1132,9 @@ def save_results():
                 """
                 UPDATE test_result
                 SET is_best_score = 0
-                WHERE contestant_id = ? AND id != ?
+                WHERE contestant_id = ? AND id != ? AND hat_type = ?
                 """,
-                (contestant_id, test_result_id),
+                (contestant_id, test_result_id, hat_type),
             )
 
         db.commit()
@@ -1132,18 +1150,18 @@ def save_results():
                 f"which means it's amplifying signals instead of blocking them."
             )
             if is_best:
-                score_message += " This is still your best score so far."
+                score_message += f" This is still your best {hat_type} score so far."
             else:
-                score_message += f" Your previous best score of {previous_best_score:.2f} dB is better."
+                score_message += f" Your previous best {hat_type} score of {previous_best_score:.2f} dB is better."
         else:
             if is_best:
                 score_message = (
-                    f"This is the best score for {contestant_name} "
+                    f"This is the best {hat_type} score for {contestant_name} "
                     f"with an attenuation of {average_attenuation:.2f} dB."
                 )
             else:
                 score_message = (
-                    f"Not the best score for {contestant_name}. Previous best: "
+                    f"Not the best {hat_type} score for {contestant_name}. Previous best: "
                     f"{previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
                 )
 
@@ -1154,7 +1172,6 @@ def save_results():
         # with the same test_result_id from the saved test results
         try:
             db = get_db()
-            contestant = db.execute("SELECT name, hat_type FROM contestant WHERE id = ?", (contestant_id,)).fetchone()
             
             # Retrieve the test result ID and data from the database
             test_result = db.execute(
@@ -1168,41 +1185,87 @@ def save_results():
             ).fetchone()
             
             if not test_result:
-                raise Exception("Could not find the saved test result")
+                print("Warning: Could not find the saved test result")
+            else:
+                test_result_id = test_result["id"]
                 
-            test_result_id = test_result["id"]
-            
-            # Get the test data points for this test result
-            test_data_points = db.execute(
-                """
-                SELECT frequency, baseline_level, hat_level, attenuation
-                FROM test_data
-                WHERE test_result_id = ?
-                ORDER BY frequency
-                """, 
-                (test_result_id,)
-            ).fetchall()
-            
-            # Extract frequencies and attenuations from the test data
-            frequencies_mhz = [round(point["frequency"] / 1e6, 2) for point in test_data_points]
-            attenuations = [point["attenuation"] for point in test_data_points]
-            
-            # Create a complete test data summary
-            test_complete_data = {
-                "event_type": "test_complete",
-                "id": f"test_complete_{time.time()}",
-                "test_result_id": test_result_id,
-                "contestant_id": contestant_id,
-                "contestant_name": contestant["name"],
-                "hat_type": contestant["hat_type"],
-                "timestamp": datetime.now(),
-                "average_attenuation": test_result["average_attenuation"],
-                "frequencies": frequencies_mhz,
-                "attenuations": attenuations
-            }
-            
-            # Update the global variable to notify SSE clients of test completion
-            latest_frequency_measurement = test_complete_data
+                # Get the contestant info with a default for hat_type in case it's NULL
+                contestant = db.execute(
+                    """
+                    SELECT c.name, COALESCE(t.hat_type, 'classic') as hat_type 
+                    FROM contestant c
+                    JOIN test_result t ON c.id = t.contestant_id
+                    WHERE c.id = ? AND t.id = ?
+                    """, 
+                    (contestant_id, test_result_id)
+                ).fetchone()
+                
+                # Get the test data points for this test result
+                test_data_points = db.execute(
+                    """
+                    SELECT frequency, baseline_level, hat_level, attenuation
+                    FROM test_data
+                    WHERE test_result_id = ?
+                    ORDER BY frequency
+                    """, 
+                    (test_result_id,)
+                ).fetchall()
+                
+                # Extract frequencies and attenuations from the test data
+                frequencies_mhz = [point["frequency"] for point in test_data_points]
+                attenuations = [point["attenuation"] for point in test_data_points]
+                
+                # Calculate effectiveness for different frequency bands using standard RF band names
+                hf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 2 <= f < 30]  # HF: 2-30 MHz
+                vhf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 30 <= f < 300]  # VHF: 30-300 MHz
+                uhf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
+                shf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 3000 <= f <= 6000]  # SHF: 3-30 GHz
+                
+                # Calculate average for each band
+                effectiveness = {
+                    "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
+                    "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
+                    "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
+                    "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
+                }
+                
+                # Find peak and minimum attenuation
+                if attenuations:
+                    max_idx = attenuations.index(max(attenuations))
+                    min_idx = attenuations.index(min(attenuations))
+                    
+                    max_attenuation = {
+                        "value": attenuations[max_idx],
+                        "frequency": frequencies_mhz[max_idx]
+                    }
+                    
+                    min_attenuation = {
+                        "value": attenuations[min_idx],
+                        "frequency": frequencies_mhz[min_idx]
+                    }
+                else:
+                    max_attenuation = {"value": 0.0, "frequency": 0.0}
+                    min_attenuation = {"value": 0.0, "frequency": 0.0}
+                
+                # Create a complete test data summary
+                test_complete_data = {
+                    "event_type": "test_complete",
+                    "id": f"test_complete_{time.time()}",
+                    "test_result_id": test_result_id,
+                    "contestant_id": contestant_id,
+                    "contestant_name": contestant["name"],
+                    "hat_type": contestant["hat_type"],
+                    "timestamp": datetime.now(),
+                    "average_attenuation": test_result["average_attenuation"],
+                    "frequencies": frequencies_mhz,
+                    "attenuations": attenuations,
+                    "effectiveness": effectiveness,
+                    "max_attenuation": max_attenuation,
+                    "min_attenuation": min_attenuation
+                }
+                
+                # Update the global variable to notify SSE clients of test completion
+                latest_frequency_measurement = test_complete_data
             
         except Exception as e:
             print(f"Error emitting test_complete event: {str(e)}")
@@ -1216,7 +1279,17 @@ def save_results():
                 "data": {
                     "test_result_id": test_result_id,
                     "average_attenuation": average_attenuation,
-                    "valid_frequencies": len(frequencies_mhz),
+                    "valid_frequencies": sum(valid_measurements) if valid_measurements else 0,
+                    "effectiveness": effectiveness,
+                    "contestant_name": contestant_name,
+                    "max_attenuation": {
+                        "value": max_attenuation,
+                        "frequency": max_attenuation_freq,
+                    },
+                    "min_attenuation": {
+                        "value": min_attenuation,
+                        "frequency": min_attenuation_freq,
+                    }
                 },
             }
         )
@@ -1299,6 +1372,12 @@ def billboard():
             WHERE test_result_id = ?
             ORDER BY frequency
         """, (recent_test["max_id"],)).fetchall()
+        
+        # Initialize these variables with empty lists before the conditional block
+        frequencies = []
+        baseline_levels = []
+        hat_levels = []
+        attenuations = []
         
         if test_data_points:
             frequencies = [round(point["frequency"] / 1e6, 2) for point in test_data_points]  # Convert to MHz
@@ -1404,17 +1483,59 @@ def billboard_updates():
             ORDER BY frequency
         """, (new_test["max_id"],)).fetchall()
         
+        # Initialize these variables with empty lists before the conditional block
+        frequencies = []
+        baseline_levels = []
+        hat_levels = []
+        attenuations = []
+        
         if test_data_points:
             frequencies = [round(point["frequency"] / 1e6, 2) for point in test_data_points]  # Convert to MHz
             baseline_levels = [point["baseline_level"] for point in test_data_points]
             hat_levels = [point["hat_level"] for point in test_data_points]
             attenuations = [point["attenuation"] for point in test_data_points]
             
+            # Calculate effectiveness for different frequency bands using standard RF band names
+            hf_values = [attenuations[i] for i, f in enumerate(frequencies) if 2 <= f < 30]  # HF: 2-30 MHz
+            vhf_values = [attenuations[i] for i, f in enumerate(frequencies) if 30 <= f < 300]  # VHF: 30-300 MHz
+            uhf_values = [attenuations[i] for i, f in enumerate(frequencies) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
+            shf_values = [attenuations[i] for i, f in enumerate(frequencies) if 3000 <= f <= 6000]  # SHF: 3-30 GHz
+            
+            # Calculate average for each band
+            effectiveness = {
+                "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
+                "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
+                "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
+                "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
+            }
+            
+            # Find peak and minimum attenuation
+            if attenuations:
+                max_idx = attenuations.index(max(attenuations))
+                min_idx = attenuations.index(min(attenuations))
+                
+                max_attenuation = {
+                    "value": attenuations[max_idx],
+                    "frequency": frequencies[max_idx]
+                }
+                
+                min_attenuation = {
+                    "value": attenuations[min_idx],
+                    "frequency": frequencies[min_idx]
+                }
+            else:
+                max_attenuation = {"value": 0.0, "frequency": 0.0}
+                min_attenuation = {"value": 0.0, "frequency": 0.0}
+            
+            # Always populate spectrum_data with whatever we have (empty lists if no data)
             spectrum_data = {
                 'frequencies': frequencies,
                 'baseline_levels': baseline_levels,
                 'hat_levels': hat_levels,
-                'attenuations': attenuations
+                'attenuations': attenuations,
+                'effectiveness': effectiveness,
+                'max_attenuation': max_attenuation,
+                'min_attenuation': min_attenuation
             }
         
         # Prepare data
@@ -1470,18 +1591,60 @@ def billboard_updates():
                         ORDER BY frequency
                     """, (new_test["max_id"],)).fetchall()
                     
+                    # Initialize these variables with empty lists before the conditional block
+                    frequencies = []
+                    baseline_levels = []
+                    hat_levels = []
+                    attenuations = []
+                    
                     if test_data_points:
                         frequencies = [round(point["frequency"] / 1e6, 2) for point in test_data_points]  # Convert to MHz
                         baseline_levels = [point["baseline_level"] for point in test_data_points]
                         hat_levels = [point["hat_level"] for point in test_data_points]
                         attenuations = [point["attenuation"] for point in test_data_points]
+                    
+                    # Calculate effectiveness for different frequency bands using standard RF band names
+                    hf_values = [attenuations[i] for i, f in enumerate(frequencies) if 2 <= f < 30]  # HF: 2-30 MHz
+                    vhf_values = [attenuations[i] for i, f in enumerate(frequencies) if 30 <= f < 300]  # VHF: 30-300 MHz
+                    uhf_values = [attenuations[i] for i, f in enumerate(frequencies) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
+                    shf_values = [attenuations[i] for i, f in enumerate(frequencies) if 3000 <= f <= 6000]  # SHF: 3-30 GHz
+                    
+                    # Calculate average for each band
+                    effectiveness = {
+                        "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
+                        "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
+                        "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
+                        "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
+                    }
+                    
+                    # Find peak and minimum attenuation
+                    if attenuations:
+                        max_idx = attenuations.index(max(attenuations))
+                        min_idx = attenuations.index(min(attenuations))
                         
-                        spectrum_data = {
-                            'frequencies': frequencies,
-                            'baseline_levels': baseline_levels,
-                            'hat_levels': hat_levels,
-                            'attenuations': attenuations
+                        max_attenuation = {
+                            "value": attenuations[max_idx],
+                            "frequency": frequencies[max_idx]
                         }
+                        
+                        min_attenuation = {
+                            "value": attenuations[min_idx],
+                            "frequency": frequencies[min_idx]
+                        }
+                    else:
+                        max_attenuation = {"value": 0.0, "frequency": 0.0}
+                        min_attenuation = {"value": 0.0, "frequency": 0.0}
+                    
+                    # Always populate spectrum_data with whatever we have (empty lists if no data)
+                    spectrum_data = {
+                        'frequencies': frequencies,
+                        'baseline_levels': baseline_levels,
+                        'hat_levels': hat_levels,
+                        'attenuations': attenuations,
+                        'effectiveness': effectiveness,
+                        'max_attenuation': max_attenuation,
+                        'min_attenuation': min_attenuation
+                    }
                     
                     # Update last_id for the next iteration
                     last_id = new_test["max_id"]
