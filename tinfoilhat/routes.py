@@ -373,25 +373,31 @@ def measure_hat():
         attenuation_data = scanner.calculate_attenuation(baseline_data, hat_data)
         average_attenuation = float(sum(attenuation_data) / len(attenuation_data))
 
-        # Calculate effectiveness in different frequency bands
-        low_freq_indices = [i for i, f in enumerate(scanner.frequencies) if f < 1e9]  # Below 1 GHz
-        mid_freq_indices = [i for i, f in enumerate(scanner.frequencies) if 1e9 <= f < 3e9]  # 1-3 GHz
-        high_freq_indices = [i for i, f in enumerate(scanner.frequencies) if f >= 3e9]  # Above 3 GHz
+        # Calculate effectiveness in different frequency bands using standard RF band names
+        hf_indices = [i for i, f in enumerate(scanner.frequencies) if 3 <= f < 30]  # HF: 3-30 MHz
+        vhf_indices = [i for i, f in enumerate(scanner.frequencies) if 30 <= f < 300]  # VHF: 30-300 MHz
+        uhf_indices = [i for i, f in enumerate(scanner.frequencies) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
+        shf_indices = [i for i, f in enumerate(scanner.frequencies) if 3000 <= f <= 5900]  # SHF: 3-30 GHz
 
         effectiveness = {
-            "low_freq": (
-                float(sum(attenuation_data[i] for i in low_freq_indices) / len(low_freq_indices))
-                if low_freq_indices
+            "hf_band": (
+                float(sum(attenuation_data[i] for i in hf_indices) / len(hf_indices))
+                if hf_indices
                 else 0.0
             ),
-            "mid_freq": (
-                float(sum(attenuation_data[i] for i in mid_freq_indices) / len(mid_freq_indices))
-                if mid_freq_indices
+            "vhf_band": (
+                float(sum(attenuation_data[i] for i in vhf_indices) / len(vhf_indices))
+                if vhf_indices
                 else 0.0
             ),
-            "high_freq": (
-                float(sum(attenuation_data[i] for i in high_freq_indices) / len(high_freq_indices))
-                if high_freq_indices
+            "uhf_band": (
+                float(sum(attenuation_data[i] for i in uhf_indices) / len(uhf_indices))
+                if uhf_indices
+                else 0.0
+            ),
+            "shf_band": (
+                float(sum(attenuation_data[i] for i in shf_indices) / len(shf_indices))
+                if shf_indices
                 else 0.0
             ),
         }
@@ -770,25 +776,31 @@ def save_results():
         attenuation_data = scanner.calculate_attenuation(baseline_readings, hat_readings)
         average_attenuation = float(sum(attenuation_data) / len(attenuation_data))
 
-        # Calculate effectiveness in different frequency bands
-        low_freq_indices = [i for i, f in enumerate(scanner.frequencies) if f < 1e9]  # Below 1 GHz
-        mid_freq_indices = [i for i, f in enumerate(scanner.frequencies) if 1e9 <= f < 3e9]  # 1-3 GHz
-        high_freq_indices = [i for i, f in enumerate(scanner.frequencies) if f >= 3e9]  # Above 3 GHz
+        # Calculate effectiveness in different frequency bands using standard RF band names
+        hf_indices = [i for i, f in enumerate(scanner.frequencies) if 3 <= f < 30]  # HF: 3-30 MHz
+        vhf_indices = [i for i, f in enumerate(scanner.frequencies) if 30 <= f < 300]  # VHF: 30-300 MHz
+        uhf_indices = [i for i, f in enumerate(scanner.frequencies) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
+        shf_indices = [i for i, f in enumerate(scanner.frequencies) if 3000 <= f <= 5900]  # SHF: 3-30 GHz
 
         effectiveness = {
-            "low_freq": (
-                float(sum(attenuation_data[i] for i in low_freq_indices) / len(low_freq_indices))
-                if low_freq_indices
+            "hf_band": (
+                float(sum(attenuation_data[i] for i in hf_indices) / len(hf_indices))
+                if hf_indices
                 else 0.0
             ),
-            "mid_freq": (
-                float(sum(attenuation_data[i] for i in mid_freq_indices) / len(mid_freq_indices))
-                if mid_freq_indices
+            "vhf_band": (
+                float(sum(attenuation_data[i] for i in vhf_indices) / len(vhf_indices))
+                if vhf_indices
                 else 0.0
             ),
-            "high_freq": (
-                float(sum(attenuation_data[i] for i in high_freq_indices) / len(high_freq_indices))
-                if high_freq_indices
+            "uhf_band": (
+                float(sum(attenuation_data[i] for i in uhf_indices) / len(uhf_indices))
+                if uhf_indices
+                else 0.0
+            ),
+            "shf_band": (
+                float(sum(attenuation_data[i] for i in shf_indices) / len(shf_indices))
+                if shf_indices
                 else 0.0
             ),
         }

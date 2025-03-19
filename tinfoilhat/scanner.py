@@ -24,19 +24,19 @@ class Scanner:
 
     def __init__(
         self,
-        num_frequencies: int = 10,
-        min_freq: int = 900,
-        max_freq: int = 2700,
+        num_frequencies: int = 50,
+        min_freq: int = 2,
+        max_freq: int = 5900,
         samples_per_freq: int = 1,
     ):
         """
         Initialize the scanner with frequency range.
 
-        :param num_frequencies: Number of frequencies to test, defaults to 10
+        :param num_frequencies: Number of frequencies to test, defaults to 50
         :type num_frequencies: int, optional
-        :param min_freq: Minimum frequency in MHz, defaults to 900 MHz
+        :param min_freq: Minimum frequency in MHz, defaults to 2 MHz
         :type min_freq: int, optional
-        :param max_freq: Maximum frequency in MHz, defaults to 2700 MHz
+        :param max_freq: Maximum frequency in MHz, defaults to 5900 MHz
         :type max_freq: int, optional
         :param samples_per_freq: Number of samples to take per frequency, defaults to 1
         :type samples_per_freq: int, optional
@@ -53,7 +53,7 @@ class Scanner:
         self.frequencies = []
         step = (max_freq - min_freq) / (num_frequencies - 1) if num_frequencies > 1 else 0
         for i in range(num_frequencies):
-            freq_mhz = min_freq + int(i * step)
+            freq_mhz = min_freq + i * step
             self.frequencies.append(freq_mhz)
 
         # Log the frequency points we'll test
@@ -227,15 +227,24 @@ class Scanner:
 
         # Set appropriate gain based on frequency range
         # Lower frequencies often need less gain to avoid overloading
-        if freq_mhz < 500:
+        if freq_mhz < 100:
+            lna_gain = 8
+            vga_gain = 12
+        elif freq_mhz < 500:
             lna_gain = 16
             vga_gain = 16
         elif freq_mhz < 1500:
             lna_gain = 24
             vga_gain = 20
-        else:
+        elif freq_mhz < 3000:
             lna_gain = 32
             vga_gain = 24
+        elif freq_mhz < 4500:
+            lna_gain = 40
+            vga_gain = 26
+        else:  # 4500 - 5900 MHz
+            lna_gain = 40
+            vga_gain = 30
 
         # Number of samples to capture
         num_samples = 262144  # 2^18, a reasonable size for analysis

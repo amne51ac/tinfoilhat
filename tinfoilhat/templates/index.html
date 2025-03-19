@@ -233,9 +233,10 @@
 
                     <div>
                         <h4>Effectiveness by Frequency Range</h4>
-                        <p><strong>Low Frequencies (&lt;1 GHz):</strong> <span id="low-freq-att">0.00</span> dB</p>
-                        <p><strong>Mid Frequencies (1-3 GHz):</strong> <span id="mid-freq-att">0.00</span> dB</p>
-                        <p><strong>High Frequencies (&gt;3 GHz):</strong> <span id="high-freq-att">0.00</span> dB</p>
+                        <p><strong>HF (3-30 MHz):</strong> <span id="hf-band-att">0.00</span> dB</p>
+                        <p><strong>VHF (30-300 MHz):</strong> <span id="vhf-band-att">0.00</span> dB</p>
+                        <p><strong>UHF (300 MHz-3 GHz):</strong> <span id="uhf-band-att">0.00</span> dB</p>
+                        <p><strong>SHF (3-6 GHz):</strong> <span id="shf-band-att">0.00</span> dB</p>
                     </div>
 
                     <div>
@@ -645,12 +646,14 @@
             let minAttenuationFreq = 0;
             
             // Frequency band totals
-            let lowFreqTotal = 0;
-            let lowFreqCount = 0;
-            let midFreqTotal = 0;
-            let midFreqCount = 0;
-            let highFreqTotal = 0;
-            let highFreqCount = 0;
+            let hfTotal = 0;
+            let hfCount = 0;
+            let vhfTotal = 0;
+            let vhfCount = 0;
+            let uhfTotal = 0;
+            let uhfCount = 0;
+            let shfTotal = 0;
+            let shfCount = 0;
             
             for (const freqHz of allFrequencies) {
                 if (attenuationData[freqHz] !== undefined) {
@@ -670,33 +673,39 @@
                     }
                     
                     // Track by frequency band
-                    if (freqHz < 1e9) {
-                        // Low frequency (< 1 GHz)
-                        lowFreqTotal += att;
-                        lowFreqCount++;
+                    if (freqHz < 3e6) {
+                        // HF (3-30 MHz)
+                        hfTotal += att;
+                        hfCount++;
+                    } else if (freqHz < 3e7) {
+                        // VHF (30-300 MHz)
+                        vhfTotal += att;
+                        vhfCount++;
                     } else if (freqHz < 3e9) {
-                        // Mid frequency (1-3 GHz)
-                        midFreqTotal += att;
-                        midFreqCount++;
+                        // UHF (300 MHz-3 GHz)
+                        uhfTotal += att;
+                        uhfCount++;
                     } else {
-                        // High frequency (> 3 GHz)
-                        highFreqTotal += att;
-                        highFreqCount++;
+                        // SHF (3-6 GHz)
+                        shfTotal += att;
+                        shfCount++;
                     }
                 }
             }
             
             // Calculate averages
             const avgAttenuation = countAttenuation > 0 ? totalAttenuation / countAttenuation : 0;
-            const lowFreqAvg = lowFreqCount > 0 ? lowFreqTotal / lowFreqCount : 0;
-            const midFreqAvg = midFreqCount > 0 ? midFreqTotal / midFreqCount : 0;
-            const highFreqAvg = highFreqCount > 0 ? highFreqTotal / highFreqCount : 0;
+            const hfAvg = hfCount > 0 ? hfTotal / hfCount : 0;
+            const vhfAvg = vhfCount > 0 ? vhfTotal / vhfCount : 0;
+            const uhfAvg = uhfCount > 0 ? uhfTotal / uhfCount : 0;
+            const shfAvg = shfCount > 0 ? shfTotal / shfCount : 0;
             
             // Update UI
             document.getElementById('average-attenuation').textContent = avgAttenuation.toFixed(2);
-            document.getElementById('low-freq-att').textContent = lowFreqAvg.toFixed(2);
-            document.getElementById('mid-freq-att').textContent = midFreqAvg.toFixed(2);
-            document.getElementById('high-freq-att').textContent = highFreqAvg.toFixed(2);
+            document.getElementById('hf-band-att').textContent = hfAvg.toFixed(2);
+            document.getElementById('vhf-band-att').textContent = vhfAvg.toFixed(2);
+            document.getElementById('uhf-band-att').textContent = uhfAvg.toFixed(2);
+            document.getElementById('shf-band-att').textContent = shfAvg.toFixed(2);
             
             if (maxAttenuation > -Infinity) {
                 document.getElementById('max-freq').textContent = (maxAttenuationFreq / 1e6).toFixed(2);
@@ -746,6 +755,15 @@
                     } else {
                         bestScoreMsg.classList.add('hidden');
                         statusEl.textContent = `Test completed and saved. Not the best score for team "${result.data.contestant_name}".`;
+                    }
+                    
+                    // If there's a place where you display the effectiveness values from the server response:
+                    // Update the effectiveness values if they exist in the response
+                    if (result.data && result.data.effectiveness) {
+                        document.getElementById('hf-band-att').textContent = result.data.effectiveness.hf_band.toFixed(2);
+                        document.getElementById('vhf-band-att').textContent = result.data.effectiveness.vhf_band.toFixed(2);
+                        document.getElementById('uhf-band-att').textContent = result.data.effectiveness.uhf_band.toFixed(2);
+                        document.getElementById('shf-band-att').textContent = result.data.effectiveness.shf_band.toFixed(2);
                     }
                 } else {
                     statusEl.textContent = 'Error: ' + result.message;
