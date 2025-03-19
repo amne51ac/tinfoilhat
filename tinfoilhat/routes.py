@@ -24,11 +24,12 @@ bp = Blueprint("tinfoilhat", __name__, url_prefix="")
 # This will prevent issues when Flask reloads the application
 scanner = None
 
+
 # New functions for persistent storage of measurements
 def store_measurement(measurement_type, frequency_hz, power):
     """
     Store a measurement in the database for persistence between app restarts.
-    
+
     :param measurement_type: Type of measurement ('baseline' or 'hat')
     :type measurement_type: str
     :param frequency_hz: Frequency in Hz
@@ -37,30 +38,26 @@ def store_measurement(measurement_type, frequency_hz, power):
     :type power: float
     """
     db = get_db()
-    
+
     # Check if measurement exists
     existing = db.execute(
-        "SELECT id FROM measurement_cache WHERE type = ? AND frequency = ?",
-        (measurement_type, frequency_hz)
+        "SELECT id FROM measurement_cache WHERE type = ? AND frequency = ?", (measurement_type, frequency_hz)
     ).fetchone()
-    
+
     if existing:
         # Update existing measurement
-        db.execute(
-            "UPDATE measurement_cache SET power = ? WHERE id = ?",
-            (power, existing['id'])
-        )
+        db.execute("UPDATE measurement_cache SET power = ? WHERE id = ?", (power, existing["id"]))
     else:
         # Insert new measurement
         db.execute(
             "INSERT INTO measurement_cache (type, frequency, power) VALUES (?, ?, ?)",
-            (measurement_type, frequency_hz, power)
+            (measurement_type, frequency_hz, power),
         )
-    
+
     db.commit()
-    
+
     # Also store in app config for current request
-    if measurement_type == 'baseline':
+    if measurement_type == "baseline":
         if "BASELINE_DATA" not in current_app.config:
             current_app.config["BASELINE_DATA"] = {}
         current_app.config["BASELINE_DATA"][str(int(frequency_hz))] = power
@@ -69,10 +66,11 @@ def store_measurement(measurement_type, frequency_hz, power):
             current_app.config["HAT_DATA"] = {}
         current_app.config["HAT_DATA"][str(int(frequency_hz))] = power
 
+
 def get_measurements(measurement_type):
     """
     Get all measurements of a specific type from the database.
-    
+
     :param measurement_type: Type of measurement ('baseline' or 'hat')
     :type measurement_type: str
     :return: Dictionary of frequency -> power
@@ -80,29 +78,30 @@ def get_measurements(measurement_type):
     """
     db = get_db()
     measurements = db.execute(
-        "SELECT frequency, power FROM measurement_cache WHERE type = ?",
-        (measurement_type,)
+        "SELECT frequency, power FROM measurement_cache WHERE type = ?", (measurement_type,)
     ).fetchall()
-    
+
     result = {}
     for row in measurements:
-        result[str(int(row['frequency']))] = row['power']
-    
+        result[str(int(row["frequency"]))] = row["power"]
+
     return result
+
 
 def load_measurements_to_config():
     """
     Load measurements from database into application config.
     Call this at the start of relevant routes to ensure we have current data.
     """
-    baseline_data = get_measurements('baseline')
-    hat_data = get_measurements('hat')
-    
+    baseline_data = get_measurements("baseline")
+    hat_data = get_measurements("hat")
+
     if baseline_data:
         current_app.config["BASELINE_DATA"] = baseline_data
-    
+
     if hat_data:
         current_app.config["HAT_DATA"] = hat_data
+
 
 def clear_measurements():
     """
@@ -112,7 +111,7 @@ def clear_measurements():
     db = get_db()
     db.execute("DELETE FROM measurement_cache")
     db.commit()
-    
+
     # Also clear from app config
     if "BASELINE_DATA" in current_app.config:
         del current_app.config["BASELINE_DATA"]
@@ -178,7 +177,7 @@ def index():
     global scanner
     if scanner is None:
         scanner = get_scanner()
-    
+
     # Load any cached measurements into the app config
     load_measurements_to_config()
 
@@ -329,6 +328,13 @@ def measure_hat():
     """
     Measure a hat's attenuation after baseline has been established.
 
+    All calculations are performed server-side for consistency:
+    - Average attenuation is calculated using only valid measurements
+    - Effectiveness values for each frequency band (HF, VHF, UHF, SHF) are calculated
+    - Maximum and minimum attenuation frequencies are identified
+
+    The client is only responsible for displaying these server-calculated values.
+
     :return: JSON response with test results
     :rtype: Response
     """
@@ -371,46 +377,65 @@ def measure_hat():
 
         # Calculate attenuation
         attenuation_data = scanner.calculate_attenuation(baseline_data, hat_data)
-        average_attenuation = float(sum(attenuation_data) / len(attenuation_data))
 
-        # Calculate effectiveness in different frequency bands using standard RF band names
-        hf_indices = [i for i, f in enumerate(scanner.frequencies) if 3 <= f < 30]  # HF: 3-30 MHz
-        vhf_indices = [i for i, f in enumerate(scanner.frequencies) if 30 <= f < 300]  # VHF: 30-300 MHz
-        uhf_indices = [i for i, f in enumerate(scanner.frequencies) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
-        shf_indices = [i for i, f in enumerate(scanner.frequencies) if 3000 <= f <= 5900]  # SHF: 3-30 GHz
+        # All measurements from scanner are considered valid
+        valid_measurements = [True] * len(attenuation_data)
+
+        # Calculate average using only valid measurements
+        total_attenuation = 0
+        valid_count = 0
+        for i, att in enumerate(attenuation_data):
+            if valid_measurements[i]:
+                total_attenuation += att
+                valid_count += 1
+
+        average_attenuation = float(total_attenuation / valid_count) if valid_count > 0 else 0.0
+        print(f"DEBUG - Calculated average attenuation in measure_hat: {average_attenuation}")
+
+        # Calculate effectiveness for different frequency bands using standard RF band names
+        # Only include valid measurements in these calculations
+        hf_values = [
+            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 2 <= f < 30 and valid_measurements[i]
+        ]  # HF: 2-30 MHz
+        vhf_values = [
+            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 30 <= f < 300 and valid_measurements[i]
+        ]  # VHF: 30-300 MHz
+        uhf_values = [
+            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 300 <= f < 3000 and valid_measurements[i]
+        ]  # UHF: 300 MHz - 3 GHz
+        shf_values = [
+            attenuation_data[i]
+            for i, f in enumerate(scanner.frequencies)
+            if 3000 <= f <= 5900 and valid_measurements[i]
+        ]  # SHF: 3-30 GHz
 
         effectiveness = {
-            "hf_band": (
-                float(sum(attenuation_data[i] for i in hf_indices) / len(hf_indices))
-                if hf_indices
-                else 0.0
-            ),
-            "vhf_band": (
-                float(sum(attenuation_data[i] for i in vhf_indices) / len(vhf_indices))
-                if vhf_indices
-                else 0.0
-            ),
-            "uhf_band": (
-                float(sum(attenuation_data[i] for i in uhf_indices) / len(uhf_indices))
-                if uhf_indices
-                else 0.0
-            ),
-            "shf_band": (
-                float(sum(attenuation_data[i] for i in shf_indices) / len(shf_indices))
-                if shf_indices
-                else 0.0
-            ),
+            "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
+            "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
+            "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
+            "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
         }
 
-        # Find peak attenuation and corresponding frequency
-        max_attenuation_idx = attenuation_data.index(max(attenuation_data))
-        max_attenuation = float(attenuation_data[max_attenuation_idx])
-        max_attenuation_freq = float(scanner.frequencies[max_attenuation_idx])
+        # Find peak and minimum attenuation (only consider valid measurements)
+        valid_attenuation_with_idx = [
+            (i, att) for i, (att, valid) in enumerate(zip(attenuation_data, valid_measurements)) if valid
+        ]
 
-        # Find minimum attenuation and corresponding frequency
-        min_attenuation_idx = attenuation_data.index(min(attenuation_data))
-        min_attenuation = float(attenuation_data[min_attenuation_idx])
-        min_attenuation_freq = float(scanner.frequencies[min_attenuation_idx])
+        if valid_attenuation_with_idx:
+            max_idx, max_att = max(valid_attenuation_with_idx, key=lambda x: x[1])
+            min_idx, min_att = min(valid_attenuation_with_idx, key=lambda x: x[1])
+
+            max_attenuation = float(max_att)
+            max_attenuation_freq = float(scanner.frequencies[max_idx])
+
+            min_attenuation = float(min_att)
+            min_attenuation_freq = float(scanner.frequencies[min_idx])
+        else:
+            # Default values if no valid measurements
+            max_attenuation = 0.0
+            max_attenuation_freq = 0.0
+            min_attenuation = 0.0
+            min_attenuation_freq = 0.0
 
         # Save results to database
         db = get_db()
@@ -424,15 +449,15 @@ def measure_hat():
             """,
             (contestant_id,),
         ).fetchone()
-        
+
         # Check if the contestant has any previous entries
         has_previous_entries = best_score_result and best_score_result["best"] is not None
-        
+
         # First score is always the best
         # Otherwise, compare with previous best - higher attenuation values are better
         # We want positive values (good shielding) to be considered better than negative values
         is_best = not has_previous_entries or (has_previous_entries and average_attenuation > best_score_result["best"])
-        
+
         previous_best_score = best_score_result["best"] if has_previous_entries else None
 
         # Add test result
@@ -482,16 +507,25 @@ def measure_hat():
 
         # Prepare a message about the score
         if average_attenuation < 0:
-            score_message = f"Warning: The hat shows negative attenuation ({average_attenuation:.2f} dB), which means it's amplifying signals instead of blocking them."
+            score_message = (
+                f"Warning: The hat shows negative attenuation ({average_attenuation:.2f} dB), "
+                f"which means it's amplifying signals instead of blocking them."
+            )
             if is_best:
                 score_message += " This is still your best score so far."
             else:
                 score_message += f" Your previous best score of {previous_best_score:.2f} dB is better."
         else:
             if is_best:
-                score_message = f"This is the best score for {contestant_name} with an attenuation of {average_attenuation:.2f} dB."
+                score_message = (
+                    f"This is the best score for {contestant_name} "
+                    f"with an attenuation of {average_attenuation:.2f} dB."
+                )
             else:
-                score_message = f"Not the best score for {contestant_name}. Previous best: {previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
+                score_message = (
+                    f"Not the best score for {contestant_name}. Previous best: "
+                    f"{previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
+                )
 
         # Convert frequencies to standard Python list to ensure JSON serialization
         frequencies_json = [float(f) for f in scanner.frequencies]
@@ -622,10 +656,10 @@ def measure_frequency():
         # Save the measurement to app config and database
         if measurement_type == "baseline":
             print(f"DEBUG - Stored baseline for {freq_mhz} MHz: {power} dBm with key {str(int(freq_hz))}")
-            store_measurement('baseline', int(freq_hz), power)
+            store_measurement("baseline", int(freq_hz), power)
         else:
             print(f"DEBUG - Stored hat for {freq_mhz} MHz: {power} dBm with key {str(int(freq_hz))}")
-            store_measurement('hat', int(freq_hz), power)
+            store_measurement("hat", int(freq_hz), power)
 
         # Calculate attenuation if we have both baseline and hat measurements for this frequency
         attenuation = None
@@ -637,7 +671,10 @@ def measure_frequency():
         ):
             baseline_power = current_app.config["BASELINE_DATA"][freq_key]
             attenuation = baseline_power - power  # Allow negative attenuation values
-            print(f"DEBUG - Calculated attenuation for {freq_mhz} MHz: {attenuation} dB (baseline: {baseline_power} dBm, hat: {power} dBm)")
+            print(
+                f"DEBUG - Calculated attenuation for {freq_mhz} MHz: {attenuation} dB "
+                f"(baseline: {baseline_power} dBm, hat: {power} dBm)"
+            )
 
         # Return the measurement results
         return jsonify(
@@ -681,6 +718,14 @@ def save_results():
     API endpoint to save the final test results to the database.
     This should be called after all measurements have been completed.
 
+    All calculations are performed server-side:
+    - Only valid measurements (frequencies with both baseline and hat data) are used
+    - Average attenuation is calculated from these valid measurements
+    - Frequency band effectiveness values are determined based on standard RF bands
+    - The database stores only the valid measurements for future reference
+
+    The client receives and displays the calculated values without performing any calculations.
+
     Required parameters:
     - contestant_id: ID of the contestant
 
@@ -693,19 +738,19 @@ def save_results():
 
     if not baseline_data or not hat_data:
         error_msg = "Baseline or hat measurements have not been completed."
-        
+
         # Add more detailed error information
         if not baseline_data:
             error_msg += " Baseline data is missing."
         if not hat_data:
             error_msg += " Hat measurement data is missing."
-            
+
         error_msg += " Please run both tests first."
-        
+
         # Debug log what data we have
         print(f"DEBUG - Save failed - Baseline data: {baseline_data}")
         print(f"DEBUG - Save failed - Hat data: {hat_data}")
-        
+
         return (
             jsonify(
                 {
@@ -741,8 +786,9 @@ def save_results():
         # Convert stored data to ordered lists matching scanner.frequencies
         baseline_readings = []
         hat_readings = []
+        valid_measurements = []  # Track which measurements are valid
         missing_frequencies = []
-        
+
         # Debug: Print stored data
         print("DEBUG - Baseline data in config:", current_app.config.get("BASELINE_DATA", {}))
         print("DEBUG - Hat data in config:", current_app.config.get("HAT_DATA", {}))
@@ -750,69 +796,88 @@ def save_results():
         for freq in scanner.frequencies:
             freq_hz = freq * 1e6  # Convert MHz to Hz
             str_freq = str(int(freq_hz))  # Use full Hz frequency as key
-            
+
             # Debug: Print what we're looking for
             print(f"DEBUG - Looking for frequency {freq} MHz ({str_freq} Hz)")
-            
+
             baseline_found = str_freq in baseline_data
             hat_found = str_freq in hat_data
-            
+
             if baseline_found and hat_found:
                 baseline_readings.append(baseline_data[str_freq])
                 hat_readings.append(hat_data[str_freq])
+                valid_measurements.append(True)
                 print(f"DEBUG - Found both: Baseline={baseline_data[str_freq]}, Hat={hat_data[str_freq]}")
             else:
                 missing_frequencies.append(freq)
                 # Use placeholder values if measurements are missing
                 baseline_readings.append(-80.0)
                 hat_readings.append(-80.0)
+                valid_measurements.append(False)
                 print(f"DEBUG - Missing data: baseline_found={baseline_found}, hat_found={hat_found}")
-                
+
         # Debug: Print constructed measurement arrays
         print("DEBUG - Baseline readings:", baseline_readings)
         print("DEBUG - Hat readings:", hat_readings)
 
         # Calculate attenuation
         attenuation_data = scanner.calculate_attenuation(baseline_readings, hat_readings)
-        average_attenuation = float(sum(attenuation_data) / len(attenuation_data))
 
-        # Calculate effectiveness in different frequency bands using standard RF band names
-        hf_indices = [i for i, f in enumerate(scanner.frequencies) if 3 <= f < 30]  # HF: 3-30 MHz
-        vhf_indices = [i for i, f in enumerate(scanner.frequencies) if 30 <= f < 300]  # VHF: 30-300 MHz
-        uhf_indices = [i for i, f in enumerate(scanner.frequencies) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
-        shf_indices = [i for i, f in enumerate(scanner.frequencies) if 3000 <= f <= 5900]  # SHF: 3-30 GHz
+        # Calculate average using only valid measurements
+        total_attenuation = 0
+        valid_count = 0
+        for i, att in enumerate(attenuation_data):
+            if valid_measurements[i]:
+                total_attenuation += att
+                valid_count += 1
+
+        average_attenuation = float(total_attenuation / valid_count) if valid_count > 0 else 0.0
+        print(f"DEBUG - Calculated average using only valid measurements: {average_attenuation}")
+
+        # Calculate effectiveness for different frequency bands using standard RF band names
+        # Only include valid measurements in these calculations
+        hf_values = [
+            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 2 <= f < 30 and valid_measurements[i]
+        ]  # HF: 2-30 MHz
+        vhf_values = [
+            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 30 <= f < 300 and valid_measurements[i]
+        ]  # VHF: 30-300 MHz
+        uhf_values = [
+            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 300 <= f < 3000 and valid_measurements[i]
+        ]  # UHF: 300 MHz - 3 GHz
+        shf_values = [
+            attenuation_data[i]
+            for i, f in enumerate(scanner.frequencies)
+            if 3000 <= f <= 5900 and valid_measurements[i]
+        ]  # SHF: 3-30 GHz
 
         effectiveness = {
-            "hf_band": (
-                float(sum(attenuation_data[i] for i in hf_indices) / len(hf_indices))
-                if hf_indices
-                else 0.0
-            ),
-            "vhf_band": (
-                float(sum(attenuation_data[i] for i in vhf_indices) / len(vhf_indices))
-                if vhf_indices
-                else 0.0
-            ),
-            "uhf_band": (
-                float(sum(attenuation_data[i] for i in uhf_indices) / len(uhf_indices))
-                if uhf_indices
-                else 0.0
-            ),
-            "shf_band": (
-                float(sum(attenuation_data[i] for i in shf_indices) / len(shf_indices))
-                if shf_indices
-                else 0.0
-            ),
+            "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
+            "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
+            "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
+            "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
         }
 
-        # Find peak and minimum attenuation
-        max_attenuation_idx = attenuation_data.index(max(attenuation_data))
-        max_attenuation = float(attenuation_data[max_attenuation_idx])
-        max_attenuation_freq = float(scanner.frequencies[max_attenuation_idx])
+        # Find peak and minimum attenuation (only consider valid measurements)
+        valid_attenuation_with_idx = [
+            (i, att) for i, (att, valid) in enumerate(zip(attenuation_data, valid_measurements)) if valid
+        ]
 
-        min_attenuation_idx = attenuation_data.index(min(attenuation_data))
-        min_attenuation = float(attenuation_data[min_attenuation_idx])
-        min_attenuation_freq = float(scanner.frequencies[min_attenuation_idx])
+        if valid_attenuation_with_idx:
+            max_idx, max_att = max(valid_attenuation_with_idx, key=lambda x: x[1])
+            min_idx, min_att = min(valid_attenuation_with_idx, key=lambda x: x[1])
+
+            max_attenuation = float(max_att)
+            max_attenuation_freq = float(scanner.frequencies[max_idx])
+
+            min_attenuation = float(min_att)
+            min_attenuation_freq = float(scanner.frequencies[min_idx])
+        else:
+            # Default values if no valid measurements
+            max_attenuation = 0.0
+            max_attenuation_freq = 0.0
+            min_attenuation = 0.0
+            min_attenuation_freq = 0.0
 
         # Save results to database
         db = get_db()
@@ -826,15 +891,15 @@ def save_results():
             """,
             (contestant_id,),
         ).fetchone()
-        
+
         # Check if the contestant has any previous entries
         has_previous_entries = best_score_result and best_score_result["best"] is not None
-        
+
         # First score is always the best
         # Otherwise, compare with previous best - higher attenuation values are better
         # We want positive values (good shielding) to be considered better than negative values
         is_best = not has_previous_entries or (has_previous_entries and average_attenuation > best_score_result["best"])
-        
+
         previous_best_score = best_score_result["best"] if has_previous_entries else None
 
         # Add test result
@@ -849,20 +914,22 @@ def save_results():
 
         # Add individual frequency measurements
         for i, freq in enumerate(scanner.frequencies):
-            db.execute(
-                """
-                INSERT INTO test_data
-                (test_result_id, frequency, baseline_level, hat_level, attenuation)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    test_result_id,
-                    float(freq),
-                    float(baseline_readings[i]),
-                    float(hat_readings[i]),
-                    float(attenuation_data[i]),
-                ),
-            )
+            # Only insert valid measurements
+            if valid_measurements[i]:
+                db.execute(
+                    """
+                    INSERT INTO test_data
+                    (test_result_id, frequency, baseline_level, hat_level, attenuation)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        test_result_id,
+                        float(freq),
+                        float(baseline_readings[i]),
+                        float(hat_readings[i]),
+                        float(attenuation_data[i]),
+                    ),
+                )
 
         # If this is the best score, reset previous best scores
         if is_best:
@@ -884,21 +951,30 @@ def save_results():
 
         # Prepare a message about the score
         if average_attenuation < 0:
-            score_message = f"Warning: The hat shows negative attenuation ({average_attenuation:.2f} dB), which means it's amplifying signals instead of blocking them."
+            score_message = (
+                f"Warning: The hat shows negative attenuation ({average_attenuation:.2f} dB), "
+                f"which means it's amplifying signals instead of blocking them."
+            )
             if is_best:
                 score_message += " This is still your best score so far."
             else:
                 score_message += f" Your previous best score of {previous_best_score:.2f} dB is better."
         else:
             if is_best:
-                score_message = f"This is the best score for {contestant_name} with an attenuation of {average_attenuation:.2f} dB."
+                score_message = (
+                    f"This is the best score for {contestant_name} "
+                    f"with an attenuation of {average_attenuation:.2f} dB."
+                )
             else:
-                score_message = f"Not the best score for {contestant_name}. Previous best: {previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
+                score_message = (
+                    f"Not the best score for {contestant_name}. Previous best: "
+                    f"{previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
+                )
 
         # Clear stored data to prevent contaminating future tests
         clear_measurements()
 
-        # Return test results
+        # Return test results with all calculated values
         return jsonify(
             {
                 "status": "success",

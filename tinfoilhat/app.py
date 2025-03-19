@@ -11,7 +11,7 @@ from contextlib import suppress
 from flask import Flask
 
 from tinfoilhat import routes
-from tinfoilhat.db import close_db, init_db, ensure_measurement_cache_exists
+from tinfoilhat.db import close_db, ensure_measurement_cache_exists, init_db
 
 
 def create_app(test_config=None):
@@ -43,7 +43,7 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
 
     # Initialize database only if it doesn't exist
-    db_path = app.config['DATABASE']
+    db_path = app.config["DATABASE"]
     if not os.path.exists(db_path):
         with app.app_context():
             init_db()

@@ -13,6 +13,13 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 
 ## Recent Updates
 
+### Server-Side Calculation Improvements (March 2025)
+- Moved all attenuation and effectiveness calculations to server-side for consistency
+- Eliminated discrepancies between client and server calculations
+- Improved accuracy by only considering valid measurements in calculations
+- Enhanced data validation logic on server for more reliable results
+- Standardized frequency band processing across all calculations
+
 ### Code Quality and Linting Improvements (March 2025)
 - Updated code style configuration to use 120-character line length
 - Fixed whitespace issues in SQL queries

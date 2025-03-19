@@ -458,10 +458,7 @@
             
             // Measurement complete or stopped
             if (!shouldStopMeasurement) {
-                // Calculate and display stats
-                calculateAndDisplayStats();
                 statusEl.textContent = 'Hat measurement completed. Saving results...';
-                document.getElementById('test-results').classList.remove('hidden');
                 // Automatically save results instead of showing the save button
                 await saveResults();
             } else {
@@ -635,87 +632,12 @@
             spectrumChart.update();
         }
         
-        // Calculate statistics and display them
+        // Calculate statistics and display them - now just a no-op function
         function calculateAndDisplayStats() {
-            // Calculate average attenuation
-            let totalAttenuation = 0;
-            let countAttenuation = 0;
-            let maxAttenuation = -Infinity;
-            let maxAttenuationFreq = 0;
-            let minAttenuation = Infinity;
-            let minAttenuationFreq = 0;
-            
-            // Frequency band totals
-            let hfTotal = 0;
-            let hfCount = 0;
-            let vhfTotal = 0;
-            let vhfCount = 0;
-            let uhfTotal = 0;
-            let uhfCount = 0;
-            let shfTotal = 0;
-            let shfCount = 0;
-            
-            for (const freqHz of allFrequencies) {
-                if (attenuationData[freqHz] !== undefined) {
-                    const att = attenuationData[freqHz];
-                    totalAttenuation += att;
-                    countAttenuation++;
-                    
-                    // Track max/min
-                    if (att > maxAttenuation) {
-                        maxAttenuation = att;
-                        maxAttenuationFreq = freqHz;
-                    }
-                    
-                    if (att < minAttenuation) {
-                        minAttenuation = att;
-                        minAttenuationFreq = freqHz;
-                    }
-                    
-                    // Track by frequency band
-                    if (freqHz < 3e6) {
-                        // HF (3-30 MHz)
-                        hfTotal += att;
-                        hfCount++;
-                    } else if (freqHz < 3e7) {
-                        // VHF (30-300 MHz)
-                        vhfTotal += att;
-                        vhfCount++;
-                    } else if (freqHz < 3e9) {
-                        // UHF (300 MHz-3 GHz)
-                        uhfTotal += att;
-                        uhfCount++;
-                    } else {
-                        // SHF (3-6 GHz)
-                        shfTotal += att;
-                        shfCount++;
-                    }
-                }
-            }
-            
-            // Calculate averages
-            const avgAttenuation = countAttenuation > 0 ? totalAttenuation / countAttenuation : 0;
-            const hfAvg = hfCount > 0 ? hfTotal / hfCount : 0;
-            const vhfAvg = vhfCount > 0 ? vhfTotal / vhfCount : 0;
-            const uhfAvg = uhfCount > 0 ? uhfTotal / uhfCount : 0;
-            const shfAvg = shfCount > 0 ? shfTotal / shfCount : 0;
-            
-            // Update UI
-            document.getElementById('average-attenuation').textContent = avgAttenuation.toFixed(2);
-            document.getElementById('hf-band-att').textContent = hfAvg.toFixed(2);
-            document.getElementById('vhf-band-att').textContent = vhfAvg.toFixed(2);
-            document.getElementById('uhf-band-att').textContent = uhfAvg.toFixed(2);
-            document.getElementById('shf-band-att').textContent = shfAvg.toFixed(2);
-            
-            if (maxAttenuation > -Infinity) {
-                document.getElementById('max-freq').textContent = (maxAttenuationFreq / 1e6).toFixed(2);
-                document.getElementById('max-att').textContent = maxAttenuation.toFixed(2);
-            }
-            
-            if (minAttenuation < Infinity) {
-                document.getElementById('min-freq').textContent = (minAttenuationFreq / 1e6).toFixed(2);
-                document.getElementById('min-att').textContent = minAttenuation.toFixed(2);
-            }
+            // This function is now a no-op as all calculations happen server-side
+            // The UI is updated with server-calculated values in the saveResults function
+            // This eliminates discrepancies between client and server calculations
+            console.log("Skipping client-side calculations - using server values instead");
         }
         
         // Save test results to database
@@ -743,6 +665,26 @@
                 const result = await response.json();
                 
                 if (result.status === 'success') {
+                    // Update the UI with server-calculated values
+                    document.getElementById('average-attenuation').textContent = result.data.average_attenuation.toFixed(2);
+                    document.getElementById('hf-band-att').textContent = result.data.effectiveness.hf_band.toFixed(2);
+                    document.getElementById('vhf-band-att').textContent = result.data.effectiveness.vhf_band.toFixed(2);
+                    document.getElementById('uhf-band-att').textContent = result.data.effectiveness.uhf_band.toFixed(2);
+                    document.getElementById('shf-band-att').textContent = result.data.effectiveness.shf_band.toFixed(2);
+                    
+                    if (result.data.max_attenuation) {
+                        document.getElementById('max-freq').textContent = (result.data.max_attenuation.frequency / 1e6).toFixed(2);
+                        document.getElementById('max-att').textContent = result.data.max_attenuation.value.toFixed(2);
+                    }
+                    
+                    if (result.data.min_attenuation) {
+                        document.getElementById('min-freq').textContent = (result.data.min_attenuation.frequency / 1e6).toFixed(2);
+                        document.getElementById('min-att').textContent = result.data.min_attenuation.value.toFixed(2);
+                    }
+                    
+                    // Show test results section
+                    document.getElementById('test-results').classList.remove('hidden');
+                    
                     // Show best score message if applicable
                     const bestScoreMsg = document.getElementById('best-score-message');
                     if (result.data.is_best_score) {
@@ -755,15 +697,6 @@
                     } else {
                         bestScoreMsg.classList.add('hidden');
                         statusEl.textContent = `Test completed and saved. Not the best score for team "${result.data.contestant_name}".`;
-                    }
-                    
-                    // If there's a place where you display the effectiveness values from the server response:
-                    // Update the effectiveness values if they exist in the response
-                    if (result.data && result.data.effectiveness) {
-                        document.getElementById('hf-band-att').textContent = result.data.effectiveness.hf_band.toFixed(2);
-                        document.getElementById('vhf-band-att').textContent = result.data.effectiveness.vhf_band.toFixed(2);
-                        document.getElementById('uhf-band-att').textContent = result.data.effectiveness.uhf_band.toFixed(2);
-                        document.getElementById('shf-band-att').textContent = result.data.effectiveness.shf_band.toFixed(2);
                     }
                 } else {
                     statusEl.textContent = 'Error: ' + result.message;

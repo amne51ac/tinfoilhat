@@ -474,9 +474,11 @@ class Scanner:
             if att < 0:
                 # Negative attenuation means the signal got stronger with the hat
                 # This could be due to reflection, resonance, or other RF effects
-                print(f"Note: Negative attenuation detected at {freq} MHz: {att:.2f} dB. Signal is stronger with the hat.")
+                print(
+                    f"Note: Negative attenuation detected at {freq} MHz: {att:.2f} dB. Signal is stronger with the hat."
+                )
                 # We'll keep the negative value for accurate representation
-            
+
             # Apply frequency-dependent adjustment
             # (tinfoil hats typically perform better at higher frequencies)
             # Calculate frequency factor (normalized to 0-1 range)
