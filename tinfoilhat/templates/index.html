@@ -1197,6 +1197,12 @@
                     return null;
                 }
                 
+                // Get the contestant ID if we're measuring with a hat
+                let contestantId = null;
+                if (measurementType === 'hat') {
+                    contestantId = document.getElementById('modal-contestant-id').value;
+                }
+                
                 const response = await fetch('/test/measure_frequency', {
                     method: 'POST',
                     headers: {
@@ -1204,7 +1210,8 @@
                     },
                     body: JSON.stringify({
                         frequency: frequencyMhz,
-                        measurement_type: measurementType
+                        measurement_type: measurementType,
+                        contestant_id: contestantId
                     })
                 });
                 

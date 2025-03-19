@@ -154,6 +154,26 @@
             0% { background-color: rgba(255, 255, 0, 0.5); }
             100% { background-color: transparent; }
         }
+        
+        /* Styles for the measurement in progress indicator */
+        .test-in-progress {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: rgba(50, 50, 50, 0.8);
+            border-radius: 5px;
+            border: 1px solid #555;
+        }
+        .measuring-indicator {
+            color: #ff9900;
+            font-weight: bold;
+            font-size: 1.2em;
+            text-align: center;
+            animation: blink 1s infinite alternate;
+        }
+        @keyframes blink {
+            from { opacity: 0.7; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -436,9 +456,22 @@
         let lastId = {{ recent_test['max_id'] if recent_test and recent_test['max_id'] else 0 }};
         let usePolling = false;
         let eventSource;
+        let frequencyEventSource;
+        
+        // Create objects to store the current test data as it's being measured
+        let currentTestData = {
+            frequencies: [],
+            baseline_levels: [],
+            hat_levels: [],
+            attenuations: [],
+            measurement_type: null,
+            contestant_id: null,
+            contestant_name: null
+        };
         
         function setupSSE() {
             try {
+                // Main leaderboard updates
                 eventSource = new EventSource(`/billboard-updates?last_id=${lastId}`);
                 
                 eventSource.onmessage = function(event) {
@@ -453,10 +486,147 @@
                     usePolling = true;
                     startPolling();
                 };
+                
+                // Real-time frequency measurement updates
+                frequencyEventSource = new EventSource('/frequency-stream');
+                
+                frequencyEventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleFrequencyUpdate(data);
+                };
+                
+                frequencyEventSource.onerror = function(e) {
+                    console.log('Frequency stream connection error');
+                    frequencyEventSource.close();
+                    // Try to reconnect after a short delay
+                    setTimeout(() => {
+                        frequencyEventSource = new EventSource('/frequency-stream');
+                    }, 3000);
+                };
             } catch (e) {
                 console.log('Error setting up SSE, falling back to polling:', e);
                 usePolling = true;
                 startPolling();
+            }
+        }
+        
+        // Handle updates from the frequency stream
+        function handleFrequencyUpdate(data) {
+            // Check if this is a measurement update or a test completion event
+            if (data.event_type === 'test_complete') {
+                // This is a final test result, update the complete spectrum
+                console.log('Test complete:', data);
+                
+                // Reset the current test data
+                currentTestData = {
+                    frequencies: [],
+                    baseline_levels: [],
+                    hat_levels: [],
+                    attenuations: [],
+                    measurement_type: null,
+                    contestant_id: null,
+                    contestant_name: null
+                };
+                
+                // No need to update charts here as the billboard update will handle it
+                return;
+            }
+            
+            // This is a single frequency measurement update
+            console.log('Frequency update:', data);
+            
+            // Store the contestant information if available
+            if (data.contestant_id && !currentTestData.contestant_id) {
+                currentTestData.contestant_id = data.contestant_id;
+            }
+            
+            // Process based on measurement type
+            if (data.measurement_type === 'baseline') {
+                // Store baseline measurement
+                const freqIndex = currentTestData.frequencies.indexOf(data.frequency_mhz);
+                if (freqIndex === -1) {
+                    // New frequency
+                    currentTestData.frequencies.push(data.frequency_mhz);
+                    currentTestData.baseline_levels.push(data.power);
+                    
+                    // Sort the arrays by frequency
+                    const sortIndices = [...currentTestData.frequencies.keys()]
+                        .sort((a, b) => currentTestData.frequencies[a] - currentTestData.frequencies[b]);
+                    
+                    currentTestData.frequencies = sortIndices.map(i => currentTestData.frequencies[i]);
+                    currentTestData.baseline_levels = sortIndices.map(i => currentTestData.baseline_levels[i]);
+                    
+                    // Add placeholder null values for hat and attenuation
+                    if (currentTestData.hat_levels.length < currentTestData.frequencies.length) {
+                        currentTestData.hat_levels.push(null);
+                        currentTestData.attenuations.push(null);
+                    }
+                } else {
+                    // Update existing frequency
+                    currentTestData.baseline_levels[freqIndex] = data.power;
+                }
+            } else if (data.measurement_type === 'hat') {
+                // Store hat measurement and attenuation if available
+                const freqIndex = currentTestData.frequencies.indexOf(data.frequency_mhz);
+                if (freqIndex === -1) {
+                    // New frequency
+                    currentTestData.frequencies.push(data.frequency_mhz);
+                    currentTestData.hat_levels.push(data.power);
+                    currentTestData.attenuations.push(data.attenuation || null);
+                    
+                    // Add placeholder null value for baseline if needed
+                    if (currentTestData.baseline_levels.length < currentTestData.frequencies.length) {
+                        currentTestData.baseline_levels.push(null);
+                    }
+                    
+                    // Sort the arrays by frequency
+                    const sortIndices = [...currentTestData.frequencies.keys()]
+                        .sort((a, b) => currentTestData.frequencies[a] - currentTestData.frequencies[b]);
+                    
+                    currentTestData.frequencies = sortIndices.map(i => currentTestData.frequencies[i]);
+                    currentTestData.baseline_levels = sortIndices.map(i => currentTestData.baseline_levels[i]);
+                    currentTestData.hat_levels = sortIndices.map(i => currentTestData.hat_levels[i]);
+                    currentTestData.attenuations = sortIndices.map(i => currentTestData.attenuations[i]);
+                } else {
+                    // Update existing frequency
+                    currentTestData.hat_levels[freqIndex] = data.power;
+                    currentTestData.attenuations[freqIndex] = data.attenuation || null;
+                }
+            }
+            
+            // Update the charts with the real-time data
+            updateChartsWithLiveData();
+        }
+        
+        // Update charts with the current test data
+        function updateChartsWithLiveData() {
+            // Don't update if no data available
+            if (currentTestData.frequencies.length === 0) {
+                return;
+            }
+            
+            // Show a "Currently Measuring" indicator
+            const recentTest = document.getElementById('recent-test');
+            const testInProgress = document.createElement('div');
+            testInProgress.className = 'test-in-progress';
+            testInProgress.innerHTML = '<div class="measuring-indicator">MEASUREMENT IN PROGRESS</div>';
+            
+            // Only add the indicator if it doesn't already exist
+            if (!document.querySelector('.test-in-progress')) {
+                recentTest.appendChild(testInProgress);
+            }
+            
+            // Update power chart with available data
+            powerChart.data.labels = currentTestData.frequencies.map(f => f.toFixed(1));
+            powerChart.data.datasets[0].data = currentTestData.baseline_levels;
+            powerChart.data.datasets[1].data = currentTestData.hat_levels;
+            powerChart.update();
+            
+            // Only update attenuation chart if we have attenuation values
+            if (currentTestData.attenuations.some(a => a !== null)) {
+                attenuationChart.data.labels = currentTestData.frequencies.map(f => f.toFixed(1));
+                attenuationChart.data.datasets[0].data = currentTestData.attenuations;
+                attenuationChart.update();
             }
         }
         
@@ -579,6 +749,23 @@
             // Update the recent test display
             if (data.new_test) {
                 updateRecentTest(data.new_test);
+                
+                // Remove the "Measurement in Progress" indicator if it exists
+                const testInProgress = document.querySelector('.test-in-progress');
+                if (testInProgress) {
+                    testInProgress.remove();
+                }
+                
+                // Reset currentTestData since we have a completed test
+                currentTestData = {
+                    frequencies: [],
+                    baseline_levels: [],
+                    hat_levels: [],
+                    attenuations: [],
+                    measurement_type: null,
+                    contestant_id: null,
+                    contestant_name: null
+                };
             }
             
             // Update leaderboards

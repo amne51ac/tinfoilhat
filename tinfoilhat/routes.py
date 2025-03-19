@@ -29,12 +29,47 @@ bp = Blueprint("tinfoilhat", __name__, url_prefix="")
 # This will prevent issues when Flask reloads the application
 scanner = None
 
+# Global variable to track the latest frequency measurement
+latest_frequency_measurement = None
+
 # Add a custom JSON encoder to handle datetime objects
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, datetime):
             return obj.strftime('%Y-%m-%d %H:%M:%S')
         return json.JSONEncoder.default(self, obj)
+
+
+@bp.route("/frequency-stream")
+def frequency_stream():
+    """
+    Server-Sent Events (SSE) endpoint that streams real-time frequency measurements
+    to the billboard. This allows the dashboard to update as each frequency is measured.
+
+    :return: Event stream response
+    :rtype: Response
+    """
+    def generate():
+        global latest_frequency_measurement
+        last_measurement_id = None
+        
+        while True:
+            # If we have a new measurement since last time
+            if latest_frequency_measurement and latest_frequency_measurement.get('id') != last_measurement_id:
+                # Update the last sent ID
+                last_measurement_id = latest_frequency_measurement.get('id')
+                
+                # Send the measurement data
+                yield f"data: {json.dumps(latest_frequency_measurement, cls=DateTimeEncoder)}\n\n"
+            
+            # Sleep to avoid high CPU usage
+            time.sleep(0.1)
+    
+    # Set appropriate headers for SSE
+    response = Response(stream_with_context(generate()), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Accel-Buffering'] = 'no'  # Disable proxy buffering
+    return response
 
 
 # New functions for persistent storage of measurements
@@ -709,6 +744,8 @@ def measure_frequency():
     :return: JSON response with measurement data
     :rtype: Response
     """
+    global latest_frequency_measurement
+    
     # Get scanner instance
     scanner = get_scanner()
     if scanner is None:
@@ -787,6 +824,28 @@ def measure_frequency():
                 f"DEBUG - Calculated attenuation for {freq_mhz} MHz: {attenuation} dB "
                 f"(baseline: {baseline_power} dBm, hat: {power} dBm)"
             )
+            
+        # Create a measurement data object
+        measurement_data = {
+            "id": f"{int(freq_hz)}_{measurement_type}_{time.time()}",  # Create a unique ID
+            "frequency_mhz": freq_mhz,
+            "frequency_hz": freq_hz,
+            "power": power,
+            "measurement_type": measurement_type,
+            "timestamp": datetime.now(),
+        }
+        
+        # Add attenuation if available
+        if attenuation is not None:
+            measurement_data["attenuation"] = attenuation
+            measurement_data["baseline_power"] = baseline_power
+            
+        # Get the contestant ID if it's available in the session
+        if request.json.get("contestant_id"):
+            measurement_data["contestant_id"] = request.json.get("contestant_id")
+            
+        # Update the global variable to notify SSE clients
+        latest_frequency_measurement = measurement_data
 
         # Return the measurement results
         return jsonify(
@@ -844,6 +903,8 @@ def save_results():
     :return: JSON response with test results
     :rtype: Response
     """
+    global latest_frequency_measurement
+    
     # Get the baseline and hat data from config
     baseline_data = current_app.config.get("BASELINE_DATA", {})
     hat_data = current_app.config.get("HAT_DATA", {})
@@ -1089,30 +1150,73 @@ def save_results():
         # Clear stored data to prevent contaminating future tests
         clear_measurements()
 
-        # Return test results with all calculated values
+        # After the test results are saved to the database, emit a test_complete event
+        # with the same test_result_id from the saved test results
+        try:
+            db = get_db()
+            contestant = db.execute("SELECT name, hat_type FROM contestant WHERE id = ?", (contestant_id,)).fetchone()
+            
+            # Retrieve the test result ID and data from the database
+            test_result = db.execute(
+                """
+                SELECT id, date, average_attenuation 
+                FROM test_result 
+                WHERE contestant_id = ? 
+                ORDER BY id DESC LIMIT 1
+                """, 
+                (contestant_id,)
+            ).fetchone()
+            
+            if not test_result:
+                raise Exception("Could not find the saved test result")
+                
+            test_result_id = test_result["id"]
+            
+            # Get the test data points for this test result
+            test_data_points = db.execute(
+                """
+                SELECT frequency, baseline_level, hat_level, attenuation
+                FROM test_data
+                WHERE test_result_id = ?
+                ORDER BY frequency
+                """, 
+                (test_result_id,)
+            ).fetchall()
+            
+            # Extract frequencies and attenuations from the test data
+            frequencies_mhz = [round(point["frequency"] / 1e6, 2) for point in test_data_points]
+            attenuations = [point["attenuation"] for point in test_data_points]
+            
+            # Create a complete test data summary
+            test_complete_data = {
+                "event_type": "test_complete",
+                "id": f"test_complete_{time.time()}",
+                "test_result_id": test_result_id,
+                "contestant_id": contestant_id,
+                "contestant_name": contestant["name"],
+                "hat_type": contestant["hat_type"],
+                "timestamp": datetime.now(),
+                "average_attenuation": test_result["average_attenuation"],
+                "frequencies": frequencies_mhz,
+                "attenuations": attenuations
+            }
+            
+            # Update the global variable to notify SSE clients of test completion
+            latest_frequency_measurement = test_complete_data
+            
+        except Exception as e:
+            print(f"Error emitting test_complete event: {str(e)}")
+            # Continue with the normal response even if the event emission fails
+        
+        # Return the original success response
         return jsonify(
             {
                 "status": "success",
                 "message": score_message,
                 "data": {
-                    "frequencies": [float(f) for f in scanner.frequencies],
-                    "baseline": [float(b) for b in baseline_readings],
-                    "hat_measurements": [float(h) for h in hat_readings],
-                    "attenuation": [float(a) for a in attenuation_data],
+                    "test_result_id": test_result_id,
                     "average_attenuation": average_attenuation,
-                    "is_best_score": is_best,
-                    "contestant_name": contestant_name,
-                    "missing_frequencies": missing_frequencies,
-                    "effectiveness": effectiveness,
-                    "samples_per_frequency": scanner.samples_per_freq,
-                    "max_attenuation": {
-                        "value": max_attenuation,
-                        "frequency": max_attenuation_freq,
-                    },
-                    "min_attenuation": {
-                        "value": min_attenuation,
-                        "frequency": min_attenuation_freq,
-                    },
+                    "valid_frequencies": len(frequencies_mhz),
                 },
             }
         )
