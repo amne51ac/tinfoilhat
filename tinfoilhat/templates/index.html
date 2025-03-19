@@ -227,7 +227,7 @@
                     <thead>
                         <tr>
                             <th>Rank</th>
-                            <th>Team Name</th>
+                            <th>Contestant Name</th>
                             <th>Attenuation Score</th>
                             <th>Test Date</th>
                         </tr>
@@ -319,7 +319,7 @@
             
             // Initialize modal contestant selection dropdown
             $('#modal-contestant-id').select2({
-                placeholder: "Search for a team...",
+                placeholder: "Search for a contestant...",
                 allowClear: true,
                 width: '100%',
                 dropdownParent: $('#continue-modal'),
@@ -328,7 +328,7 @@
                         return 'Searching...';
                     },
                     noResults: function() {
-                        return 'No teams found';
+                        return 'No contestants found';
                     }
                 }
             });
@@ -389,12 +389,23 @@
             document.getElementById('hybrid-hat-button').addEventListener('click', function() {
                 startHatMeasurement('hybrid');
             });
+            
+            // Set up modal add contestant button
+            document.getElementById('modal-add-contestant').addEventListener('click', function() {
+                // Show the registration modal without hiding the continue modal
+                const registrationModal = document.getElementById('registration-modal');
+                // Set a higher z-index to make it appear above the continue modal
+                registrationModal.style.zIndex = "1100";
+                registrationModal.style.display = 'block';
+            });
         });
         
         // Handle contestant registration form submission
         async function submitRegistrationForm(form) {
             const formData = new FormData(form);
             const messagesContainer = document.getElementById('registration-messages');
+            const registrationModal = document.getElementById('registration-modal');
+            const continueModalOpen = document.getElementById('continue-modal').style.display === 'block';
             
             try {
                 const response = await fetch(form.action, {
@@ -419,15 +430,19 @@
                     // Fetch updated data
                     updateLeaderboard();
                     
-                    // Add the new contestant to the dropdown immediately
-                    if (result.contestant) {
+                    // If this was opened from the continue modal, update that dropdown too
+                    if (result.contestant && continueModalOpen) {
+                        // Add the newly created contestant to the modal dropdown
+                        const modalDropdown = document.getElementById('modal-contestant-id');
                         const newOption = new Option(result.contestant.name, result.contestant.id, true, true);
-                        $('#contestant_id').append(newOption).trigger('change');
+                        $('#modal-contestant-id').append(newOption).trigger('change');
                     }
                     
                     // Close the modal after a short delay
                     setTimeout(() => {
-                        document.getElementById('registration-modal').style.display = 'none';
+                        registrationModal.style.display = 'none';
+                        // Reset z-index when closed
+                        registrationModal.style.zIndex = "1000";
                     }, 1000);
                 } else {
                     // Display error message from server
@@ -950,14 +965,14 @@
                     const bestScoreMsg = document.getElementById('best-score-message');
                     if (result.data.is_best_score) {
                         bestScoreMsg.classList.remove('hidden');
-                        bestScoreMsg.textContent = `This is the best score for team "${result.data.contestant_name}"! The leaderboard has been updated.`;
+                        bestScoreMsg.textContent = `This is the best score for contestant "${result.data.contestant_name}"! The leaderboard has been updated.`;
                         
                         // Update the leaderboard
                         updateLeaderboard(result.data.contestant_name);
-                        statusEl.textContent = `Test completed and saved. This is the best score for team "${result.data.contestant_name}"!`;
+                        statusEl.textContent = `Test completed and saved. This is the best score for contestant "${result.data.contestant_name}"!`;
                     } else {
                         bestScoreMsg.classList.add('hidden');
-                        statusEl.textContent = `Test completed and saved. Not the best score for team "${result.data.contestant_name}".`;
+                        statusEl.textContent = `Test completed and saved. Not the best score for contestant "${result.data.contestant_name}".`;
                     }
                 } else {
                     statusEl.textContent = 'Error: ' + result.message;
@@ -1011,7 +1026,7 @@
             const modalCurrentValue = modalDropdown.value;
             
             // Store current selection
-            modalDropdown.innerHTML = '<option value="">-- Search or select a team --</option>';
+            modalDropdown.innerHTML = '<option value="">-- Search or select a contestant --</option>';
             
             // Add all contestants
             contestants.forEach(contestant => {
@@ -1070,21 +1085,26 @@
             
             <div class="form-group">
                 <label for="modal-contestant-id">Select Contestant:</label>
-                <select id="modal-contestant-id" name="modal-contestant-id">
-                    <option value="">-- Search or select a team --</option>
-                    {% for contestant in contestants %}
-                        <option value="{{ contestant.id }}">{{ contestant.name }}</option>
-                    {% endfor %}
-                </select>
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    <div style="flex-grow: 1;">
+                        <select id="modal-contestant-id" name="modal-contestant-id">
+                            <option value="">-- Search or select a contestant --</option>
+                            {% for contestant in contestants %}
+                                <option value="{{ contestant.id }}">{{ contestant.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="button" id="modal-add-contestant" class="button-secondary" style="white-space: nowrap;">Add New Contestant</button>
+                </div>
             </div>
             
             <h3>Select Hat Type:</h3>
             <div style="display: flex; gap: 10px; margin-top: 15px;">
-                <button id="classic-hat-button" class="button-secondary" style="flex: 1; padding: 15px; background-color: #e67e22; transition: transform 0.2s, box-shadow 0.2s;">
+                <button id="classic-hat-button" class="button-secondary" style="flex: 1; padding: 15px; background-color: #227de6; transition: transform 0.2s, box-shadow 0.2s;">
                     <strong>Classic</strong><br>
                     <small>Tinfoil Only</small>
                 </button>
-                <button id="hybrid-hat-button" class="button-secondary" style="flex: 1; padding: 15px; background-color: #8e44ad; transition: transform 0.2s, box-shadow 0.2s;">
+                <button id="hybrid-hat-button" class="button-secondary" style="flex: 1; padding: 15px; background-color: #e58e14; transition: transform 0.2s, box-shadow 0.2s;">
                     <strong>Hybrid</strong><br>
                     <small>Tinfoil Plus Other Materials</small>
                 </button>
