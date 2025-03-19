@@ -4,6 +4,7 @@
 DROP TABLE IF EXISTS contestant;
 DROP TABLE IF EXISTS test_result;
 DROP TABLE IF EXISTS test_data;
+DROP TABLE IF EXISTS measurement_cache;
 
 -- Contestant table
 CREATE TABLE contestant (
@@ -34,4 +35,14 @@ CREATE TABLE test_data (
   hat_level REAL NOT NULL,
   attenuation REAL NOT NULL,
   FOREIGN KEY (test_result_id) REFERENCES test_result (id)
+);
+
+-- Measurement cache table (for in-progress measurements persistence between app restarts)
+CREATE TABLE measurement_cache (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  type TEXT NOT NULL,   -- 'baseline' or 'hat'
+  frequency INTEGER NOT NULL,
+  power REAL NOT NULL,
+  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(type, frequency)   -- Ensure only one measurement per type/frequency
 ); 

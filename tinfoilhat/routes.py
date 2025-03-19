@@ -24,6 +24,101 @@ bp = Blueprint("tinfoilhat", __name__, url_prefix="")
 # This will prevent issues when Flask reloads the application
 scanner = None
 
+# New functions for persistent storage of measurements
+def store_measurement(measurement_type, frequency_hz, power):
+    """
+    Store a measurement in the database for persistence between app restarts.
+    
+    :param measurement_type: Type of measurement ('baseline' or 'hat')
+    :type measurement_type: str
+    :param frequency_hz: Frequency in Hz
+    :type frequency_hz: int
+    :param power: Power measurement in dBm
+    :type power: float
+    """
+    db = get_db()
+    
+    # Check if measurement exists
+    existing = db.execute(
+        "SELECT id FROM measurement_cache WHERE type = ? AND frequency = ?",
+        (measurement_type, frequency_hz)
+    ).fetchone()
+    
+    if existing:
+        # Update existing measurement
+        db.execute(
+            "UPDATE measurement_cache SET power = ? WHERE id = ?",
+            (power, existing['id'])
+        )
+    else:
+        # Insert new measurement
+        db.execute(
+            "INSERT INTO measurement_cache (type, frequency, power) VALUES (?, ?, ?)",
+            (measurement_type, frequency_hz, power)
+        )
+    
+    db.commit()
+    
+    # Also store in app config for current request
+    if measurement_type == 'baseline':
+        if "BASELINE_DATA" not in current_app.config:
+            current_app.config["BASELINE_DATA"] = {}
+        current_app.config["BASELINE_DATA"][str(int(frequency_hz))] = power
+    else:  # hat
+        if "HAT_DATA" not in current_app.config:
+            current_app.config["HAT_DATA"] = {}
+        current_app.config["HAT_DATA"][str(int(frequency_hz))] = power
+
+def get_measurements(measurement_type):
+    """
+    Get all measurements of a specific type from the database.
+    
+    :param measurement_type: Type of measurement ('baseline' or 'hat')
+    :type measurement_type: str
+    :return: Dictionary of frequency -> power
+    :rtype: dict
+    """
+    db = get_db()
+    measurements = db.execute(
+        "SELECT frequency, power FROM measurement_cache WHERE type = ?",
+        (measurement_type,)
+    ).fetchall()
+    
+    result = {}
+    for row in measurements:
+        result[str(int(row['frequency']))] = row['power']
+    
+    return result
+
+def load_measurements_to_config():
+    """
+    Load measurements from database into application config.
+    Call this at the start of relevant routes to ensure we have current data.
+    """
+    baseline_data = get_measurements('baseline')
+    hat_data = get_measurements('hat')
+    
+    if baseline_data:
+        current_app.config["BASELINE_DATA"] = baseline_data
+    
+    if hat_data:
+        current_app.config["HAT_DATA"] = hat_data
+
+def clear_measurements():
+    """
+    Clear all measurements from the database.
+    Call this after test results have been saved.
+    """
+    db = get_db()
+    db.execute("DELETE FROM measurement_cache")
+    db.commit()
+    
+    # Also clear from app config
+    if "BASELINE_DATA" in current_app.config:
+        del current_app.config["BASELINE_DATA"]
+    if "HAT_DATA" in current_app.config:
+        del current_app.config["HAT_DATA"]
+
 
 def get_scanner():
     """
@@ -83,6 +178,9 @@ def index():
     global scanner
     if scanner is None:
         scanner = get_scanner()
+    
+    # Load any cached measurements into the app config
+    load_measurements_to_config()
 
     # Get leaderboard data - only the best scores per contestant
     db = get_db()
@@ -320,8 +418,15 @@ def measure_hat():
             """,
             (contestant_id,),
         ).fetchone()
-        previous_best_score = best_score_result["best"] if best_score_result and best_score_result["best"] is not None else 0
-        is_best = average_attenuation > previous_best_score
+        
+        # Check if the contestant has any previous entries
+        has_previous_entries = best_score_result and best_score_result["best"] is not None
+        
+        # If this is their first test, it's automatically the best
+        # Otherwise, compare with their previous best
+        is_best = not has_previous_entries or (has_previous_entries and average_attenuation > best_score_result["best"])
+        
+        previous_best_score = best_score_result["best"] if has_previous_entries else None
 
         # Add test result
         cursor = db.execute(
@@ -494,24 +599,13 @@ def measure_frequency():
         # Perform the measurement using Hz value
         power = scanner._measure_power_at_frequency(freq_hz)
 
-        # Store in appropriate session variable based on measurement type
+        # Save the measurement to app config and database
         if measurement_type == "baseline":
-            # Initialize baseline data dictionary if it doesn't exist
-            if "BASELINE_DATA" not in current_app.config:
-                current_app.config["BASELINE_DATA"] = {}
-
-            # Store the measurement - use int(freq_hz) as key for consistent lookup
-            current_app.config["BASELINE_DATA"][str(int(freq_hz))] = power
             print(f"DEBUG - Stored baseline for {freq_mhz} MHz: {power} dBm with key {str(int(freq_hz))}")
-
-        elif measurement_type == "hat":
-            # Initialize hat data dictionary if it doesn't exist
-            if "HAT_DATA" not in current_app.config:
-                current_app.config["HAT_DATA"] = {}
-
-            # Store the measurement - use int(freq_hz) as key for consistent lookup
-            current_app.config["HAT_DATA"][str(int(freq_hz))] = power
+            store_measurement('baseline', int(freq_hz), power)
+        else:
             print(f"DEBUG - Stored hat for {freq_mhz} MHz: {power} dBm with key {str(int(freq_hz))}")
+            store_measurement('hat', int(freq_hz), power)
 
         # Calculate attenuation if we have both baseline and hat measurements for this frequency
         attenuation = None
@@ -706,8 +800,15 @@ def save_results():
             """,
             (contestant_id,),
         ).fetchone()
-        previous_best_score = best_score_result["best"] if best_score_result and best_score_result["best"] is not None else 0
-        is_best = average_attenuation > previous_best_score
+        
+        # Check if the contestant has any previous entries
+        has_previous_entries = best_score_result and best_score_result["best"] is not None
+        
+        # If this is their first test, it's automatically the best
+        # Otherwise, compare with their previous best
+        is_best = not has_previous_entries or (has_previous_entries and average_attenuation > best_score_result["best"])
+        
+        previous_best_score = best_score_result["best"] if has_previous_entries else None
 
         # Add test result
         cursor = db.execute(
@@ -755,10 +856,7 @@ def save_results():
         contestant_name = contestant_result["name"] if contestant_result else "Unknown"
 
         # Clear stored data to prevent contaminating future tests
-        if "BASELINE_DATA" in current_app.config:
-            del current_app.config["BASELINE_DATA"]
-        if "HAT_DATA" in current_app.config:
-            del current_app.config["HAT_DATA"]
+        clear_measurements()
 
         # Return test results
         return jsonify(

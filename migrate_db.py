@@ -1,75 +1,87 @@
+#!/usr/bin/env python
 """
-Database migration script for the Tinfoil Hat Competition.
+Database migration script for the Tinfoil Hat Competition application.
 
-This script updates the database schema to include new fields
-for phone_number, email, and notes in the contestant table.
+This script updates the database schema without destroying existing data.
 """
 
-import sqlite3
 import os
+import sqlite3
+import sys
 from pathlib import Path
 
-def main():
-    """Run the database migration."""
-    db_path = Path('instance/tinfoilhat.sqlite')
+def migrate_database(db_path):
+    """
+    Migrate the database to the latest schema version.
     
-    if not db_path.exists():
-        print(f"Database not found at {db_path}. Nothing to migrate.")
-        return
+    :param db_path: Path to the SQLite database file
+    :type db_path: str
+    :return: True if successful, False otherwise
+    :rtype: bool
+    """
+    print(f"Migrating database at: {db_path}")
     
-    print(f"Migrating database at {db_path}...")
+    if not os.path.exists(db_path):
+        print(f"Error: Database file not found at {db_path}")
+        return False
     
     # Connect to the database
     conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     try:
-        # Begin transaction
-        conn.execute("BEGIN TRANSACTION")
+        # Get list of existing tables
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = [row['name'] for row in cursor.fetchall()]
+        print(f"Existing tables: {', '.join(tables)}")
         
-        # Check if the contact_info column exists
-        cursor.execute("PRAGMA table_info(contestant)")
-        columns = cursor.fetchall()
-        column_names = [col[1] for col in columns]
-        
-        if "contact_info" in column_names:
-            # Step 1: Create temporary table with new schema
+        # Add measurement_cache table if it doesn't exist
+        if 'measurement_cache' not in tables:
+            print("Adding measurement_cache table...")
             cursor.execute("""
-                CREATE TABLE contestant_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    phone_number TEXT,
-                    email TEXT,
-                    notes TEXT,
-                    created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-                )
+            CREATE TABLE measurement_cache (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              type TEXT NOT NULL,
+              frequency INTEGER NOT NULL,
+              power REAL NOT NULL,
+              created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              UNIQUE(type, frequency)
+            )
             """)
-            
-            # Step 2: Copy data from old table to new table
-            cursor.execute("""
-                INSERT INTO contestant_new (id, name, notes, created)
-                SELECT id, name, contact_info, created FROM contestant
-            """)
-            
-            # Step 3: Drop old table
-            cursor.execute("DROP TABLE contestant")
-            
-            # Step 4: Rename new table to original name
-            cursor.execute("ALTER TABLE contestant_new RENAME TO contestant")
-            
-            # Commit the transaction
-            conn.commit()
-            print("Migration completed successfully.")
+            print("measurement_cache table created successfully.")
         else:
-            print("Migration already applied. No changes needed.")
-            conn.rollback()
+            print("measurement_cache table already exists, skipping.")
             
+        conn.commit()
+        print("Migration completed successfully!")
+        return True
+        
     except Exception as e:
-        # Rollback in case of error
         conn.rollback()
-        print(f"Migration failed: {e}")
+        print(f"Error during migration: {str(e)}")
+        return False
+        
     finally:
         conn.close()
 
-if __name__ == "__main__":
-    main() 
+def main():
+    """Main function to run the migration."""
+    if len(sys.argv) > 1:
+        db_path = sys.argv[1]
+    else:
+        # Default path is in the instance folder
+        script_dir = Path(__file__).parent
+        instance_dir = script_dir / 'instance'
+        db_path = instance_dir / 'tinfoilhat.sqlite'
+    
+    print(f"Using database path: {db_path}")
+    
+    if not migrate_database(str(db_path)):
+        print("Migration failed!")
+        return 1
+        
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main()) 

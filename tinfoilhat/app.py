@@ -11,7 +11,7 @@ from contextlib import suppress
 from flask import Flask
 
 from tinfoilhat import routes
-from tinfoilhat.db import close_db, init_db
+from tinfoilhat.db import close_db, init_db, ensure_measurement_cache_exists
 
 
 def create_app(test_config=None):
@@ -42,9 +42,17 @@ def create_app(test_config=None):
     with suppress(OSError):
         os.makedirs(app.instance_path)
 
-    # Initialize database
-    with app.app_context():
-        init_db()
+    # Initialize database only if it doesn't exist
+    db_path = app.config['DATABASE']
+    if not os.path.exists(db_path):
+        with app.app_context():
+            init_db()
+            print(f"Created new database at {db_path}")
+    else:
+        # Make sure measurement_cache table exists
+        with app.app_context():
+            ensure_measurement_cache_exists()
+            print(f"Validated database schema at {db_path}")
 
     # Register database close function to be called when cleaning up app context
     app.teardown_appcontext(close_db)

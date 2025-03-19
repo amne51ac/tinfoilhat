@@ -39,6 +39,29 @@ def close_db(e=None):
         db.close()
 
 
+def ensure_measurement_cache_exists():
+    """
+    Ensure the measurement_cache table exists in the database.
+    """
+    db = get_db()
+    
+    # Check if measurement_cache table exists
+    cursor = db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='measurement_cache'")
+    if cursor.fetchone() is None:
+        # Create the measurement_cache table
+        db.execute("""
+        CREATE TABLE IF NOT EXISTS measurement_cache (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          type TEXT NOT NULL,
+          frequency INTEGER NOT NULL,
+          power REAL NOT NULL,
+          created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE(type, frequency)
+        )
+        """)
+        db.commit()
+
+
 def init_db():
     """
     Initialize the database with schema.
@@ -48,6 +71,9 @@ def init_db():
     schema_path = Path(__file__).parent / "schema.sql"
     with schema_path.open("r") as f:
         db.executescript(f.read())
+        
+    # Make sure the measurement_cache table exists
+    ensure_measurement_cache_exists()
 
 
 @click.command("init-db")
