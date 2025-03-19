@@ -204,7 +204,7 @@ def get_leaderboard():
     """
     API endpoint to fetch the current leaderboard data.
 
-    :return: JSON response with leaderboard data
+    :return: JSON response with leaderboard data and contestants list
     :rtype: Response
     """
     db = get_db()
@@ -229,8 +229,21 @@ def get_leaderboard():
                 "test_date": row["test_date"],
             }
         )
+    
+    # Get all contestants for the dropdown
+    contestants = db.execute("SELECT id, name FROM contestant").fetchall()
+    
+    # Convert to list of dictionaries for JSON serialization
+    contestants_data = []
+    for row in contestants:
+        contestants_data.append(
+            {
+                "id": row["id"],
+                "name": row["name"],
+            }
+        )
 
-    return jsonify({"leaderboard": leaderboard_data})
+    return jsonify({"leaderboard": leaderboard_data, "contestants": contestants_data})
 
 
 @bp.route("/contestants", methods=["POST"])
@@ -238,7 +251,7 @@ def add_contestant():
     """
     Add a new contestant.
 
-    :return: Redirect to the main page
+    :return: Redirect or JSON response based on request type
     :rtype: Response
     """
     name = request.form.get("name")
@@ -247,16 +260,33 @@ def add_contestant():
     notes = request.form.get("notes", "")
 
     if not name:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({"status": "error", "message": "Contestant name is required."}), 400
         flash("Contestant name is required.")
         return redirect(url_for("tinfoilhat.index"))
 
     db = get_db()
-    db.execute(
+    cursor = db.execute(
         "INSERT INTO contestant (name, phone_number, email, notes) VALUES (?, ?, ?, ?)",
         (name, phone_number, email, notes),
     )
     db.commit()
-
+    
+    # Get the ID of the newly inserted contestant
+    new_contestant_id = cursor.lastrowid
+    
+    # Check if this is an AJAX request
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            "status": "success", 
+            "message": f"Contestant '{name}' added successfully.",
+            "contestant": {
+                "id": new_contestant_id,
+                "name": name
+            }
+        })
+    
+    # For traditional form submissions
     flash(f"Contestant '{name}' added successfully.")
     return redirect(url_for("tinfoilhat.index"))
 

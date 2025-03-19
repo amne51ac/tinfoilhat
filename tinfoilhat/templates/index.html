@@ -217,6 +217,7 @@
                     </div>
                     <button type="submit">Register New Contestant</button>
                 </form>
+                <div id="registration-messages" class="message info hidden"></div>
             </div>
         </div>
         
@@ -308,7 +309,21 @@
             $('#contestant_id').select2({
                 placeholder: "Search for a team...",
                 allowClear: true,
-                width: '100%'
+                width: '100%',
+                language: {
+                    searching: function() {
+                        return 'Searching...';
+                    },
+                    noResults: function() {
+                        return 'No teams found';
+                    }
+                },
+                templateResult: function(data) {
+                    if (data.loading) {
+                        return 'Searching...';
+                    }
+                    return data.text;
+                }
             });
             
             // Fetch the initial leaderboard data
@@ -317,10 +332,64 @@
             // Add event listener for contestant registration form
             const registrationForm = document.getElementById('new-contestant-form');
             registrationForm.addEventListener('submit', function(event) {
-                // Note: We don't prevent default here so the form still submits normally
-                // But after submission, when page reloads, the leaderboard will be fresh
+                event.preventDefault(); // Prevent default form submission
+                submitRegistrationForm(registrationForm);
             });
         });
+        
+        // Handle contestant registration form submission
+        async function submitRegistrationForm(form) {
+            const formData = new FormData(form);
+            const messagesContainer = document.getElementById('registration-messages');
+            
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    // After submission, reset form and update leaderboard/contestants
+                    form.reset();
+                    
+                    // Display success message
+                    messagesContainer.textContent = result.message || 'Contestant registered successfully!';
+                    messagesContainer.className = 'message success';
+                    messagesContainer.classList.remove('hidden');
+                    
+                    // Fetch updated data
+                    updateLeaderboard();
+                    
+                    // Add the new contestant to the dropdown immediately
+                    if (result.contestant) {
+                        const newOption = new Option(result.contestant.name, result.contestant.id, true, true);
+                        $('#contestant_id').append(newOption).trigger('change');
+                    }
+                } else {
+                    // Display error message from server
+                    messagesContainer.textContent = result.message || 'Error registering contestant.';
+                    messagesContainer.className = 'message error';
+                    messagesContainer.classList.remove('hidden');
+                }
+                
+                // Hide message after 3 seconds
+                setTimeout(() => {
+                    messagesContainer.classList.add('hidden');
+                }, 3000);
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                
+                // Display error message
+                messagesContainer.textContent = 'Error registering contestant. Please try again.';
+                messagesContainer.className = 'message error';
+                messagesContainer.classList.remove('hidden');
+            }
+        }
         
         // Initialize the chart
         function initChart() {
