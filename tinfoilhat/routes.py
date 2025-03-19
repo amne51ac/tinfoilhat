@@ -133,7 +133,7 @@ def get_scanner():
         try:
             # Attempt to initialize scanner with the HackRF device
             print("Initializing Scanner with HackRF device...")
-            scanner = Scanner(samples_per_freq=10)  # Take 3 samples per frequency for more accurate measurements
+            scanner = Scanner(samples_per_freq=1000)  # Take 3 samples per frequency for more accurate measurements
 
             # Check if HackRF is actually available
             if not scanner.hackrf_available:
