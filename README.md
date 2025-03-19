@@ -184,6 +184,237 @@ The application uses the HackRF One device to make real RF measurements:
 4. Results are displayed in real-time as measurements progress
 5. Statistics are calculated to show effectiveness across frequency bands
 
+## Detailed System Workflow
+
+The Tinfoil Hat Competition application uses a sophisticated workflow to handle the testing process, real-time data presentation, and results storage. This section provides a comprehensive explanation of the system architecture and communication flow using C4 diagrams.
+
+### System Context (Level 1)
+
+```mermaid
+C4Context
+  title System Context Diagram for Tinfoil Hat Competition
+  
+  Person(contestant, "Contestant", "Person who creates and tests a tinfoil hat")
+  Person(operator, "Test Operator", "Person running the testing system")
+  
+  System(tinfoilhat, "Tinfoil Hat Competition App", "Measures and analyzes RF signal attenuation of tinfoil hats")
+  
+  System_Ext(hackrf, "HackRF One", "Software-defined radio for RF measurements")
+  
+  Rel(contestant, tinfoilhat, "Submits tinfoil hat for testing")
+  Rel(operator, tinfoilhat, "Registers contestants, runs tests, views results")
+  Rel(tinfoilhat, hackrf, "Configures hardware, retrieves RF measurements")
+  
+  UpdateRelStyle(contestant, tinfoilhat, $textColor="blue", $lineColor="blue")
+  UpdateRelStyle(operator, tinfoilhat, $textColor="green", $lineColor="green")
+  UpdateRelStyle(tinfoilhat, hackrf, $textColor="red", $lineColor="red")
+```
+
+The context diagram shows the main users of the system (contestants and operators) and how they interact with the application and hardware.
+
+### Container Diagram (Level 2)
+
+```mermaid
+C4Container
+  title Container Diagram for Tinfoil Hat Competition
+  
+  Person(contestant, "Contestant", "Person who creates and tests a tinfoil hat")
+  Person(operator, "Test Operator", "Person running the testing system")
+  
+  System_Boundary(tinfoilhat, "Tinfoil Hat Competition Application") {
+    Container(web_ui, "Web Interface", "HTML, CSS, JavaScript", "Provides testing interface, visualizations, and leaderboard")
+    Container(flask_app, "Flask Application", "Python, Flask", "Handles HTTP requests, business logic, and data processing")
+    Container(scanner, "Scanner Module", "Python", "Interfaces with HackRF hardware")
+    ContainerDb(database, "SQLite Database", "SQLite", "Stores contestant details, test results, and measurements")
+  }
+  
+  System_Ext(hackrf, "HackRF One", "Software-defined radio for RF measurements")
+  
+  Rel(contestant, web_ui, "Submits information", "HTTP")
+  Rel(operator, web_ui, "Uses", "HTTP")
+  Rel(web_ui, flask_app, "Makes API calls to", "HTTP, JSON")
+  Rel(flask_app, scanner, "Controls", "Function calls")
+  Rel(flask_app, database, "Reads from and writes to", "SQL")
+  Rel(scanner, hackrf, "Configures and reads from", "hackrf_* commands")
+  
+  UpdateRelStyle(web_ui, flask_app, $textColor="blue", $lineColor="blue")
+  UpdateRelStyle(flask_app, scanner, $textColor="red", $lineColor="red")
+  UpdateRelStyle(scanner, hackrf, $textColor="red", $lineColor="red")
+```
+
+The container diagram reveals the major components of the application, showing how the web interface, Flask backend, scanner module, and database interact.
+
+### Component Diagram (Level 3)
+
+```mermaid
+C4Component
+  title Component Diagram for Tinfoil Hat Competition Flask Application
+  
+  Container_Boundary(flask_app, "Flask Application") {
+    Component(routes, "Routes Module", "Python, Flask Blueprint", "Defines HTTP endpoints and handles requests")
+    Component(sse, "SSE Endpoints", "Python, Flask", "Provides real-time updates via Server-Sent Events")
+    Component(db_module, "Database Module", "Python, SQLite", "Manages database connections and queries")
+    Component(scanner_component, "Scanner Controller", "Python", "Manages HackRF device communication")
+    Component(measurement, "Measurement Processor", "Python", "Processes raw measurements into attenuation data")
+    Component(calculator, "Results Calculator", "Python", "Calculates effectiveness across frequency bands")
+  }
+  
+  ContainerDb(database, "SQLite Database", "SQLite", "Contestant data, measurements, and results")
+  Container(web_ui, "Web Interface", "HTML, CSS, JavaScript", "User interface")
+  System_Ext(hackrf, "HackRF One Hardware", "SDR Device")
+  
+  Rel(web_ui, routes, "Makes requests to", "HTTP, JSON")
+  Rel(web_ui, sse, "Receives updates from", "SSE")
+  Rel(routes, db_module, "Uses", "Function calls")
+  Rel(routes, scanner_component, "Controls", "Function calls")
+  Rel(routes, measurement, "Uses", "Function calls")
+  Rel(scanner_component, hackrf, "Communicates with", "hackrf_* commands")
+  Rel(measurement, calculator, "Uses", "Function calls")
+  Rel(db_module, database, "Reads/writes", "SQL")
+  
+  UpdateRelStyle(web_ui, routes, $textColor="blue", $lineColor="blue")
+  UpdateRelStyle(web_ui, sse, $textColor="green", $lineColor="green")
+  UpdateRelStyle(scanner_component, hackrf, $textColor="red", $lineColor="red")
+```
+
+The component diagram breaks down the Flask application into its functional components, showing how they interact to handle the testing process.
+
+### Testing Process Workflow
+
+Below is a detailed sequence of operations that occur during a complete test cycle:
+
+#### 1. Initial Setup Phase
+- **HackRF Detection**: On application startup, the system checks for a connected HackRF One device
+- **Database Validation**: The application verifies the SQLite database schema
+- **Scanner Initialization**: A Scanner object is configured with test frequencies and hardware parameters
+
+#### 2. Baseline Measurement Phase
+- **API Trigger**: The `/test/baseline` endpoint is called via POST request
+- **For Each Test Frequency**:
+  - The `/test/measure_frequency` endpoint is called with `measurement_type=baseline`
+  - The Scanner configures the HackRF to the specific frequency
+  - Power level is measured in dBm and stored in the `measurement_cache` table
+  - Real-time updates are sent via SSE to the billboard display
+  - Measurement results are returned to the client
+
+#### 3. Hat Measurement Phase
+- **API Trigger**: The `/test/measure` endpoint is called via POST request with contestant data
+- **For Each Test Frequency**:
+  - Similar measurements are taken with the tinfoil hat in place
+  - Results are stored with `measurement_type=hat`
+  - Real-time attenuation is calculated by comparing with baseline
+  - Updates are streamed to the billboard display
+
+#### 4. Results Calculation and Storage
+- **API Trigger**: The `/test/save_results` endpoint is called
+- **Data Processing**:
+  - Average attenuation across all frequencies is calculated
+  - Band-specific effectiveness values are determined
+  - Maximum and minimum attenuation frequencies are identified
+- **Database Storage**:
+  - Test results are stored in the `test_result` table
+  - Individual measurements are saved to the `test_data` table
+  - The best score flag is updated if applicable
+- **Real-time Updates**:
+  - The latest results are pushed to all connected clients
+
+#### 5. Communication Sequence Diagram
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant Browser
+  participant Flask
+  participant Scanner
+  participant HackRF
+  participant Database
+  participant Billboard
+  
+  Note over User,HackRF: Baseline Measurement Phase
+  User->>Browser: Click "Run Baseline Test"
+  Browser->>Flask: POST /test/baseline
+  Flask->>Scanner: get_scanner()
+  
+  loop For each frequency
+    Flask->>Scanner: measure_frequency()
+    Scanner->>HackRF: Configure frequency
+    Scanner->>HackRF: Measure power
+    HackRF-->>Scanner: Power reading (dBm)
+    Scanner-->>Flask: Measurement result
+    Flask->>Database: store_measurement("baseline", freq, power)
+    Flask->>Billboard: Send SSE update
+    Flask-->>Browser: Return measurement
+  end
+  
+  Note over User,HackRF: Hat Measurement Phase
+  User->>Browser: Select contestant and hat type
+  Browser->>Flask: POST /test/measure
+  
+  loop For each frequency
+    Flask->>Scanner: measure_frequency()
+    Scanner->>HackRF: Configure frequency
+    Scanner->>HackRF: Measure power with hat
+    HackRF-->>Scanner: Power reading (dBm)
+    Scanner-->>Flask: Measurement result
+    Flask->>Flask: Calculate attenuation
+    Flask->>Database: store_measurement("hat", freq, power)
+    Flask->>Billboard: Send SSE update
+    Flask-->>Browser: Return measurement and attenuation
+  end
+  
+  Note over User,HackRF: Results Processing Phase
+  Browser->>Flask: POST /test/save_results
+  Flask->>Flask: Calculate average attenuation
+  Flask->>Flask: Calculate band effectiveness
+  Flask->>Database: Save test_result
+  Flask->>Database: Save test_data points
+  Flask->>Database: Update best_score flag
+  Flask->>Billboard: Send test completion update
+  Flask-->>Browser: Return final results
+  Browser->>Browser: Display results and charts
+```
+
+This sequence diagram illustrates the detailed communication flow between all components during the testing process, from baseline measurement through results display.
+
+### Real-time Update Mechanism
+
+The system uses Server-Sent Events (SSE) to provide real-time updates through two primary endpoints:
+
+1. **`/frequency-stream`**: Streams individual frequency measurements in real-time
+   - Used during the testing process to update the UI as each frequency is measured
+   - Provides immediate feedback on measurement progress
+
+2. **`/billboard-updates`**: Provides test completion updates
+   - Polls for new completed tests (every 5 seconds)
+   - Updates leaderboards and spectral visualization when new results are available
+   - Enables a dynamic, multi-display competition environment
+
+### Data Flow Diagram
+
+```mermaid
+flowchart TD
+    A[User Interface] -->|1. Start Baseline Test| B(Baseline Measurement)
+    B -->|2. Configure HackRF| C[Hardware Measurement]
+    C -->|3. Raw Power Readings| D{Store Baseline}
+    D -->|4. Power Levels| E[(Database)]
+    A -->|5. Select Contestant| F(Hat Measurement)
+    F -->|6. Configure HackRF| G[Hardware Measurement]
+    G -->|7. Raw Power Readings| H{Calculate Attenuation}
+    H -->|8. Compare with Baseline| D
+    H -->|9. Attenuation Values| I(Results Processing)
+    I -->|10. Calculate Average| J{Store Results}
+    J -->|11. Save Test Record| E
+    J -->|12. Update Leaderboard| K[Display Results]
+    E -->|13. Query Best Scores| L[Leaderboard Display]
+    E -->|14. Query Measurements| M[Spectral Visualization]
+    
+    style B fill:#f9f,stroke:#333,stroke-width:2px
+    style F fill:#bbf,stroke:#333,stroke-width:2px
+    style I fill:#bfb,stroke:#333,stroke-width:2px
+```
+
+This data flow diagram illustrates how information moves through the system, from initial measurement to final display.
+
 ## Development
 
 The project uses the following development tools:
