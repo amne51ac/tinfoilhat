@@ -463,11 +463,11 @@ class Scanner:
 
             # Handle potential measurement errors
             if att < 0:
-                # Negative attenuation would mean the signal got stronger with the hat
-                # This is likely a measurement error or natural variation
-                print(f"Warning: Negative attenuation detected at {freq} MHz. " f"Likely measurement variation.")
-                att = 0.1  # Set to a minimal positive value
-
+                # Negative attenuation means the signal got stronger with the hat
+                # This could be due to reflection, resonance, or other RF effects
+                print(f"Note: Negative attenuation detected at {freq} MHz: {att:.2f} dB. Signal is stronger with the hat.")
+                # We'll keep the negative value for accurate representation
+            
             # Apply frequency-dependent adjustment
             # (tinfoil hats typically perform better at higher frequencies)
             # Calculate frequency factor (normalized to 0-1 range)
@@ -490,8 +490,12 @@ class Scanner:
         print(f"Attenuation (dB): {[round(a, 1) for a in attenuation]}")
 
         # Check if hat is effective
-        if max(attenuation) < 2.0:
+        if max(attenuation) < 2.0 and all(a >= 0 for a in attenuation):
             print("\nWARNING: The hat shows minimal attenuation (<2dB) - " "this might not be an effective RF shield.")
+        elif any(a < 0 for a in attenuation):
+            neg_freqs = [self.frequencies[i] for i, a in enumerate(attenuation) if a < 0]
+            print(f"\nWARNING: The hat shows negative attenuation at frequencies: {neg_freqs} MHz.")
+            print("This means the signal is stronger with the hat than without it at these frequencies.")
         else:
             peak_attenuation = max(attenuation)
             peak_freq = self.frequencies[attenuation.index(peak_attenuation)]

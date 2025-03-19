@@ -529,7 +529,7 @@ def measure_frequency():
             and str(freq_hz) in current_app.config["BASELINE_DATA"]
         ):
             baseline_power = current_app.config["BASELINE_DATA"][str(freq_hz)]
-            attenuation = max(0.1, baseline_power - power)  # Minimum 0.1 dB attenuation to avoid negative values
+            attenuation = baseline_power - power  # Allow negative attenuation values
 
         # Return the measurement results
         return jsonify(
