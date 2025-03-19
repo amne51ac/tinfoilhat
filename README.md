@@ -13,6 +13,23 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 
 ## Recent Updates
 
+### UI and Testing Workflow Improvements (March 2025)
+- Redesigned testing flow to separate baseline and hat measurement phases
+- Added a dedicated "Continue to Hat Measurement" modal with contestant selection
+- Improved chart labels to show frequency and common radio band names (e.g., "89 (FM Radio)")
+- Reduced spacing between UI elements for better visual cohesion
+- Added ability to register new contestants directly from the measurement flow
+- Renamed "Run Test" button to "Run Baseline Test" for clarity
+- Fixed modal layering issues to ensure proper interaction with overlapping modals
+- Consistent terminology throughout the application (standardized on "contestant")
+
+### Spectrum Analyzer Enhancements (March 2025)
+- Improved chart label formatting to show frequencies with human-readable band names
+- Added tooltips showing detailed frequency information and descriptions
+- Adjusted chart container height and padding for better display
+- Enhanced layout of results display for better readability
+- Added more visual feedback during the measurement process
+
 ### Server-Side Calculation Improvements (March 2025)
 - Moved all attenuation and effectiveness calculations to server-side for consistency
 - Eliminated discrepancies between client and server calculations
@@ -107,16 +124,22 @@ Then open your browser and navigate to http://localhost:8000
 
 ## Usage Instructions
 
-1. **Register Contestants**: Enter the contestant details in the registration form.
+1. **Register Contestants**: Use the "Add Contestant" button to enter participant details.
 
 2. **Testing Process**:
-   - Select a contestant from the dropdown menu
-   - Click "Run Test" to begin the testing process
-   - The system will first run a baseline test automatically
-   - When prompted, place the tinfoil hat on the mannequin/test subject
-   - Click "Continue to Hat Measurement" to proceed with hat measurement
+   - Click "Run Baseline Test" to begin the testing process
+   - The system will run a baseline test without the hat
+   - When complete, you'll be prompted to place the hat on the mannequin/test subject
+   - Select a contestant from the dropdown (or add a new one)
+   - Choose the hat type (Classic or Hybrid)
    - The system will complete the test and automatically save the results
-   - Review the results on screen - the application will calculate the RF attenuation and update the leaderboard
+   - Review the results showing the average attenuation and effectiveness across frequency bands
+
+3. **Viewing Results**:
+   - Results appear automatically after test completion
+   - Check the effectiveness across different frequency ranges
+   - Note the frequencies where the hat performed best/worst
+   - The leaderboard updates automatically if this is the contestant's best score
 
 ## Leaderboard
 
@@ -136,11 +159,19 @@ For optimal performance:
 ### Testing Process
 
 1. A contestant creates a tinfoil hat
-2. Register the contestant in the application (or select from existing contestants)
-3. Run a baseline test without the hat to measure ambient RF noise across all frequencies
-4. Place the hat on the mannequin head and run the measurement test
-5. View the results showing the average attenuation across all frequencies
-6. If this is the contestant's best score, it will be highlighted and saved to the leaderboard
+2. The operator runs a baseline test to measure ambient RF signals
+3. The contestant places their hat on the mannequin head
+4. The operator selects the contestant and hat type from the modal
+5. The system measures RF signals with the hat in place
+6. The application calculates attenuation by comparing baseline and hat measurements
+7. Results show overall effectiveness and performance across different frequency bands
+8. If this is the contestant's best score, it's saved to the leaderboard
+
+### Hat Types
+
+The system supports two types of hats:
+- **Classic**: Made with tinfoil only
+- **Hybrid**: Made with tinfoil plus other materials
 
 ### Real Measurements
 

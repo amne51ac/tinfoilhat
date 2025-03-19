@@ -264,7 +264,7 @@
                     <p id="current-freq-text">Measuring at: <span id="current-frequency">0</span> MHz</p>
                 </div>
                 <div class="form-group" style="margin-top: 5px;">
-                    <button id="test-button" onclick="runCompleteTest()">Run Baseline Test</button>
+                    <button id="test-button" onclick="runCompleteTest()">Step 1: Run Baseline Test</button>
                     <button id="stop-button" class="button-stop" onclick="stopMeasurement()" style="background-color: #e74c3c; display: none;">Stop Measurement</button>
                 </div>
                 
@@ -640,7 +640,7 @@
             document.getElementById('test-results').classList.add('hidden');
             
             const statusEl = document.getElementById('test-status');
-            statusEl.textContent = 'PHASE 1: Running baseline test...';
+            statusEl.textContent = 'Running baseline test...';
             statusEl.classList.remove('hidden');
             statusEl.classList.remove('error');
             
@@ -674,7 +674,8 @@
             
             // PHASE 2: PROMPT USER TO PLACE HAT
             // -----------------------------
-            statusEl.textContent = 'PHASE 1 COMPLETE! Please place the hat on the measurement device and select options to continue.';
+            statusEl.textContent = 'PHASE 1 COMPLETE! Please place the hat on the measurement device and select ' +
+            'options to continue. Please select a contestant, and determine the hat type (classic or hybrid) to continue.';
             
             // Reset measurement in progress flag to allow re-running the baseline
             measurementInProgress = false;
@@ -1078,7 +1079,7 @@
     <div id="continue-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" id="close-continue-modal">&times;</span>
-            <h2>Continue to Hat Measurement</h2>
+            <h2>Step 2: Continue to Hat Measurement</h2>
             <div class="message info" style="margin-bottom: 20px;">
                 <strong>Important:</strong> Please place the hat on the measurement device before continuing.
             </div>
