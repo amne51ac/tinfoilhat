@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tinfoil Hat Competition - Billboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/billboard.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        .billboard-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .billboard-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .billboard-header h1 {
+            font-size: 3em;
+            margin: 0;
+            color: #ffd700;
+        }
+        .billboard-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        .leaderboards-container {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+        .leaderboard {
+            flex: 1;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+        .leaderboard h2 {
+            text-align: center;
+            margin-top: 0;
+            color: #ffd700;
+            font-size: 2em;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .leaderboard-table th, .leaderboard-table td {
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 1.2em;
+        }
+        .leaderboard-table th {
+            border-bottom: 1px solid #333;
+            color: #ccc;
+        }
+        .leaderboard-table tbody tr:nth-child(odd) {
+            background-color: #252525;
+        }
+        .rank {
+            font-weight: bold;
+            width: 40px;
+            text-align: center;
+        }
+        .attenuation {
+            text-align: right;
+            font-weight: bold;
+        }
+        .first-place {
+            background-color: rgba(255, 215, 0, 0.3) !important;
+        }
+        .second-place {
+            background-color: rgba(192, 192, 192, 0.3) !important;
+        }
+        .third-place {
+            background-color: rgba(205, 127, 50, 0.3) !important;
+        }
+        .negative-attenuation {
+            color: #ff4d4d;
+        }
+        .testing-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #recent-test {
+            flex: 0 0 auto;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        #recent-test .contestant-name {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #recent-test .hat-type {
+            font-size: 1.8em;
+            color: #aaa;
+            margin-bottom: 15px;
+        }
+        #recent-test .attenuation {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        #recent-test .test-date {
+            font-size: 1.2em;
+            color: #888;
+        }
+        .spectrum-container {
+            flex: 1;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        .spectrum-container h2 {
+            text-align: center;
+            margin-top: 0;
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+        .chart-container {
+            flex: 1;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .new-entry {
+            animation: highlight 3s ease-out;
+        }
+        @keyframes highlight {
+            0% { background-color: rgba(255, 255, 0, 0.5); }
+            100% { background-color: transparent; }
+        }
+    </style>
+</head>
+<body>
+<div class="billboard-container">
+    <div class="billboard-header">
+        <h1>TINFOIL HAT COMPETITION</h1>
+    </div>
+    <div class="billboard-content">
+        <div class="leaderboards-container">
+            <div class="leaderboard">
+                <h2>Classic Hats</h2>
+                <table id="classic-leaderboard" class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Attenuation (dB)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if leaderboard_classic %}
+                            {% for entry in leaderboard_classic %}
+                            <tr class="{% if loop.index == 1 %}first-place{% elif loop.index == 2 %}second-place{% elif loop.index == 3 %}third-place{% endif %}">
+                                <td class="rank">{{ loop.index }}</td>
+                                <td>{{ entry.name }}</td>
+                                <td class="attenuation {% if entry.attenuation < 0 %}negative-attenuation{% endif %}">
+                                    {{ "%.2f"|format(entry.attenuation) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center">No entries yet</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="leaderboard">
+                <h2>Hybrid Hats</h2>
+                <table id="hybrid-leaderboard" class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Attenuation (dB)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if leaderboard_hybrid %}
+                            {% for entry in leaderboard_hybrid %}
+                            <tr class="{% if loop.index == 1 %}first-place{% elif loop.index == 2 %}second-place{% elif loop.index == 3 %}third-place{% endif %}">
+                                <td class="rank">{{ loop.index }}</td>
+                                <td>{{ entry.name }}</td>
+                                <td class="attenuation {% if entry.attenuation < 0 %}negative-attenuation{% endif %}">
+                                    {{ "%.2f"|format(entry.attenuation) }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="3" class="text-center">No entries yet</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="testing-container">
+            <div id="recent-test">
+                {% if recent_test and recent_test['max_id'] %}
+                    <div class="contestant-name">{{ recent_test['name'] }}</div>
+                    <div class="hat-type">{{ recent_test['hat_type']|capitalize }} Hat</div>
+                    <div class="attenuation {% if recent_test['attenuation'] < 0 %}negative-attenuation{% endif %}">
+                        {{ "%.2f"|format(recent_test['attenuation']) }} dB
+                    </div>
+                    <div class="test-date">{{ recent_test['date'] }}</div>
+                {% else %}
+                    <div class="contestant-name">No Tests Yet</div>
+                    <div class="hat-type">Waiting for data...</div>
+                    <div class="attenuation">0.00 dB</div>
+                    <div class="test-date">-</div>
+                {% endif %}
+            </div>
+            <div class="spectrum-container">
+                <h2>Spectrum Analyzer</h2>
+                <div class="chart-container">
+                    <canvas id="powerChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="attenuationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize charts
+        const powerCtx = document.getElementById('powerChart').getContext('2d');
+        const attenuationCtx = document.getElementById('attenuationChart').getContext('2d');
+        
+        // Initialize with empty data initially
+        const emptyData = {
+            labels: [],
+            datasets: []
+        };
+        
+        // Power Chart (showing both baseline and hat readings)
+        const powerChart = new Chart(powerCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Baseline (dBm)',
+                    data: [],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.2,
+                    borderWidth: 2
+                }, {
+                    label: 'With Hat (dBm)',
+                    data: [],
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    tension: 0.2,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Signal Power (dBm)',
+                        color: '#e0e0e0',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            color: '#e0e0e0'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Frequency (MHz)',
+                            color: '#e0e0e0'
+                        },
+                        ticks: {
+                            color: '#e0e0e0'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Power (dBm)',
+                            color: '#e0e0e0'
+                        },
+                        ticks: {
+                            color: '#e0e0e0'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Attenuation Chart
+        const attenuationChart = new Chart(attenuationCtx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Attenuation (dB)',
+                    data: [],
+                    backgroundColor: function(context) {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value < 0 ? 'rgba(255, 99, 132, 0.7)' : 'rgba(75, 192, 192, 0.7)';
+                    },
+                    borderColor: function(context) {
+                        const value = context.dataset.data[context.dataIndex];
+                        return value < 0 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)';
+                    },
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Attenuation (dB)',
+                        color: '#e0e0e0',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            color: '#e0e0e0'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += context.parsed.y.toFixed(2) + ' dB';
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Frequency (MHz)',
+                            color: '#e0e0e0'
+                        },
+                        ticks: {
+                            color: '#e0e0e0'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Attenuation (dB)',
+                            color: '#e0e0e0'
+                        },
+                        ticks: {
+                            color: '#e0e0e0'
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Initialize charts with existing data if available
+        {% if spectrum_data and spectrum_data.frequencies %}
+            const frequencyLabels = {{ spectrum_data.frequencies|tojson }}.map(f => f.toFixed(1));
+            const baselineLevels = {{ spectrum_data.baseline_levels|tojson }};
+            const hatLevels = {{ spectrum_data.hat_levels|tojson }};
+            const attenuations = {{ spectrum_data.attenuations|tojson }};
+            
+            // Update power chart
+            powerChart.data.labels = frequencyLabels;
+            powerChart.data.datasets[0].data = baselineLevels;
+            powerChart.data.datasets[1].data = hatLevels;
+            powerChart.update();
+            
+            // Update attenuation chart
+            attenuationChart.data.labels = frequencyLabels;
+            attenuationChart.data.datasets[0].data = attenuations;
+            attenuationChart.update();
+        {% endif %}
+        
+        // Connect to SSE endpoint for real-time updates
+        let lastId = {{ recent_test['max_id'] if recent_test and recent_test['max_id'] else 0 }};
+        let usePolling = false;
+        let eventSource;
+        
+        function setupSSE() {
+            try {
+                eventSource = new EventSource(`/billboard-updates?last_id=${lastId}`);
+                
+                eventSource.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    updateBillboard(data);
+                    lastId = data.last_id;
+                };
+                
+                eventSource.onerror = function(e) {
+                    console.log('SSE connection error, falling back to polling...');
+                    eventSource.close();
+                    usePolling = true;
+                    startPolling();
+                };
+            } catch (e) {
+                console.log('Error setting up SSE, falling back to polling:', e);
+                usePolling = true;
+                startPolling();
+            }
+        }
+        
+        // Polling fallback
+        function startPolling() {
+            if (!usePolling) return;
+            
+            // Poll for updates every 5 seconds
+            const pollInterval = 5000;
+            
+            function pollForUpdates() {
+                fetch(`/billboard-updates?last_id=${lastId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.new_test) {
+                            updateBillboard(data);
+                            lastId = data.last_id;
+                        }
+                    })
+                    .catch(error => console.error('Polling error:', error))
+                    .finally(() => {
+                        if (usePolling) {
+                            setTimeout(pollForUpdates, pollInterval);
+                        }
+                    });
+            }
+            
+            pollForUpdates();
+        }
+        
+        // Function to update the recent test display
+        function updateRecentTest(testData) {
+            const recentTest = document.getElementById('recent-test');
+            recentTest.innerHTML = `
+                <div class="contestant-name">${testData.name}</div>
+                <div class="hat-type">${testData.hat_type.charAt(0).toUpperCase() + testData.hat_type.slice(1)} Hat</div>
+                <div class="attenuation ${testData.attenuation < 0 ? 'negative-attenuation' : ''}">
+                    ${testData.attenuation.toFixed(2)} dB
+                </div>
+                <div class="test-date">${testData.date}</div>
+            `;
+            
+            // Add a highlight effect to show it's new
+            recentTest.classList.add('new-entry');
+            setTimeout(() => {
+                recentTest.classList.remove('new-entry');
+            }, 3000);
+        }
+        
+        // Function to update a leaderboard table
+        function updateLeaderboard(type, data) {
+            const tableId = `${type}-leaderboard`;
+            const table = document.getElementById(tableId);
+            const tbody = table.querySelector('tbody');
+            
+            // Clear current entries
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="3" class="text-center">No entries yet</td>';
+                tbody.appendChild(row);
+                return;
+            }
+            
+            // Add new entries
+            data.forEach((entry, index) => {
+                const row = document.createElement('tr');
+                row.classList.add('new-entry');
+                
+                // Add medal class based on rank
+                if (index === 0) row.classList.add('first-place');
+                else if (index === 1) row.classList.add('second-place');
+                else if (index === 2) row.classList.add('third-place');
+                
+                row.innerHTML = `
+                    <td class="rank">${index + 1}</td>
+                    <td>${entry.name}</td>
+                    <td class="attenuation">${entry.attenuation < 0 ? 
+                        `<span class="negative-attenuation">${entry.attenuation.toFixed(2)}</span>` : 
+                        entry.attenuation.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Remove highlight after animation
+            setTimeout(() => {
+                const newEntries = tbody.querySelectorAll('.new-entry');
+                newEntries.forEach(entry => {
+                    entry.classList.remove('new-entry');
+                });
+            }, 3000);
+        }
+        
+        // Function to update the spectrum charts
+        function updateCharts(spectrumData) {
+            // Make sure we have data to display
+            if (!spectrumData.frequencies || !spectrumData.frequencies.length) {
+                console.warn('No spectrum data to display');
+                return;
+            }
+            
+            // Format frequency labels (round to one decimal place)
+            const frequencyLabels = spectrumData.frequencies.map(f => f.toFixed(1));
+            
+            // Update power chart
+            powerChart.data.labels = frequencyLabels;
+            powerChart.data.datasets[0].data = spectrumData.baseline_levels;
+            powerChart.data.datasets[1].data = spectrumData.hat_levels;
+            powerChart.update();
+            
+            // Update attenuation chart
+            attenuationChart.data.labels = frequencyLabels;
+            attenuationChart.data.datasets[0].data = spectrumData.attenuations;
+            attenuationChart.update();
+        }
+        
+        // Common function to update the billboard with new data
+        function updateBillboard(data) {
+            // Update the recent test display
+            if (data.new_test) {
+                updateRecentTest(data.new_test);
+            }
+            
+            // Update leaderboards
+            if (data.leaderboard_classic) {
+                updateLeaderboard('classic', data.leaderboard_classic);
+            }
+            
+            if (data.leaderboard_hybrid) {
+                updateLeaderboard('hybrid', data.leaderboard_hybrid);
+            }
+            
+            // Update charts with spectrum data
+            if (data.spectrum_data && Object.keys(data.spectrum_data).length > 0) {
+                updateCharts(data.spectrum_data);
+            }
+        }
+        
+        // Initial setup
+        setupSSE();
+        
+        // Refresh the page once per hour to prevent memory leaks
+        setTimeout(() => {
+            window.location.reload();
+        }, 3600000); // 1 hour
+    });
+</script>
+</body>
+</html> 

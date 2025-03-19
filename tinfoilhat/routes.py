@@ -13,7 +13,12 @@ from flask import (
     render_template,
     request,
     url_for,
+    Response,
+    stream_with_context,
 )
+import json
+import time
+from datetime import datetime
 
 from tinfoilhat.db import get_db
 from tinfoilhat.scanner import Scanner
@@ -23,6 +28,13 @@ bp = Blueprint("tinfoilhat", __name__, url_prefix="")
 # Instead of creating the scanner at module level, create it for each request
 # This will prevent issues when Flask reloads the application
 scanner = None
+
+# Add a custom JSON encoder to handle datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.strftime('%Y-%m-%d %H:%M:%S')
+        return json.JSONEncoder.default(self, obj)
 
 
 # New functions for persistent storage of measurements
@@ -1149,3 +1161,249 @@ def get_frequencies():
             frequency_labels[str(freq_hz)] = {"name": label_data[0], "description": label_data[1]}
 
     return jsonify({"status": "success", "data": {"frequencies": frequencies_hz, "labels": frequency_labels}})
+
+
+@bp.route("/billboard")
+def billboard():
+    """
+    Display the billboard view showing leaderboards and recent test results
+    
+    :return: Rendered template
+    :rtype: str
+    """
+    db = get_db()
+    
+    # Get most recent test result
+    recent_test = db.execute("""
+        SELECT t.id as max_id, c.name, t.hat_type, ROUND(t.average_attenuation, 2) as attenuation, 
+               t.test_date as date
+        FROM test_result t
+        JOIN contestant c ON t.contestant_id = c.id
+        WHERE t.id = (SELECT MAX(id) FROM test_result)
+    """).fetchone()
+    
+    # Get leaderboard data
+    leaderboard_classic = get_leaderboard_data('classic')
+    leaderboard_hybrid = get_leaderboard_data('hybrid')
+    
+    # Get spectrum data for the most recent test
+    spectrum_data = {}
+    if recent_test and recent_test["max_id"]:
+        test_data_points = db.execute("""
+            SELECT frequency, baseline_level, hat_level, attenuation
+            FROM test_data
+            WHERE test_result_id = ?
+            ORDER BY frequency
+        """, (recent_test["max_id"],)).fetchall()
+        
+        if test_data_points:
+            frequencies = [round(point["frequency"] / 1e6, 2) for point in test_data_points]  # Convert to MHz
+            baseline_levels = [point["baseline_level"] for point in test_data_points]
+            hat_levels = [point["hat_level"] for point in test_data_points]
+            attenuations = [point["attenuation"] for point in test_data_points]
+            
+            spectrum_data = {
+                'frequencies': frequencies,
+                'baseline_levels': baseline_levels,
+                'hat_levels': hat_levels,
+                'attenuations': attenuations
+            }
+    
+    return render_template(
+        "billboard.html",
+        recent_test=recent_test,
+        leaderboard_classic=leaderboard_classic,
+        leaderboard_hybrid=leaderboard_hybrid,
+        spectrum_data=spectrum_data
+    )
+
+
+def get_leaderboard_data(hat_type):
+    """
+    Helper function to get leaderboard data for a specific hat type
+    
+    :param hat_type: Type of hat ('classic' or 'hybrid')
+    :type hat_type: str
+    :return: List of leaderboard entries
+    :rtype: list
+    """
+    db = get_db()
+    
+    # Query for the best scores per contestant for this hat type
+    results = db.execute("""
+        SELECT c.name, ROUND(t.average_attenuation, 2) as attenuation
+        FROM contestant c
+        JOIN (
+            SELECT contestant_id, MAX(average_attenuation) as max_att
+            FROM test_result
+            WHERE hat_type = ?
+            GROUP BY contestant_id
+        ) best_scores ON c.id = best_scores.contestant_id
+        JOIN test_result t ON c.id = t.contestant_id 
+            AND t.average_attenuation = best_scores.max_att
+            AND t.hat_type = ?
+        ORDER BY t.average_attenuation DESC
+        LIMIT 10
+    """, (hat_type, hat_type)).fetchall()
+    
+    # Convert to list of dictionaries
+    return [{'name': result["name"], 'attenuation': result["attenuation"]} for result in results]
+
+
+@bp.route("/billboard-updates", methods=["GET"])
+def billboard_updates():
+    """Send SSE events when new test results are added."""
+    last_id = request.args.get('last_id', type=int, default=0)
+    
+    # Check if this is an SSE request (EventSource connection) or regular HTTP request (polling)
+    is_sse = request.headers.get('Accept') == 'text/event-stream'
+    
+    # For polling requests (non-SSE), just return the latest data as JSON
+    if not is_sse:
+        # Get the database connection
+        db = get_db()
+        
+        # Get any new test results
+        new_test = db.execute("""
+            SELECT t.id as max_id, c.name, t.hat_type, ROUND(t.average_attenuation, 2) as attenuation, 
+                   t.test_date as date
+            FROM test_result t
+            JOIN contestant c ON t.contestant_id = c.id
+            WHERE t.id > ?
+            ORDER BY t.id DESC
+            LIMIT 1
+        """, (last_id,)).fetchone()
+        
+        if not new_test or not new_test["max_id"]:
+            # No new tests, return empty data
+            return jsonify({
+                'last_id': last_id,
+                'new_test': None,
+                'leaderboard_classic': [],
+                'leaderboard_hybrid': [],
+                'spectrum_data': {}
+            })
+        
+        # Format date for display
+        formatted_date = new_test["date"]
+        
+        # Get leaderboards data
+        leaderboard_classic = get_leaderboard_data('classic')
+        leaderboard_hybrid = get_leaderboard_data('hybrid')
+        
+        # Get spectrum data for the charts
+        spectrum_data = {}
+        test_data_points = db.execute("""
+            SELECT frequency, baseline_level, hat_level, attenuation
+            FROM test_data
+            WHERE test_result_id = ?
+            ORDER BY frequency
+        """, (new_test["max_id"],)).fetchall()
+        
+        if test_data_points:
+            frequencies = [round(point["frequency"] / 1e6, 2) for point in test_data_points]  # Convert to MHz
+            baseline_levels = [point["baseline_level"] for point in test_data_points]
+            hat_levels = [point["hat_level"] for point in test_data_points]
+            attenuations = [point["attenuation"] for point in test_data_points]
+            
+            spectrum_data = {
+                'frequencies': frequencies,
+                'baseline_levels': baseline_levels,
+                'hat_levels': hat_levels,
+                'attenuations': attenuations
+            }
+        
+        # Prepare data
+        data = {
+            'last_id': new_test["max_id"],
+            'new_test': {
+                'name': new_test["name"],
+                'hat_type': new_test["hat_type"],
+                'attenuation': new_test["attenuation"],
+                'date': formatted_date
+            },
+            'leaderboard_classic': leaderboard_classic,
+            'leaderboard_hybrid': leaderboard_hybrid,
+            'spectrum_data': spectrum_data
+        }
+        
+        return jsonify(data)
+        
+    # For SSE connections:
+    def generate():
+        nonlocal last_id
+        app = current_app._get_current_object()  # Get the actual application object
+        
+        while True:
+            # Create a new application context for each iteration
+            with app.app_context():
+                db = get_db()
+                # Get any new test results
+                new_test = db.execute("""
+                    SELECT t.id as max_id, c.name, t.hat_type, ROUND(t.average_attenuation, 2) as attenuation, 
+                           t.test_date as date
+                    FROM test_result t
+                    JOIN contestant c ON t.contestant_id = c.id
+                    WHERE t.id > ?
+                    ORDER BY t.id DESC
+                    LIMIT 1
+                """, (last_id,)).fetchone()
+                
+                if new_test and new_test["max_id"]:
+                    # Format date for display
+                    formatted_date = new_test["date"]
+                    
+                    # Get leaderboards data
+                    leaderboard_classic = get_leaderboard_data('classic')
+                    leaderboard_hybrid = get_leaderboard_data('hybrid')
+                    
+                    # Get spectrum data for the charts
+                    spectrum_data = {}
+                    test_data_points = db.execute("""
+                        SELECT frequency, baseline_level, hat_level, attenuation
+                        FROM test_data
+                        WHERE test_result_id = ?
+                        ORDER BY frequency
+                    """, (new_test["max_id"],)).fetchall()
+                    
+                    if test_data_points:
+                        frequencies = [round(point["frequency"] / 1e6, 2) for point in test_data_points]  # Convert to MHz
+                        baseline_levels = [point["baseline_level"] for point in test_data_points]
+                        hat_levels = [point["hat_level"] for point in test_data_points]
+                        attenuations = [point["attenuation"] for point in test_data_points]
+                        
+                        spectrum_data = {
+                            'frequencies': frequencies,
+                            'baseline_levels': baseline_levels,
+                            'hat_levels': hat_levels,
+                            'attenuations': attenuations
+                        }
+                    
+                    # Update last_id for the next iteration
+                    last_id = new_test["max_id"]
+                    
+                    # Prepare data
+                    data = {
+                        'last_id': new_test["max_id"],
+                        'new_test': {
+                            'name': new_test["name"],
+                            'hat_type': new_test["hat_type"],
+                            'attenuation': new_test["attenuation"],
+                            'date': formatted_date
+                        },
+                        'leaderboard_classic': leaderboard_classic,
+                        'leaderboard_hybrid': leaderboard_hybrid,
+                        'spectrum_data': spectrum_data
+                    }
+                    
+                    # Convert to JSON and yield SSE format - use the DateTimeEncoder for datetime objects
+                    yield f'data: {json.dumps(data, cls=DateTimeEncoder)}\n\n'
+                    
+            # Add a delay to avoid hammering the database
+            time.sleep(1)
+    
+    # Set appropriate headers for SSE
+    response = Response(stream_with_context(generate()), mimetype='text/event-stream')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['X-Accel-Buffering'] = 'no'  # Disable proxy buffering
+    return response
