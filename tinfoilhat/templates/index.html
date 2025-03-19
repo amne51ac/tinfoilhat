@@ -259,19 +259,43 @@
     </div>
     
     <script>
-        // Global variables for chart and test data
-        let spectrumChart = null;
+        // Initialize global variables
+        let spectrumChart;
+        let allFrequencies = [];
         let baselineData = {};
         let hatData = {};
         let attenuationData = {};
-        let allFrequencies = [];
+        let shouldStopMeasurement = false;
+        let frequencyLabels = {}; // Store frequency labels
         let currentTestType = null; // 'baseline' or 'hat'
         let measurementInProgress = false;
-        let shouldStopMeasurement = false;
         
-        // Initialize the spectrum chart
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Initialize the chart
+            initChart();
+            
+            // Get frequencies
+            await getFrequencies();
+            
+            // Update chart labels
+            updateChartLabels();
+            
+            // Fetch the initial leaderboard data
+            updateLeaderboard();
+            
+            // Add event listener for contestant registration form
+            const registrationForm = document.getElementById('new-contestant-form');
+            registrationForm.addEventListener('submit', function(event) {
+                // Note: We don't prevent default here so the form still submits normally
+                // But after submission, when page reloads, the leaderboard will be fresh
+            });
+        });
+        
+        // Initialize the chart
         function initChart() {
             const ctx = document.getElementById('spectrum-chart').getContext('2d');
+            
             spectrumChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -280,23 +304,28 @@
                         {
                             label: 'Baseline',
                             data: [],
-                            borderColor: 'rgb(75, 192, 192)',
-                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                            tension: 0.1
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            yAxisID: 'y'
                         },
                         {
-                            label: 'Hat Measurement',
+                            label: 'With Hat',
                             data: [],
-                            borderColor: 'rgb(255, 99, 132)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                            tension: 0.1
+                            backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            yAxisID: 'y'
                         },
                         {
-                            label: 'Attenuation',
+                            label: 'Attenuation (dB)',
                             data: [],
-                            borderColor: 'rgb(54, 162, 235)',
-                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                            tension: 0.1,
+                            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            borderWidth: 2,
+                            pointRadius: 3,
                             yAxisID: 'attenuation'
                         }
                     ]
@@ -308,6 +337,16 @@
                             title: {
                                 display: true,
                                 text: 'Frequency (MHz)'
+                            },
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    // Display frequency with label if available
+                                    const freq = allFrequencies[index];
+                                    if (freq && frequencyLabels[freq]) {
+                                        return frequencyLabels[freq].name;
+                                    }
+                                    return (freq / 1e6).toFixed(2);
+                                }
                             }
                         },
                         y: {
@@ -327,6 +366,28 @@
                             min: -10,
                             max: 30
                         }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    const freq = allFrequencies[tooltipItems[0].dataIndex];
+                                    const freqMHz = (freq / 1e6).toFixed(2);
+                                    let title = `${freqMHz} MHz`;
+                                    
+                                    // Add label name and description if available
+                                    if (freq && frequencyLabels[freq]) {
+                                        const label = frequencyLabels[freq];
+                                        title += ` - ${label.name}`;
+                                        if (label.description) {
+                                            title += ` (${label.description})`;
+                                        }
+                                    }
+                                    
+                                    return title;
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -340,6 +401,13 @@
                 
                 if (result.status === 'success') {
                     allFrequencies = result.data.frequencies;
+                    
+                    // Store frequency labels if available
+                    if (result.data.labels) {
+                        frequencyLabels = result.data.labels;
+                        console.log("Received frequency labels:", frequencyLabels);
+                    }
+                    
                     return allFrequencies;
                 } else {
                     console.error('Error fetching frequencies:', result.message);
@@ -349,6 +417,21 @@
                 console.error('Error fetching frequencies:', error);
                 return [];
             }
+        }
+        
+        // Update chart with baseline data
+        function updateChartLabels() {
+            // Convert Hz to MHz for display
+            const freqLabels = allFrequencies.map(f => {
+                // Use label if available, otherwise just display frequency
+                if (frequencyLabels[f]) {
+                    return `${(f / 1e6).toFixed(2)} - ${frequencyLabels[f].name}`;
+                }
+                return (f / 1e6).toFixed(2);
+            });
+            
+            spectrumChart.data.labels = freqLabels;
+            spectrumChart.update();
         }
         
         // Run baseline test with real-time updates
@@ -597,14 +680,6 @@
             }
         }
         
-        // Update chart with baseline data
-        function updateChartLabels() {
-            // Convert Hz to MHz for display
-            const freqLabels = allFrequencies.map(f => (f / 1e6).toFixed(2));
-            spectrumChart.data.labels = freqLabels;
-            spectrumChart.update();
-        }
-        
         // Update chart with current data
         function updateChartData() {
             // Create data arrays for chart
@@ -749,24 +824,6 @@
                 console.error('Error updating leaderboard:', error);
             }
         }
-        
-        // Initialize the chart when the page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            initChart();
-            
-            // Also fetch the initial leaderboard data
-            updateLeaderboard();
-            
-            // Fetch the list of frequencies
-            getFrequencies();
-            
-            // Add event listener for contestant registration form
-            const registrationForm = document.getElementById('new-contestant-form');
-            registrationForm.addEventListener('submit', function(event) {
-                // Note: We don't prevent default here so the form still submits normally
-                // But after submission, when page reloads, the leaderboard will be fresh
-            });
-        });
     </script>
 </body>
 </html> 

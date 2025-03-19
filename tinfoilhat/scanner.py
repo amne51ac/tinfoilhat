@@ -49,15 +49,119 @@ class Scanner:
         # Sample rate for HackRF (8 million samples per second)
         self.sample_rate = 8000000
 
-        # Generate evenly spaced frequencies (in MHz)
-        self.frequencies = []
-        step = (max_freq - min_freq) / (num_frequencies - 1) if num_frequencies > 1 else 0
-        for i in range(num_frequencies):
-            freq_mhz = min_freq + i * step
-            self.frequencies.append(freq_mhz)
+        # Dictionary of common frequency bands with their names
+        # Format: frequency in MHz -> (name, description)
+        self.common_frequencies = {
+            # AM/FM Radio
+            88.5: ("FM Radio", "FM Radio Broadcasting"),
+            98.1: ("FM Radio", "FM Radio Broadcasting"),
+            107.9: ("FM Radio", "FM Radio Broadcasting"),
+            # Cellular Bands
+            850: ("Cellular", "GSM/CDMA 850 Band"),
+            900: ("Cellular", "GSM/EGSM Band"),
+            1800: ("Cellular", "DCS Band"),
+            1900: ("Cellular", "PCS Band"),
+            2100: ("Cellular", "UMTS/3G Band"),
+            # LTE Bands
+            700: ("LTE Band 12", "LTE 700 MHz"),
+            1700: ("LTE Band 4", "AWS-1"),
+            2600: ("LTE Band 7", "LTE 2600 MHz"),
+            # 5G Bands
+            3500: ("5G Mid-Band", "C-Band 5G"),
+            4700: ("5G High-Band", "mmWave 5G"),
+            # WiFi Bands
+            2412: ("WiFi 2.4GHz", "Channel 1"),
+            2437: ("WiFi 2.4GHz", "Channel 6"),
+            2462: ("WiFi 2.4GHz", "Channel 11"),
+            5180: ("WiFi 5GHz", "Channel 36"),
+            5220: ("WiFi 5GHz", "Channel 44"),
+            5320: ("WiFi 5GHz", "Channel 64"),
+            5500: ("WiFi 5GHz", "Channel 100"),
+            5700: ("WiFi 5GHz", "Channel 140"),
+            # Bluetooth
+            2402: ("Bluetooth", "Low Channels"),
+            2441: ("Bluetooth", "Mid Channels"),
+            2480: ("Bluetooth", "High Channels"),
+            # GPS
+            1575.42: ("GPS L1", "Civil GPS"),
+            1227.60: ("GPS L2", "Military GPS"),
+            # ISM Bands
+            433: ("ISM 433MHz", "Remote Controls/Sensors"),
+            915: ("ISM 915MHz", "ISM Band"),
+            2450: ("ISM 2.4GHz", "ISM Band"),
+            5800: ("ISM 5.8GHz", "ISM Band"),
+            # TV Broadcasting
+            174: ("VHF TV", "Television Broadcasting"),
+            470: ("UHF TV", "Television Broadcasting"),
+            # Amateur Radio
+            144: ("2m Amateur", "Ham Radio"),
+            432: ("70cm Amateur", "Ham Radio"),
+            1296: ("23cm Amateur", "Ham Radio"),
+            # Satellites
+            137: ("NOAA Weather", "Weather Satellites"),
+            1090: ("ADS-B", "Aircraft Tracking"),
+            # Wireless Microphones
+            518: ("Wireless Mic", "UHF Wireless Mics"),
+            # RFID
+            865: ("RFID UHF", "UHF RFID"),
+            2455: ("RFID", "Microwave RFID"),
+            # Medical Devices
+            2400: ("Medical", "Medical Telemetry"),
+            # Smart Home
+            868: ("Smart Home", "Z-Wave"),
+            908: ("Smart Home", "ZigBee"),
+        }
+
+        # Determine how many common frequencies to include (50-85% of total)
+        common_freq_count = int(self.num_frequencies * 0.7)  # 70% common frequencies
+        remaining_freq_count = self.num_frequencies - common_freq_count
+
+        # Filter common frequencies to be within our min-max range
+        filtered_common = {f: v for f, v in self.common_frequencies.items() if self.min_freq <= f <= self.max_freq}
+
+        # If we have more common frequencies than needed, select a subset
+        self.selected_frequencies = []
+        self.frequency_labels = {}
+
+        if len(filtered_common) > common_freq_count:
+            # Take a well-distributed subset of common frequencies
+            freq_keys = sorted(list(filtered_common.keys()))
+            step = len(freq_keys) / common_freq_count
+            indices = [int(i * step) for i in range(common_freq_count)]
+
+            for idx in indices:
+                if idx < len(freq_keys):
+                    freq = freq_keys[idx]
+                    self.selected_frequencies.append(freq)
+                    self.frequency_labels[freq] = filtered_common[freq]
+        else:
+            # Use all common frequencies and adjust remaining_freq_count
+            self.selected_frequencies = list(filtered_common.keys())
+            self.frequency_labels = filtered_common
+            remaining_freq_count = self.num_frequencies - len(self.selected_frequencies)
+
+        # If we have any remaining slots, add evenly spaced frequencies
+        if remaining_freq_count > 0:
+            # Calculate evenly spaced frequencies for remaining slots
+            step = (self.max_freq - self.min_freq) / (remaining_freq_count + 1)
+            for i in range(1, remaining_freq_count + 1):
+                new_freq = self.min_freq + i * step
+                # Avoid duplicates and frequencies very close to existing ones
+                is_duplicate = False
+                for existing_freq in self.selected_frequencies:
+                    if abs(existing_freq - new_freq) < 5:  # within 5 MHz
+                        is_duplicate = True
+                        break
+
+                if not is_duplicate:
+                    self.selected_frequencies.append(new_freq)
+
+        # Sort frequencies for proper display
+        self.frequencies = sorted(self.selected_frequencies)
 
         # Log the frequency points we'll test
         print(f"Will test the following frequencies (MHz): {self.frequencies}")
+        print(f"Frequency labels: {self.frequency_labels}")
 
         # Verify HackRF presence
         self.hackrf_available = self._check_hackrf()

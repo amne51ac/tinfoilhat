@@ -1038,4 +1038,11 @@ def get_frequencies():
     # but we need to return them in Hz to match our new code
     frequencies_hz = [int(freq * 1e6) for freq in scanner.frequencies]
 
-    return jsonify({"status": "success", "data": {"frequencies": frequencies_hz}})
+    # Prepare frequency labels for the frontend
+    frequency_labels = {}
+    if hasattr(scanner, "frequency_labels"):
+        for freq_mhz, label_data in scanner.frequency_labels.items():
+            freq_hz = int(freq_mhz * 1e6)
+            frequency_labels[str(freq_hz)] = {"name": label_data[0], "description": label_data[1]}
+
+    return jsonify({"status": "success", "data": {"frequencies": frequencies_hz, "labels": frequency_labels}})
