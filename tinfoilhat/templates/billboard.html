@@ -954,12 +954,43 @@
                             // Update the UI
                             const recentTest = document.getElementById('recent-test');
                             const testInfo = recentTest.querySelector('.test-info');
-                            testInfo.innerHTML = `
-                                <div class="contestant-name">RESET</div>
-                                <div class="hat-type">Test data has been reset</div>
-                                <div class="attenuation">0.00 dB</div>
-                                <div class="test-date">Waiting for new test</div>
-                            `;
+                            
+                            // Check if this is a baseline test start
+                            if (data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true)) {
+                                // Show baseline in progress message
+                                testInfo.innerHTML = `
+                                    <div class="contestant-name">BASELINE TEST</div>
+                                    <div class="hat-type">Baseline Measurement in Progress</div>
+                                    <div class="attenuation">0.00 dB</div>
+                                    <div class="test-date">In Progress</div>
+                                `;
+                                
+                                // Add a baseline in progress indicator
+                                const testInProgress = document.createElement('div');
+                                testInProgress.className = 'test-in-progress';
+                                testInProgress.innerHTML = '<div class="measuring-indicator">BASELINE IN PROGRESS</div>';
+                                testInfo.appendChild(testInProgress);
+                                
+                                // Set baseline_in_progress flag
+                                currentTestData.measurement_type = 'baseline';
+                                currentTestData.baseline_in_progress = true;
+                            } else {
+                                // Standard reset message
+                                testInfo.innerHTML = `
+                                    <div class="contestant-name">DATA RESET</div>
+                                    <div class="hat-type">Waiting for new measurements</div>
+                                    <div class="attenuation">0.00 dB</div>
+                                    <div class="test-date">All previous data cleared</div>
+                                `;
+                            }
+                            
+                            // Remove any existing measurement indicators (only if not a baseline start)
+                            if (!(data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true))) {
+                                const testInProgress = document.querySelector('.test-in-progress');
+                                if (testInProgress) {
+                                    testInProgress.remove();
+                                }
+                            }
                             
                             return;
                         }
@@ -1032,34 +1063,45 @@
                                     // Show reset state in the UI
                                     const recentTest = document.getElementById('recent-test');
                                     const testInfo = recentTest.querySelector('.test-info');
-                                    testInfo.innerHTML = `
-                                        <div class="contestant-name">New Baseline Test</div>
-                                        <div class="hat-type">All Previous Data Cleared</div>
-                                        <div class="attenuation">0.00 dB</div>
-                                        <div class="test-date">Ready for measurements</div>
-                                    `;
                                     
-                                    // Add a visual indicator for the reset
-                                    const resetIndicator = document.createElement('div');
-                                    resetIndicator.className = 'billboard-reset-indicator';
-                                    resetIndicator.textContent = 'CHART DATA CLEARED FOR NEW TEST';
-                                    resetIndicator.style.color = '#ff5500';
-                                    resetIndicator.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-                                    resetIndicator.style.padding = '10px';
-                                    resetIndicator.style.margin = '10px 0';
-                                    resetIndicator.style.textAlign = 'center';
-                                    resetIndicator.style.fontWeight = 'bold';
-                                    resetIndicator.style.border = '2px solid #ff5500';
-                                    resetIndicator.style.borderRadius = '5px';
+                                    // Check if this is a baseline test start
+                                    if (data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true)) {
+                                        // Show baseline in progress message
+                                        testInfo.innerHTML = `
+                                            <div class="contestant-name">BASELINE TEST</div>
+                                            <div class="hat-type">Baseline Measurement in Progress</div>
+                                            <div class="attenuation">0.00 dB</div>
+                                            <div class="test-date">In Progress</div>
+                                        `;
+                                        
+                                        // Add a baseline in progress indicator
+                                        const testInProgress = document.createElement('div');
+                                        testInProgress.className = 'test-in-progress';
+                                        testInProgress.innerHTML = '<div class="measuring-indicator">BASELINE IN PROGRESS</div>';
+                                        testInfo.appendChild(testInProgress);
+                                        
+                                        // Set baseline_in_progress flag
+                                        currentTestData.measurement_type = 'baseline';
+                                        currentTestData.baseline_in_progress = true;
+                                    } else {
+                                        // Standard reset message
+                                        testInfo.innerHTML = `
+                                            <div class="contestant-name">DATA RESET</div>
+                                            <div class="hat-type">Waiting for new measurements</div>
+                                            <div class="attenuation">0.00 dB</div>
+                                            <div class="test-date">All previous data cleared</div>
+                                        `;
+                                    }
                                     
-                                    testInfo.appendChild(resetIndicator);
-                                    
-                                    // Remove the indicator after 5 seconds
-                                    setTimeout(() => {
-                                        if (resetIndicator && resetIndicator.parentNode) {
-                                            resetIndicator.parentNode.removeChild(resetIndicator);
+                                    // Remove any existing measurement indicators (only if not a baseline start)
+                                    if (!(data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true))) {
+                                        const testInProgress = document.querySelector('.test-in-progress');
+                                        if (testInProgress) {
+                                            testInProgress.remove();
                                         }
-                                    }, 5000);
+                                    }
+                                    
+                                    return;
                                 }
                                 // Update with new spectrum data if it contains frequencies
                                 else if (data.spectrum_data.frequencies && data.spectrum_data.frequencies.length > 0) {
@@ -1368,34 +1410,45 @@
                             // Show reset state in the UI
                             const recentTest = document.getElementById('recent-test');
                             const testInfo = recentTest.querySelector('.test-info');
-                            testInfo.innerHTML = `
-                                <div class="contestant-name">New Baseline Test</div>
-                                <div class="hat-type">All Previous Data Cleared</div>
-                                <div class="attenuation">0.00 dB</div>
-                                <div class="test-date">Ready for measurements</div>
-                            `;
                             
-                            // Add a visual indicator for the reset
-                            const resetIndicator = document.createElement('div');
-                            resetIndicator.className = 'billboard-reset-indicator';
-                            resetIndicator.textContent = 'CHART DATA CLEARED FOR NEW TEST';
-                            resetIndicator.style.color = '#ff5500';
-                            resetIndicator.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-                            resetIndicator.style.padding = '10px';
-                            resetIndicator.style.margin = '10px 0';
-                            resetIndicator.style.textAlign = 'center';
-                            resetIndicator.style.fontWeight = 'bold';
-                            resetIndicator.style.border = '2px solid #ff5500';
-                            resetIndicator.style.borderRadius = '5px';
+                            // Check if this is a baseline test start
+                            if (data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true)) {
+                                // Show baseline in progress message
+                                testInfo.innerHTML = `
+                                    <div class="contestant-name">BASELINE TEST</div>
+                                    <div class="hat-type">Baseline Measurement in Progress</div>
+                                    <div class="attenuation">0.00 dB</div>
+                                    <div class="test-date">In Progress</div>
+                                `;
+                                
+                                // Add a baseline in progress indicator
+                                const testInProgress = document.createElement('div');
+                                testInProgress.className = 'test-in-progress';
+                                testInProgress.innerHTML = '<div class="measuring-indicator">BASELINE IN PROGRESS</div>';
+                                testInfo.appendChild(testInProgress);
+                                
+                                // Set baseline_in_progress flag
+                                currentTestData.measurement_type = 'baseline';
+                                currentTestData.baseline_in_progress = true;
+                            } else {
+                                // Standard reset message
+                                testInfo.innerHTML = `
+                                    <div class="contestant-name">DATA RESET</div>
+                                    <div class="hat-type">Waiting for new measurements</div>
+                                    <div class="attenuation">0.00 dB</div>
+                                    <div class="test-date">All previous data cleared</div>
+                                `;
+                            }
                             
-                            testInfo.appendChild(resetIndicator);
-                            
-                            // Remove the indicator after 5 seconds
-                            setTimeout(() => {
-                                if (resetIndicator && resetIndicator.parentNode) {
-                                    resetIndicator.parentNode.removeChild(resetIndicator);
+                            // Remove any existing measurement indicators (only if not a baseline start)
+                            if (!(data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true))) {
+                                const testInProgress = document.querySelector('.test-in-progress');
+                                if (testInProgress) {
+                                    testInProgress.remove();
                                 }
-                            }, 5000);
+                            }
+                            
+                            return;
                         }
                         // Update with new spectrum data if it contains frequencies
                         else if (data.spectrum_data.frequencies && data.spectrum_data.frequencies.length > 0) {
@@ -1738,17 +1791,42 @@
                     // Update UI to indicate reset
                     const recentTest = document.getElementById('recent-test');
                     const testInfo = recentTest.querySelector('.test-info');
-                    testInfo.innerHTML = `
-                        <div class="contestant-name">DATA RESET</div>
-                        <div class="hat-type">Waiting for new measurements</div>
-                        <div class="attenuation">0.00 dB</div>
-                        <div class="test-date">All previous data cleared</div>
-                    `;
                     
-                    // Remove any existing measurement indicators
-                    const testInProgress = document.querySelector('.test-in-progress');
-                    if (testInProgress) {
-                        testInProgress.remove();
+                    // Check if this is a baseline test start
+                    if (data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true)) {
+                        // Show baseline in progress message
+                        testInfo.innerHTML = `
+                            <div class="contestant-name">BASELINE TEST</div>
+                            <div class="hat-type">Baseline Measurement in Progress</div>
+                            <div class="attenuation">0.00 dB</div>
+                            <div class="test-date">In Progress</div>
+                        `;
+                        
+                        // Add a baseline in progress indicator
+                        const testInProgress = document.createElement('div');
+                        testInProgress.className = 'test-in-progress';
+                        testInProgress.innerHTML = '<div class="measuring-indicator">BASELINE IN PROGRESS</div>';
+                        testInfo.appendChild(testInProgress);
+                        
+                        // Set baseline_in_progress flag
+                        currentTestData.measurement_type = 'baseline';
+                        currentTestData.baseline_in_progress = true;
+                    } else {
+                        // Standard reset message
+                        testInfo.innerHTML = `
+                            <div class="contestant-name">DATA RESET</div>
+                            <div class="hat-type">Waiting for new measurements</div>
+                            <div class="attenuation">0.00 dB</div>
+                            <div class="test-date">All previous data cleared</div>
+                        `;
+                    }
+                    
+                    // Remove any existing measurement indicators (only if not a baseline start)
+                    if (!(data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true))) {
+                        const testInProgress = document.querySelector('.test-in-progress');
+                        if (testInProgress) {
+                            testInProgress.remove();
+                        }
                     }
                     
                     // Add a visual reset notification

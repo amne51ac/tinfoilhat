@@ -487,6 +487,16 @@ def start_baseline():
             "event_type": "clear_all",
             "timestamp": datetime.now(),
             "message": "All test data has been cleared for new baseline test",
+            # Add a special flag to indicate baseline is starting
+            "baseline_start": True,
+            # Add data that the billboard uses to update the latest test display
+            "new_test": {
+                "name": "BASELINE TEST",
+                "hat_type": "baseline",
+                "attenuation": 0.0,
+                "date": "In Progress",
+                "is_baseline_start": True
+            }
         }
 
         # Broadcast to all clients with high priority
@@ -842,11 +852,13 @@ def measure_frequency():
         return jsonify(
             {
                 "status": "success",
+                "message": f"Measured power at {freq_mhz} MHz: {power:.2f} dBm",
                 "data": {
-                    "frequency": freq_hz,
+                    "frequency_mhz": freq_mhz,
                     "power": power,
                     "measurement_type": measurement_type,
-                    "attenuation": attenuation,
+                    "is_baseline": measurement_type == "baseline",
+                    "timestamp": datetime.now(),
                 },
             }
         )
