@@ -10,6 +10,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
+from flask import jsonify
 
 from tinfoilhat.app import create_app
 from tinfoilhat.db import get_db, init_db
@@ -55,7 +56,7 @@ def test_index(client):
 
 def test_contestant_registration(client):
     """Test adding a new contestant."""
-    response = client.post("/contestants", data={"name": "Test Team", "contact_info": "test@example.com"})
+    response = client.post("/contestants", data={"name": "Test Team"})
     assert response.status_code == 302  # Redirect after successful submission
 
     # Check that the contestant was added to the database
@@ -239,3 +240,138 @@ def test_first_baseline_detection():
     current_test_data["hat_levels"] = [None, None]  # Reset hat levels to all None
     is_first_baseline = len(current_test_data["frequencies"]) == 0
     assert is_first_baseline is True
+
+
+def test_measure_frequency(client):
+    """Test the measure_frequency endpoint."""
+    with patch("tinfoilhat.routes.get_scanner") as mock_get_scanner:
+        # Mock scanner and its measure_frequency method
+        mock_scanner = MagicMock()
+        mock_scanner._measure_power_at_frequency = MagicMock(return_value=-85.0)
+        mock_get_scanner.return_value = mock_scanner
+
+        # Create a patch for store_measurement function
+        with patch("tinfoilhat.routes.store_measurement"):
+            # Test baseline measurement
+            response = client.post("/test/measure_frequency", json={"frequency": 433.0, "measurement_type": "baseline"})
+
+            # Verify response
+            assert response.status_code == 200
+            data = json.loads(response.data)
+            assert data["status"] == "success"
+            assert data["data"]["power"] == -85.0
+            assert data["data"]["frequency"] == 433.0 * 1e6  # Check for value in Hz instead of MHz
+
+            # Check that scanner method was called with the right parameters
+            mock_scanner._measure_power_at_frequency.assert_called_with(433.0 * 1e6)  # Convert MHz to Hz
+
+
+def test_get_frequencies(client):
+    """Test the get_frequencies endpoint."""
+    with patch("tinfoilhat.routes.get_scanner") as mock_get_scanner:
+        # Mock scanner with predefined frequencies and frequency labels
+        mock_scanner = MagicMock()
+        mock_scanner.frequencies = [433.0, 868.0, 2450.0]
+        mock_scanner.frequency_labels = {
+            433.0: ("ISM 433MHz", "Remote Controls"),
+            868.0: ("Z-Wave", "Smart Home"),
+            2450.0: ("WiFi", "2.4GHz"),
+        }
+        mock_get_scanner.return_value = mock_scanner
+
+        # Call the endpoint
+        response = client.get("/test/get_frequencies")
+
+        # Verify response
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert "data" in data
+        assert "frequencies" in data["data"]
+        # Assert the frequencies are returned with the right multiplier (Hz)
+        expected_frequencies = [433000000, 868000000, 2450000000]
+        for freq in expected_frequencies:
+            assert freq in data["data"]["frequencies"]
+
+
+def test_billboard(client):
+    """Test the billboard page."""
+    response = client.get("/billboard")
+    assert response.status_code == 200
+    assert b"Tinfoil Hat Competition" in response.data
+    # Check for key billboard elements
+    assert b"<canvas" in response.data  # Chart canvas should be present
+    assert b"powerChart" in response.data  # Chart JS instance
+
+
+def test_get_leaderboard(client):
+    """Test the leaderboard endpoint."""
+    # Insert test data
+    with client.application.app_context():
+        db = get_db()
+
+        # Insert a test contestant
+        db.execute("INSERT INTO contestant (name) VALUES (?)", ("Test Team",))
+
+        # Check the structure of the test_result table
+        table_info = db.execute("PRAGMA table_info(test_result)").fetchall()
+        column_names = [col["name"] for col in table_info]
+
+        # Insert a test result with the correct schema
+        insert_query = """
+            INSERT INTO test_result
+            (contestant_id, hat_type, average_attenuation, test_date, is_best_score"""
+
+        # Add optional fields if they exist in the schema
+        if "max_attenuation" in column_names:
+            insert_query += ", max_attenuation, max_freq, min_attenuation, min_freq"
+
+        insert_query += """)
+            VALUES (?, ?, ?, datetime('now'), ?"""
+
+        # Add values for optional fields if they exist
+        values = [1, "classic", 3.5, 1]
+        if "max_attenuation" in column_names:
+            insert_query += ", ?, ?, ?, ?"
+            values.extend([5.0, 433.0, 1.5, 2450.0])
+
+        insert_query += ")"
+
+        db.execute(insert_query, values)
+        db.commit()
+
+    # Test the endpoint for classic hats
+    response = client.get("/leaderboard?hat_type=classic")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert "leaderboard" in data
+    assert len(data["leaderboard"]) == 1
+    assert data["leaderboard"][0]["name"] == "Test Team"
+    assert data["leaderboard"][0]["hat_type"] == "classic"
+    assert abs(data["leaderboard"][0]["average_attenuation"] - 3.5) < 0.001
+
+    # Test for all hat types
+    response = client.get("/leaderboard?show_all_types=true")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert "leaderboard" in data
+    assert len(data["leaderboard"]) == 1
+    assert data["leaderboard"][0]["name"] == "Test Team"
+
+
+def test_cancel_test(client):
+    """Test the cancel_test endpoint."""
+    with client.application.app_context(), patch("tinfoilhat.routes.reset_test_state") as mock_reset:
+        # Configure mock to return success
+        mock_reset.return_value = jsonify({"status": "success", "message": "Test state has been fully reset"})
+
+        # Call the endpoint
+        response = client.post("/test/cancel")
+
+        # Verify response
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data["status"] == "success"
+        assert "message" in data
+
+        # Verify reset was called
+        mock_reset.assert_called_once()

@@ -15,14 +15,6 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 
 ## Recent Updates
 
-### Data Clearing and Reset Improvements (March 2025)
-- Enhanced reset handling to properly clear preexisting data when starting a new baseline test
-- Added detection for the first measurement of a baseline test to automatically clear data
-- Improved visual feedback when data is reset, with clear notifications to users
-- Added state tracking to distinguish between baseline and hat measurement phases
-- Fixed memory leaks and data persistence issues to ensure clean test starts
-- Implemented safeguards to prevent mixed data display from different test phases
-
 ### UI and Testing Workflow Improvements (March 2025)
 - Redesigned testing flow to separate baseline and hat measurement phases
 - Added a dedicated "Continue to Hat Measurement" modal with contestant selection
