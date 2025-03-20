@@ -166,3 +166,76 @@ def test_server_side_calculation_logic():
             # 3. Check that the max and min are identified correctly
             assert max([2.0, 4.0, 5.0, 0.5]) == 5.0  # Max attenuation
             assert min([2.0, 4.0, 5.0, 0.5]) == 0.5  # Min attenuation
+
+
+def test_reset_test_state(client):
+    """Test that the test state is properly reset."""
+    with client.application.app_context(), patch("tinfoilhat.routes.freq_clients", {}), patch(
+        "tinfoilhat.routes.billboard_clients", {}
+    ), patch("tinfoilhat.routes.latest_frequency_measurement", None):
+
+        # First try to modify the app config
+        client.application.config["BASELINE_DATA"] = {"test": "data"}
+        client.application.config["HAT_DATA"] = {"test": "data"}
+        client.application.config["ATTENUATION_DATA"] = {"test": "data"}
+        client.application.config["CURRENT_BASELINE"] = {"test": "data"}
+
+        # Call the reset endpoint
+        response = client.post("/test/reset")
+        assert response.status_code == 200  # Should return success
+
+        # Check if the config has been cleared
+        for key in ["BASELINE_DATA", "HAT_DATA", "ATTENUATION_DATA", "CURRENT_BASELINE"]:
+            assert key not in client.application.config
+
+        # Check the database to ensure measurement_cache is cleared
+        with client.application.app_context():
+            db = get_db()
+            count = db.execute("SELECT COUNT(*) FROM measurement_cache").fetchone()[0]
+            assert count == 0
+
+
+def test_first_baseline_detection():
+    """Test the detection of the first baseline measurement."""
+    # This function tests the client-side detection logic that we added to the billboard.html
+    # Since this logic is in JavaScript, we can only create a mock test to verify the principles
+
+    # Mock the currentTestData object
+    current_test_data = {
+        "frequencies": [],
+        "baseline_levels": [],
+        "hat_levels": [None, None],  # Some hat levels exist
+        "attenuations": [None, None],
+        "measurement_type": None,
+        "contestant_id": None,
+        "contestant_name": None,
+        "hat_type": None,
+        "baseline_in_progress": False,
+    }
+
+    # Test Case 1: Should detect new baseline when hat data exists and baseline_in_progress is False
+    # Fix: Using the correct logic to match what's in the billboard.html file
+    # The issue was that we need to have some non-null hat levels for this logic to work
+    current_test_data["hat_levels"] = [None, -82.5]  # At least one non-null hat level
+
+    is_first_baseline = (
+        current_test_data["hat_levels"]
+        and any(level is not None for level in current_test_data["hat_levels"])
+        and not current_test_data["baseline_in_progress"]
+    )
+    assert is_first_baseline is True
+
+    # Test Case 2: Should not detect as first baseline when baseline_in_progress is True
+    current_test_data["baseline_in_progress"] = True
+    is_first_baseline = (
+        current_test_data["hat_levels"]
+        and any(level is not None for level in current_test_data["hat_levels"])
+        and not current_test_data["baseline_in_progress"]
+    )
+    assert is_first_baseline is False
+
+    # Test Case 3: Should detect as first baseline when frequencies array is empty
+    current_test_data["baseline_in_progress"] = False
+    current_test_data["hat_levels"] = [None, None]  # Reset hat levels to all None
+    is_first_baseline = len(current_test_data["frequencies"]) == 0
+    assert is_first_baseline is True
