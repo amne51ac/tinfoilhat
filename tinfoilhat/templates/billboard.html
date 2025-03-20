@@ -915,62 +915,23 @@
                                 emergencyNotice.style.left = '50%';
                                 emergencyNotice.style.transform = 'translate(-50%, -50%)';
                                 emergencyNotice.style.backgroundColor = '#ff0000';
-                                emergencyNotice.style.color = '#ffffff';
-                                emergencyNotice.style.padding = '40px';
-                                emergencyNotice.style.borderRadius = '10px';
-                                emergencyNotice.style.fontSize = '28px';
+                                emergencyNotice.style.color = 'white';
+                                emergencyNotice.style.padding = '20px';
+                                emergencyNotice.style.fontSize = '24px';
                                 emergencyNotice.style.fontWeight = 'bold';
-                                emergencyNotice.style.textAlign = 'center';
-                                emergencyNotice.style.zIndex = '99999';
-                                emergencyNotice.style.boxShadow = '0 0 20px rgba(255, 0, 0, 0.8)';
+                                emergencyNotice.style.zIndex = '9999';
+                                emergencyNotice.style.borderRadius = '10px';
                                 document.body.appendChild(emergencyNotice);
                                 
-                                // Guaranteed clear chart data - do this multiple times to ensure it happens
-                                for (let i = 0; i < 3; i++) {
-                                    // Force a complete reset of chart data
-                                    powerChart.data.labels = [];
-                                    powerChart.data.datasets[0].data = [];
-                                    powerChart.data.datasets[1].data = [];
-                                    powerChart.data.datasets[2].data = [];
-                                    powerChart.update();
-                                    console.log(`Emergency reset attempt ${i+1}/3: Chart data forcefully cleared`);
-                                }
-                                
-                                // Force reset all test data in memory
-                                currentTestData = {
-                                    frequencies: [],
-                                    baseline_levels: [],
-                                    hat_levels: [],
-                                    attenuations: [],
-                                    measurement_type: null,
-                                    contestant_id: null,
-                                    contestant_name: null,
-                                    hat_type: null,
-                                    baseline_in_progress: false
-                                };
-                                
-                                // Reload the page after a short delay, which is the ultimate reset
+                                // Remove after 5 seconds
                                 setTimeout(() => {
-                                    if (emergencyNotice && emergencyNotice.parentNode) {
-                                        emergencyNotice.textContent = 'RELOADING PAGE TO ENSURE CLEAN STATE...';
+                                    if (emergencyNotice.parentNode) {
+                                        emergencyNotice.parentNode.removeChild(emergencyNotice);
                                     }
-                                    setTimeout(() => {
-                                        window.location.reload();
-                                    }, 1000);
-                                }, 2000);
-                                
-                                return; // Skip further processing
+                                }, 5000);
                             }
                             
-                            // Standard reset handling for non-emergency resets
-                            // Force complete reset of chart data
-                            powerChart.data.labels = [];
-                            powerChart.data.datasets[0].data = [];
-                            powerChart.data.datasets[1].data = [];
-                            powerChart.data.datasets[2].data = [];
-                            powerChart.update();
-                            
-                            // Reset all test data
+                            // Perform the reset
                             currentTestData = {
                                 frequencies: [],
                                 baseline_levels: [],
@@ -983,117 +944,62 @@
                                 baseline_in_progress: false
                             };
                             
-                            // Update UI with reset message
+                            // Reset chart data
+                            powerChart.data.labels = [];
+                            powerChart.data.datasets[0].data = [];
+                            powerChart.data.datasets[1].data = [];
+                            powerChart.data.datasets[2].data = [];
+                            powerChart.update();
+                            
+                            // Update the UI
                             const recentTest = document.getElementById('recent-test');
                             const testInfo = recentTest.querySelector('.test-info');
                             testInfo.innerHTML = `
-                                <div class="contestant-name">RESET DETECTED</div>
-                                <div class="hat-type">New Baseline Measurement</div>
+                                <div class="contestant-name">RESET</div>
+                                <div class="hat-type">Test data has been reset</div>
                                 <div class="attenuation">0.00 dB</div>
-                                <div class="test-date">All data cleared</div>
+                                <div class="test-date">Waiting for new test</div>
                             `;
                             
-                            // Display a prominent reset notification
-                            const resetMsg = document.createElement('div');
-                            resetMsg.className = 'sse-reset-notification';
-                            resetMsg.textContent = 'RESET DETECTED - ALL CHART DATA CLEARED';
-                            resetMsg.style.color = '#ffffff';
-                            resetMsg.style.backgroundColor = '#ff0000';
-                            resetMsg.style.padding = '15px';
-                            resetMsg.style.margin = '15px 0';
-                            resetMsg.style.textAlign = 'center';
-                            resetMsg.style.fontWeight = 'bold';
-                            resetMsg.style.fontSize = '18px';
-                            resetMsg.style.border = '3px solid #ffffff';
-                            resetMsg.style.borderRadius = '5px';
-                            
-                            testInfo.appendChild(resetMsg);
-                            
-                            // Remove the notification after a few seconds
-                            setTimeout(() => {
-                                if (resetMsg && resetMsg.parentNode) {
-                                    resetMsg.parentNode.removeChild(resetMsg);
-                                }
-                            }, 8000);
-                            
-                            return; // Skip further processing
+                            return;
                         }
                         
-                        // IMPORTANT FIX: Check for first baseline measurement
-                        // If we're getting baseline measurements (indicated by text in server log)
-                        // and this is the start of a new measurement series, clear data
-                        if (data.measurement_type === 'baseline') {
-                            // Check if this looks like the first measurement of a new baseline series
-                            // by looking at the measurement frequency (typically starts low)
-                            const isFirstBaseline = data.first_baseline === true ||    // Explicit marker
-                                                  data.frequency_mhz < 100 ||         // Very low freq typically indicates start
-                                                  (currentTestData.hat_levels && 
-                                                   currentTestData.hat_levels.some(level => level !== null) && 
-                                                   !currentTestData.baseline_in_progress);
-                            
-                            if (isFirstBaseline) {
-                                console.log("🔄 FIRST BASELINE MEASUREMENT DETECTED - FORCE CLEARING CHART DATA 🔄");
-                                
-                                // Force clear all chart data
-                                powerChart.data.labels = [];
-                                powerChart.data.datasets[0].data = [];
-                                powerChart.data.datasets[1].data = [];
-                                powerChart.data.datasets[2].data = [];
-                                powerChart.update();
-                                
-                                // Reset test data but keep the current measurement type
-                                currentTestData = {
-                                    frequencies: [],
-                                    baseline_levels: [],
-                                    hat_levels: [],
-                                    attenuations: [],
-                                    measurement_type: 'baseline',
-                                    contestant_id: data.contestant_id || null,
-                                    contestant_name: data.contestant_name || "New Baseline Test",
-                                    hat_type: null,
-                                    baseline_in_progress: true
-                                };
-                                
-                                // Update UI to show clear state
-                                const recentTest = document.getElementById('recent-test');
-                                const testInfo = recentTest.querySelector('.test-info');
-                                testInfo.innerHTML = `
-                                    <div class="contestant-name">NEW BASELINE TEST</div>
-                                    <div class="hat-type">Starting baseline measurement...</div>
-                                    <div class="attenuation">0.00 dB</div>
-                                    <div class="test-date">In Progress</div>
-                                `;
-                                
-                                // Add baseline indicator
-                                if (!document.querySelector('.test-in-progress')) {
-                                    const testInProgress = document.createElement('div');
-                                    testInProgress.className = 'test-in-progress';
-                                    testInProgress.innerHTML = '<div class="measuring-indicator">NEW BASELINE IN PROGRESS</div>';
-                                    testInfo.appendChild(testInProgress);
-                                }
-                            }
-                        }
-                        
-                        // Continue with normal event processing...
+                        // Check for test completion events
                         if (data.event_type === 'test_complete') {
-                            // This is a final test result
-                            console.log('Test complete event received:', data);
+                            console.log("🏆 TEST COMPLETION EVENT RECEIVED in frequency stream handler");
                             
-                            // Important: Do not reset or modify current test data or chart
-                            // The billboard update will handle the leaderboard/recent test updates
-                            // but we'll preserve the current chart data as-is since it likely has better frequency info
+                            // Update recent test display
+                            const recentTest = document.getElementById('recent-test');
+                            const testInfo = recentTest.querySelector('.test-info');
+                            testInfo.innerHTML = `
+                                <div class="contestant-name">${data.contestant_name || "Unknown"}</div>
+                                <div class="hat-type">${data.hat_type ? (data.hat_type.charAt(0).toUpperCase() + data.hat_type.slice(1)) : "Classic"} Hat</div>
+                                <div class="attenuation ${data.average_attenuation < 0 ? 'negative-attenuation' : ''}">
+                                    ${parseFloat(data.average_attenuation).toFixed(2)} dB
+                                </div>
+                                <div class="test-date">${new Date().toLocaleString()}</div>
+                            `;
                             
-                            // Mark the current state as completed but don't change the data
-                            console.log("Test complete - preserving current chart data");
+                            // Update leaderboards if they're included in the event
+                            if (data.leaderboard_classic) {
+                                updateLeaderboard('classic', data.leaderboard_classic);
+                            }
                             
-                            // Update the UI to remove the "in progress" indicator without changing chart data
+                            if (data.leaderboard_hybrid) {
+                                updateLeaderboard('hybrid', data.leaderboard_hybrid);
+                            }
+                            
+                            // Remove any "in progress" indicators
                             const testInProgress = document.querySelector('.test-in-progress');
                             if (testInProgress) {
                                 testInProgress.remove();
                             }
                             
                             return;
-                        } else if (data.event_type === 'billboard_update') {
+                        }
+                        
+                        // Continue with normal event processing...
+                        if (data.event_type === 'billboard_update') {
                             // This is a special update for the billboard with spectrum data
                             console.log('Billboard update received:', data);
                             
@@ -1867,7 +1773,29 @@
                     }, 5000);
                 }
                 
-                // Update the recent test display
+                // Check for test completion events
+                if (data.event_type === "test_complete") {
+                    console.log("🏆 TEST COMPLETION EVENT RECEIVED - Updating recent test and leaderboards");
+                    
+                    // Create a test object from the test completion data
+                    const testData = {
+                        name: data.contestant_name || "Unknown",
+                        hat_type: data.hat_type || "classic",
+                        attenuation: data.average_attenuation || 0.0,
+                        date: new Date().toLocaleString()
+                    };
+                    
+                    // Update the recent test display
+                    updateRecentTest(testData);
+                    
+                    // Remove the "Measurement in Progress" indicator if it exists
+                    const testInProgress = document.querySelector('.test-in-progress');
+                    if (testInProgress) {
+                        testInProgress.remove();
+                    }
+                }
+                
+                // Update the recent test display if there's new test data
                 if (data.new_test) {
                     updateRecentTest(data.new_test);
                     

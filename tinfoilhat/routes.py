@@ -1234,6 +1234,10 @@ def save_results():
                     max_attenuation = {"value": 0.0, "frequency": 0.0}
                     min_attenuation = {"value": 0.0, "frequency": 0.0}
 
+                # Get fresh leaderboard data
+                leaderboard_classic = get_leaderboard_data("classic")
+                leaderboard_hybrid = get_leaderboard_data("hybrid")
+
                 # Create a complete test data summary
                 test_complete_data = {
                     "event_type": "test_complete",
@@ -1249,10 +1253,25 @@ def save_results():
                     "effectiveness": effectiveness,
                     "max_attenuation": max_attenuation,
                     "min_attenuation": min_attenuation,
+                    "leaderboard_classic": leaderboard_classic,
+                    "leaderboard_hybrid": leaderboard_hybrid,
+                    # Add a new_test object that the billboard UI already knows how to handle
+                    "new_test": {
+                        "max_id": test_result_id,
+                        "name": contestant["name"],
+                        "hat_type": contestant["hat_type"],
+                        "attenuation": test_result["average_attenuation"],
+                        "date": format_datetime(datetime.now())
+                    }
                 }
 
                 # Update the global variable to notify SSE clients of test completion
+                global latest_frequency_measurement
                 latest_frequency_measurement = test_complete_data
+                
+                # Broadcast the test completion event to all clients
+                broadcast_test_event(test_complete_data)
+                print(f"Broadcasting test completion for {contestant['name']} with score {test_result['average_attenuation']:.2f}dB")
 
         except Exception as e:
             print(f"Error emitting test_complete event: {str(e)}")
@@ -2154,6 +2173,23 @@ def broadcast_test_event(event_data):
     Args:
         event_data (dict): The event data to send.
     """
+    # Update event_data with latest leaderboard data if this is a test_complete event
+    if event_data.get("event_type") == "test_complete":
+        # Get latest leaderboard data to ensure clients have up-to-date info
+        db = get_db()
+        
+        # Get leaderboard data for classic hats
+        leaderboard_classic = get_leaderboard_data("classic")
+        
+        # Get leaderboard data for hybrid hats
+        leaderboard_hybrid = get_leaderboard_data("hybrid")
+        
+        # Add the leaderboard data to the event
+        event_data["leaderboard_classic"] = leaderboard_classic
+        event_data["leaderboard_hybrid"] = leaderboard_hybrid
+        
+        print(f"Added fresh leaderboard data to test_complete event for hat_type: {event_data.get('hat_type')}")
+
     # Send to frequency stream clients
     for client_queue in freq_clients.values():
         with contextlib.suppress(Exception):
@@ -2165,6 +2201,8 @@ def broadcast_test_event(event_data):
             client_queue.put(event_data)
 
     # Store the latest event for new clients
+    global latest_frequency_measurement
+    latest_frequency_measurement = event_data
 
 
 @bp.route("/test/reset", methods=["POST"])
