@@ -1269,6 +1269,8 @@ def save_results():
                     "valid_frequencies": sum(valid_measurements) if valid_measurements else 0,
                     "effectiveness": effectiveness,
                     "contestant_name": contestant_name,
+                    "is_best_score": is_best,
+                    "hat_type": hat_type,
                     "max_attenuation": {
                         "value": max_attenuation,
                         "frequency": max_attenuation_freq,

@@ -1409,14 +1409,14 @@
                     const bestScoreMsg = document.getElementById('best-score-message');
                     if (result.data.is_best_score) {
                         bestScoreMsg.classList.remove('hidden');
-                        bestScoreMsg.textContent = `This is the best score for contestant "${result.data.contestant_name}"! The leaderboard has been updated.`;
+                        bestScoreMsg.textContent = `This is the best ${result.data.hat_type} score for contestant "${result.data.contestant_name}"! The leaderboard has been updated.`;
                         
                         // Update the leaderboard
                         updateLeaderboard(result.data.contestant_name);
-                        statusEl.textContent = `Test completed and saved. This is the best score for contestant "${result.data.contestant_name}"!`;
+                        statusEl.textContent = `Test completed and saved. This is the best ${result.data.hat_type} score for contestant "${result.data.contestant_name}"!`;
                     } else {
                         bestScoreMsg.classList.add('hidden');
-                        statusEl.textContent = `Test completed and saved. Not the best score for contestant "${result.data.contestant_name}".`;
+                        statusEl.textContent = `Test completed and saved. Not the best ${result.data.hat_type} score for contestant "${result.data.contestant_name}".`;
                         
                         // Update the leaderboard with the latest contestant name, even if not best score
                         updateLeaderboard(result.data.contestant_name);
