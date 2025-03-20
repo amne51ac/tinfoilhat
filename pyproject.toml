@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "tinfoilhat"
 version = "0.1.0"
-description = "Tinfoil Hat Competition App for Cypher Con"
+description = "Tinfoil Hat Competition Scoring Platform"
 readme = "README.md"
 authors = [
-    {name = "Cypher Con Team", email = "info@cyphercon.com"}
+    {name = "Mark Milhouse (amne1ac)", email = "info@amne51ac.com"}
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.13"
 dependencies = [
     "flask>=2.0.0",
     "numpy>=1.20.0",
@@ -32,7 +32,7 @@ packages = ["tinfoilhat"]
 
 [tool.black]
 line-length = 120
-target-version = ["py38"]
+target-version = ["py313"]
 include = '\.pyi?$'
 
 [tool.isort]
@@ -41,7 +41,7 @@ line_length = 120
 
 [tool.ruff]
 line-length = 120
-target-version = "py38"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "C90", "N", "B", "SIM", "TCH", "UP", "YTT", "BLE"]

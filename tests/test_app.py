@@ -108,10 +108,12 @@ def test_server_side_calculation_logic():
         db_mock.execute().fetchone.return_value = {"name": "Test Team", "best": None}
 
         # Test with patched dependencies
-        with patch("tinfoilhat.routes.get_scanner", return_value=scanner_mock), patch(
-            "tinfoilhat.routes.get_db", return_value=db_mock
-        ), patch("tinfoilhat.routes.request") as request_mock, patch("tinfoilhat.routes.clear_measurements"), patch(
-            "tinfoilhat.routes.jsonify", side_effect=lambda x: MagicMock(data=json.dumps(x))
+        with (
+            patch("tinfoilhat.routes.get_scanner", return_value=scanner_mock),
+            patch("tinfoilhat.routes.get_db", return_value=db_mock),
+            patch("tinfoilhat.routes.request") as request_mock,
+            patch("tinfoilhat.routes.clear_measurements"),
+            patch("tinfoilhat.routes.jsonify", side_effect=lambda x: MagicMock(data=json.dumps(x))),
         ):
             # Configure the mock request
             request_mock.json = {"contestant_id": "1"}
@@ -171,9 +173,12 @@ def test_server_side_calculation_logic():
 
 def test_reset_test_state(client):
     """Test that the test state is properly reset."""
-    with client.application.app_context(), patch("tinfoilhat.routes.freq_clients", {}), patch(
-        "tinfoilhat.routes.billboard_clients", {}
-    ), patch("tinfoilhat.routes.latest_frequency_measurement", None):
+    with (
+        client.application.app_context(),
+        patch("tinfoilhat.routes.freq_clients", {}),
+        patch("tinfoilhat.routes.billboard_clients", {}),
+        patch("tinfoilhat.routes.latest_frequency_measurement", None),
+    ):
 
         # First try to modify the app config
         client.application.config["BASELINE_DATA"] = {"test": "data"}

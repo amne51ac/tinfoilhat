@@ -34,9 +34,12 @@ def mock_hackrf_commands():
 
 def test_scanner_initialization(mock_hackrf_commands):
     """Test scanner initialization with mocked hardware."""
-    with patch("os.path.exists", return_value=True), patch("os.makedirs"), patch(
-        "tempfile.mkdtemp", return_value="/tmp/mock_hackrf"
-    ), patch("tinfoilhat.scanner.Scanner._check_hackrf", return_value=True):
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("os.makedirs"),
+        patch("tempfile.mkdtemp", return_value="/tmp/mock_hackrf"),
+        patch("tinfoilhat.scanner.Scanner._check_hackrf", return_value=True),
+    ):
         # Initialize Scanner
         scanner = Scanner()
 
@@ -55,19 +58,25 @@ def test_scanner_initialization(mock_hackrf_commands):
 def test_measure_power_at_frequency(mock_hackrf_commands):
     """Test power measurement at a specific frequency with mocked hardware."""
     # Using multiple patches in a single with statement for clarity and to avoid nesting
-    with patch("os.path.exists", side_effect=lambda path: True), patch("os.makedirs"), patch(
-        "tempfile.mkdtemp", return_value="/tmp/mock_hackrf"
-    ), patch("builtins.open", MagicMock()), patch("time.sleep"), patch("os.path.getsize", return_value=1024):
+    with (
+        patch("os.path.exists", side_effect=lambda path: True),
+        patch("os.makedirs"),
+        patch("tempfile.mkdtemp", return_value="/tmp/mock_hackrf"),
+        patch("builtins.open", MagicMock()),
+        patch("time.sleep"),
+        patch("os.path.getsize", return_value=1024),
+    ):
 
         # Create a mock file for _analyze_iq_samples to read
         mock_file = MagicMock()
         mock_file.read.return_value = b"mock_iq_data"
 
         # Mock the file open operation and subprocess together
-        with patch("builtins.open", return_value=mock_file), patch(
-            "subprocess.run", return_value=MagicMock(returncode=0)
-        ), patch("tinfoilhat.scanner.Scanner._check_hackrf", return_value=True), patch(
-            "tinfoilhat.scanner.Scanner.refresh_hackrf", return_value=True
+        with (
+            patch("builtins.open", return_value=mock_file),
+            patch("subprocess.run", return_value=MagicMock(returncode=0)),
+            patch("tinfoilhat.scanner.Scanner._check_hackrf", return_value=True),
+            patch("tinfoilhat.scanner.Scanner.refresh_hackrf", return_value=True),
         ):
 
             # Initialize Scanner
@@ -91,8 +100,10 @@ def test_measure_power_at_frequency(mock_hackrf_commands):
 
 def test_calculate_attenuation():
     """Test attenuation calculation."""
-    with patch("os.path.exists", return_value=True), patch("os.makedirs"), patch(
-        "tempfile.mkdtemp", return_value="/tmp/mock_hackrf"
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("os.makedirs"),
+        patch("tempfile.mkdtemp", return_value="/tmp/mock_hackrf"),
     ):
         # Initialize Scanner
         scanner = Scanner()
@@ -114,17 +125,21 @@ def test_calculate_attenuation():
 
 def test_frequency_gain_selection():
     """Test that appropriate gains are selected for different frequency ranges."""
-    with patch("os.path.exists", return_value=True), patch("os.makedirs"), patch(
-        "tempfile.mkdtemp", return_value="/tmp/mock_hackrf"
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("os.makedirs"),
+        patch("tempfile.mkdtemp", return_value="/tmp/mock_hackrf"),
     ):
         # Initialize Scanner
         scanner = Scanner()
 
         # Mock file operations to avoid file not found errors
-        with patch("os.path.exists", return_value=True), patch("os.path.getsize", return_value=1024), patch(
-            "builtins.open", return_value=MagicMock(read=lambda: b"mock_iq_data")
-        ), patch("subprocess.run", return_value=MagicMock(returncode=0)), patch.object(
-            scanner, "_analyze_iq_samples", return_value=-85.0
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("os.path.getsize", return_value=1024),
+            patch("builtins.open", return_value=MagicMock(read=lambda: b"mock_iq_data")),
+            patch("subprocess.run", return_value=MagicMock(returncode=0)),
+            patch.object(scanner, "_analyze_iq_samples", return_value=-85.0),
         ):
 
             # Test low frequency
@@ -141,8 +156,10 @@ def test_frequency_gain_selection():
 
 def test_average_measurements():
     """Test the averaging of multiple power measurements."""
-    with patch("os.path.exists", return_value=True), patch("os.makedirs"), patch(
-        "tempfile.mkdtemp", return_value="/tmp/mock_hackrf"
+    with (
+        patch("os.path.exists", return_value=True),
+        patch("os.makedirs"),
+        patch("tempfile.mkdtemp", return_value="/tmp/mock_hackrf"),
     ):
         # Initialize Scanner
         scanner = Scanner()
@@ -156,9 +173,12 @@ def test_average_measurements():
         scanner._capture_power_level = MagicMock(side_effect=lambda *args: next(measurement_iter))
 
         # Test the measurement with averaging - using combined with statements
-        with patch("os.path.exists", return_value=True), patch("os.path.getsize", return_value=1024), patch(
-            "builtins.open", return_value=MagicMock(read=lambda: b"mock_iq_data")
-        ), patch("subprocess.run", return_value=MagicMock(returncode=0)):
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("os.path.getsize", return_value=1024),
+            patch("builtins.open", return_value=MagicMock(read=lambda: b"mock_iq_data")),
+            patch("subprocess.run", return_value=MagicMock(returncode=0)),
+        ):
 
             # Expected result is the average of our measurements
             expected = sum(measurements) / len(measurements)

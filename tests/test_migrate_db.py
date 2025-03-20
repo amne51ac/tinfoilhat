@@ -114,9 +114,11 @@ def test_migrate_database_function():
     from tinfoilhat.migrate_db import migrate_database
 
     # Mock the app context and ensure_hat_type_column_exists function
-    with patch("tinfoilhat.migrate_db.create_app") as mock_create_app, patch(
-        "tinfoilhat.migrate_db.ensure_hat_type_column_exists"
-    ) as mock_ensure, patch("builtins.print"):
+    with (
+        patch("tinfoilhat.migrate_db.create_app") as mock_create_app,
+        patch("tinfoilhat.migrate_db.ensure_hat_type_column_exists") as mock_ensure,
+        patch("builtins.print"),
+    ):
 
         # Create a mock app with app_context
         mock_app = mock_create_app.return_value

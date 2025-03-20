@@ -1028,7 +1028,7 @@ def save_results():
 
         # Find peak and minimum attenuation (only consider valid measurements)
         valid_attenuation_with_idx = [
-            (i, att) for i, (att, valid) in enumerate(zip(attenuation_data, valid_measurements)) if valid
+            (i, att) for i, (att, valid) in enumerate(zip(attenuation_data, valid_measurements, strict=False)) if valid
         ]
 
         if valid_attenuation_with_idx:

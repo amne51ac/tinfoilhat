@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.9']  # Add more Python versions if needed
+        python-version: ['3.13']  # Using Python 3.13
 
     steps:
     - uses: actions/checkout@v3
@@ -44,7 +44,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.13'
         
     - name: Install dependencies
       run: |
@@ -62,7 +62,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.13'
         
     - name: Install dependencies
       run: |

@@ -1,6 +1,7 @@
 # Tinfoil Hat Competition
 
 ![CI Status](https://github.com/amne51ac/tinfoilhat/actions/workflows/ci.yml/badge.svg)
+![Test Coverage]
 
 A Flask web application for running and tracking Tinfoil Hat Competitions, originally built for Cyphercon in Milwaukee on April 3-4 2025.
 
@@ -63,13 +64,13 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 
 ## Requirements
 
-- Python 3.8+ (primary development on Python 3.9)
+- Python 3.13+ (primary development on Python 3.13)
 - HackRF One with telescoping antenna
 - Mannequin head for testing
 - HackRF system tools
 
 ### Supported Python Versions
-The application is tested primarily with Python 3.9. While the codebase should be compatible with Python 3.8 and 3.10+, these versions are not actively tested in the CI pipeline. If you encounter any issues with other Python versions, please report them.
+The application is tested primarily with Python 3.13. While the codebase should be compatible with future Python versions, these versions are not actively tested in the CI pipeline. If you encounter any issues with other Python versions, please report them.
 
 ## Hardware Setup
 

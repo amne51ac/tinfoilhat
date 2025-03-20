@@ -13,8 +13,9 @@ def test_main_script():
     mock_app = MagicMock()
 
     # Patch both create_app and __name__ in a single with statement
-    with patch("tinfoilhat.__main__.create_app", return_value=mock_app), patch(
-        "tinfoilhat.__main__.__name__", "__main__"
+    with (
+        patch("tinfoilhat.__main__.create_app", return_value=mock_app),
+        patch("tinfoilhat.__main__.__name__", "__main__"),
     ):
 
         # Use __import__ instead of import to avoid unused import warning and ensure code execution

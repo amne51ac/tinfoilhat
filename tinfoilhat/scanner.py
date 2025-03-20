@@ -9,7 +9,6 @@ import os
 import subprocess
 import tempfile
 import time
-from typing import List
 
 import numpy as np
 
@@ -445,7 +444,7 @@ class Scanner:
                     raise RuntimeError(f"HackRF connection lost during measurement at {freq_mhz} MHz: " f"{str(e)}")
             raise
 
-    def get_baseline_readings(self) -> List[float]:
+    def get_baseline_readings(self) -> list[float]:
         """
         Measure baseline power at all frequencies.
 
@@ -493,7 +492,7 @@ class Scanner:
         print(f"Baseline readings: {baseline}")
         return baseline
 
-    def get_hat_readings(self) -> List[float]:
+    def get_hat_readings(self) -> list[float]:
         """
         Measure power with a hat in place.
 
@@ -545,7 +544,7 @@ class Scanner:
         print(f"Hat readings: {hat_readings}")
         return hat_readings
 
-    def calculate_attenuation(self, baseline: List[float], hat_readings: List[float]) -> List[float]:
+    def calculate_attenuation(self, baseline: list[float], hat_readings: list[float]) -> list[float]:
         """
         Calculate attenuation at each frequency by comparing baseline to hat readings.
 
@@ -567,7 +566,7 @@ class Scanner:
             print("ERROR: Invalid readings data. Cannot calculate attenuation.")
             return [0.1] * len(self.frequencies)
 
-        for freq, base, hat in zip(self.frequencies, baseline, hat_readings):
+        for freq, base, hat in zip(self.frequencies, baseline, hat_readings, strict=False):
             # Lower hat reading means better attenuation (more negative dBm)
             # So we subtract hat from baseline to get positive attenuation values
 
