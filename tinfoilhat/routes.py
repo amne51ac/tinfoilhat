@@ -1163,7 +1163,7 @@ def save_results():
             # Retrieve the test result ID and data from the database
             test_result = db.execute(
                 """
-                SELECT id, date, average_attenuation
+                SELECT id, test_date, average_attenuation
                 FROM test_result
                 WHERE contestant_id = ?
                 ORDER BY id DESC LIMIT 1
@@ -1242,7 +1242,7 @@ def save_results():
                     "contestant_id": contestant_id,
                     "contestant_name": contestant["name"],
                     "hat_type": contestant["hat_type"],
-                    "timestamp": datetime.now(),
+                    "test_date": datetime.now(),
                     "average_attenuation": test_result["average_attenuation"],
                     "frequencies": frequencies_mhz,
                     "attenuations": attenuations,

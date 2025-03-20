@@ -147,6 +147,9 @@
             box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
             position: relative;
             overflow: hidden;
+            height: calc(100vh - 200px); /* Fixed height with space for header */
+            display: flex;
+            flex-direction: column;
         }
         
         .leaderboard::before {
@@ -174,6 +177,21 @@
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
+            overflow-y: auto;
+            flex: 1;
+        }
+        
+        .leaderboard-table tbody {
+            display: block;
+            overflow-y: auto;
+            max-height: calc(100% - 50px); /* Account for header */
+        }
+        
+        .leaderboard-table thead,
+        .leaderboard-table tbody tr {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
         }
         
         .leaderboard-table th, .leaderboard-table td {
@@ -258,6 +276,7 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            height: calc(100vh - 200px); /* Fixed height with space for header */
         }
         
         #recent-test::before {
@@ -315,6 +334,8 @@
             border: 1px solid rgba(51, 255, 51, 0.5);
             padding: 20px 10px;
             min-height: 300px;
+            max-height: calc(100% - 150px); /* Account for test info */
+            overflow: hidden;
         }
         
         /* Styles for the measurement in progress indicator */
@@ -602,6 +623,8 @@
                             backgroundColor: 'rgba(51, 255, 51, 0.1)',
                             tension: 0.2,
                             borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
                             yAxisID: 'y'
                         }, 
                         {
@@ -611,6 +634,8 @@
                             backgroundColor: 'rgba(0, 200, 255, 0.1)',
                             tension: 0.2,
                             borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
                             yAxisID: 'y'
                         },
                         {
@@ -620,6 +645,8 @@
                             backgroundColor: 'rgba(255, 204, 0, 0.1)',
                             tension: 0.2,
                             borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
                             yAxisID: 'attenuation'
                         }
                     ]
