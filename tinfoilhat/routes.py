@@ -282,6 +282,8 @@ def get_leaderboard():
     hat_type = request.args.get("hat_type")
     # Get show_all_types parameter
     show_all_types = request.args.get("show_all_types") == "true"
+    # Get search parameter
+    search = request.args.get("search", "").strip()
 
     db = get_db()
 
@@ -299,9 +301,10 @@ def get_leaderboard():
             JOIN test_result t ON c.id = t.contestant_id
                 AND t.average_attenuation = best_scores.max_att
                 AND t.hat_type = best_scores.hat_type
+            WHERE LOWER(c.name) LIKE LOWER(?)
             ORDER BY t.average_attenuation DESC
         """
-        params = []
+        params = [f"%{search}%"]
     elif hat_type and hat_type.lower() in ["classic", "hybrid"]:
         # Show best scores for the selected hat type for each contestant
         query = """
@@ -316,9 +319,10 @@ def get_leaderboard():
             JOIN test_result t ON c.id = t.contestant_id
                 AND t.average_attenuation = best_scores.max_att
                 AND t.hat_type = ?
+            WHERE LOWER(c.name) LIKE LOWER(?)
             ORDER BY t.average_attenuation DESC
         """
-        params = [hat_type.lower(), hat_type.lower()]
+        params = [hat_type.lower(), hat_type.lower(), f"%{search}%"]
     else:
         # Original query - showing only best scores regardless of hat type
         query = """
@@ -326,9 +330,10 @@ def get_leaderboard():
             FROM contestant c
             JOIN test_result t ON c.id = t.contestant_id
             WHERE t.is_best_score = 1
+            AND LOWER(c.name) LIKE LOWER(?)
             ORDER BY t.average_attenuation DESC
         """
-        params = []
+        params = [f"%{search}%"]
 
     # Execute the query
     leaderboard = db.execute(query, params).fetchall()
@@ -346,8 +351,14 @@ def get_leaderboard():
             }
         )
 
-    # Get all contestants for the dropdown
-    contestants = db.execute("SELECT id, name FROM contestant").fetchall()
+    # Get all contestants for the dropdown, filtered by search if provided
+    contestants_query = "SELECT id, name FROM contestant"
+    contestants_params = []
+    if search:
+        contestants_query += " WHERE LOWER(name) LIKE LOWER(?)"
+        contestants_params = [f"%{search}%"]
+    
+    contestants = db.execute(contestants_query, contestants_params).fetchall()
 
     # Convert to list of dictionaries for JSON serialization
     contestants_data = []
@@ -1835,10 +1846,21 @@ def admin():
     """
     db = get_db()
 
+    # Get search parameter
+    search = request.args.get("search", "").strip()
+
+    # Build the contestants query
+    contestants_query = "SELECT id, name, phone_number, email, notes, created FROM contestant"
+    contestants_params = []
+    
+    if search:
+        contestants_query += " WHERE LOWER(name) LIKE LOWER(?)"
+        contestants_params.append(f"%{search}%")
+    
+    contestants_query += " ORDER BY name"
+    
     # Get all contestants
-    contestants_rows = db.execute(
-        "SELECT id, name, phone_number, email, notes, created FROM contestant ORDER BY name"
-    ).fetchall()
+    contestants_rows = db.execute(contestants_query, contestants_params).fetchall()
 
     # Convert Row objects to dictionaries for JSON serialization
     contestants = []
@@ -1855,8 +1877,7 @@ def admin():
         )
 
     # Get all test results with contestant names
-    test_results_rows = db.execute(
-        """
+    test_results_query = """
         SELECT
             tr.id,
             tr.contestant_id,
@@ -1867,9 +1888,16 @@ def admin():
             tr.hat_type
         FROM test_result tr
         JOIN contestant c ON tr.contestant_id = c.id
-        ORDER BY tr.test_date DESC
-        """
-    ).fetchall()
+    """
+    test_results_params = []
+    
+    if search:
+        test_results_query += " WHERE LOWER(c.name) LIKE LOWER(?)"
+        test_results_params.append(f"%{search}%")
+    
+    test_results_query += " ORDER BY tr.test_date DESC"
+    
+    test_results_rows = db.execute(test_results_query, test_results_params).fetchall()
 
     # Convert Row objects to dictionaries for JSON serialization
     test_results = []
@@ -1886,7 +1914,7 @@ def admin():
             }
         )
 
-    return render_template("admin.html", contestants=contestants, test_results=test_results)
+    return render_template("admin.html", contestants=contestants, test_results=test_results, search=search)
 
 
 @bp.route("/admin/contestants", methods=["POST"])

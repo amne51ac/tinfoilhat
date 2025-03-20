@@ -423,6 +423,7 @@ The project uses the following development tools:
 - black for code formatting
 - ruff for linting
 - isort for import sorting
+- pytest for code testing
 
 ### Code Style and Linting
 

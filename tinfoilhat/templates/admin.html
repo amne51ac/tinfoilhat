@@ -333,7 +333,15 @@
 
         <div id="contestants" class="tabcontent" style="display: block;">
             <h2>Contestants</h2>
-            <button onclick="showAddContestantModal()">Add New Contestant</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="filter-label" style="display: flex; align-items: center; margin-right: 5px;">
+                        <strong>Search:</strong>
+                    </div>
+                    <input type="text" id="search-input" placeholder="Search by contestant name..." style="flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-background); color: var(--text-color);" value="{{ search }}">
+                </div>
+                <button onclick="showAddContestantModal()">Add New Contestant</button>
+            </div>
             <table id="contestants-table">
                 <thead>
                     <tr>
@@ -776,6 +784,26 @@
                     alert('Error deleting test result');
                 }
             }
+
+            // Set up search input handler
+            const searchInput = document.getElementById('search-input');
+            let searchTimeout;
+            searchInput.addEventListener('input', function() {
+                // Clear previous timeout
+                clearTimeout(searchTimeout);
+                // Set new timeout to debounce search
+                searchTimeout = setTimeout(() => {
+                    // Update URL with search parameter
+                    const url = new URL(window.location.href);
+                    if (this.value) {
+                        url.searchParams.set('search', this.value);
+                    } else {
+                        url.searchParams.delete('search');
+                    }
+                    // Reload page with new search parameter
+                    window.location.href = url.toString();
+                }, 300); // Wait 300ms after user stops typing
+            });
         </script>
     </div>
 </body>

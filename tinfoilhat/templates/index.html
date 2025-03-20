@@ -562,6 +562,14 @@
                     <button id="filter-classic" class="filter-button {% if active_filter == 'classic' %}filter-active{% endif %}" data-filter="classic">Classic</button>
                     <button id="filter-hybrid" class="filter-button {% if active_filter == 'hybrid' %}filter-active{% endif %}" data-filter="hybrid">Hybrid</button>
                 </div>
+
+                <!-- Add search input -->
+                <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                    <div class="filter-label" style="display: flex; align-items: center; margin-right: 5px;">
+                        <strong>Search:</strong>
+                    </div>
+                    <input type="text" id="search-input" placeholder="Search by contestant name..." style="flex: 1; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-background); color: var(--text-color);">
+                </div>
                 
                 <table id="leaderboard">
                     <thead>
@@ -783,6 +791,18 @@
                 // Set a higher z-index to make it appear above the continue modal
                 registrationModal.style.zIndex = "1100";
                 registrationModal.style.display = 'block';
+            });
+
+            // Set up search input handler
+            const searchInput = document.getElementById('search-input');
+            let searchTimeout;
+            searchInput.addEventListener('input', function() {
+                // Clear previous timeout
+                clearTimeout(searchTimeout);
+                // Set new timeout to debounce search
+                searchTimeout = setTimeout(() => {
+                    updateLeaderboard(null, null, this.value);
+                }, 300); // Wait 300ms after user stops typing
             });
         });
         
@@ -1412,15 +1432,24 @@
         }
         
         // Fetch and update the leaderboard
-        async function updateLeaderboard(highlightTeam = null, hatTypeFilter = null) {
+        async function updateLeaderboard(highlightTeam = null, hatTypeFilter = null, searchQuery = '') {
             try {
                 // Build URL with filter if specified
                 let url = '/leaderboard';
+                const params = new URLSearchParams();
+                
                 if (hatTypeFilter && hatTypeFilter !== 'all') {
-                    url += `?hat_type=${hatTypeFilter}`;
+                    params.append('hat_type', hatTypeFilter);
                 } else {
-                    // Add a parameter to show all types per contestant
-                    url += `?show_all_types=true`;
+                    params.append('show_all_types', 'true');
+                }
+                
+                if (searchQuery) {
+                    params.append('search', searchQuery);
+                }
+                
+                if (params.toString()) {
+                    url += '?' + params.toString();
                 }
                 
                 const response = await fetch(url);
