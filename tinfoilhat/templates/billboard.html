@@ -261,7 +261,7 @@
         }
         
         #recent-test::before {
-            content: "LATEST TEST & SPECTRUM";
+            content: "LATEST TEST";
             position: absolute;
             top: 0;
             left: 0;
@@ -424,6 +424,39 @@
         .leaderboard, #recent-test, .spectrum-container {
             border: 2px solid #33ff33;
             box-shadow: inset 0 0 7px rgba(51, 255, 51, 0.2);
+        }
+        
+        /* Reset button styles */
+        #forceResetBtn {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            border: 1px solid #ff3333;
+            color: #ff3333;
+            font-family: 'VT323', monospace;
+            font-size: 14px;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            z-index: 10;
+            opacity: 0.6;
+        }
+        
+        #forceResetBtn:hover {
+            background-color: rgba(50, 0, 0, 0.8);
+            opacity: 1;
+            box-shadow: 0 0 5px rgba(255, 51, 51, 0.7);
+        }
+        
+        #forceResetBtn:active {
+            transform: scale(0.95);
+        }
+        
+        #forceResetBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -795,7 +828,7 @@
             {% endif %}
             
             // Connect to SSE endpoint for real-time updates
-            let lastId = {{ recent_test['max_id'] if recent_test and recent_test['max_id'] else 0 }};
+            let lastId = {% if recent_test and recent_test['max_id'] %}{{ recent_test['max_id'] }}{% else %}0{% endif %};
             let usePolling = false;
             let eventSource;
             let frequencyEventSource;
@@ -809,7 +842,8 @@
                 measurement_type: null,
                 contestant_id: null,
                 contestant_name: null,
-                hat_type: null
+                hat_type: null,
+                baseline_in_progress: false
             };
             
             function setupSSE() {
@@ -819,6 +853,7 @@
                     
                     eventSource.onmessage = function(event) {
                         const data = JSON.parse(event.data);
+                        console.log('Received SSE message:', data); // Add logging to help debug
                         updateBillboard(data);
                         lastId = data.last_id;
                     };
@@ -835,7 +870,424 @@
                     
                     frequencyEventSource.onmessage = function(event) {
                         const data = JSON.parse(event.data);
-                        handleFrequencyUpdate(data);
+                        console.log('Frequency stream event received:', data); // Add logging for all frequency stream events
+                        
+                        // First, check if this is a reset event (highest priority)
+                        if (data.event_type === 'clear_all' || data.event_type === 'test_reset') {
+                            console.log("🚨 CRITICAL: Direct reset event received via frequency stream - performing IMMEDIATE reset");
+                            
+                            // Check for emergency flag which indicates highest-priority reset
+                            if (data.emergency === true) {
+                                console.log("🔥🔥🔥 EMERGENCY RESET DETECTED - FORCING IMMEDIATE CHART RESET 🔥🔥🔥");
+                                
+                                // Create a highly visible emergency notification
+                                const emergencyNotice = document.createElement('div');
+                                emergencyNotice.textContent = 'EMERGENCY RESET - NEW BASELINE TEST STARTED';
+                                emergencyNotice.style.position = 'fixed';
+                                emergencyNotice.style.top = '50%';
+                                emergencyNotice.style.left = '50%';
+                                emergencyNotice.style.transform = 'translate(-50%, -50%)';
+                                emergencyNotice.style.backgroundColor = '#ff0000';
+                                emergencyNotice.style.color = '#ffffff';
+                                emergencyNotice.style.padding = '40px';
+                                emergencyNotice.style.borderRadius = '10px';
+                                emergencyNotice.style.fontSize = '28px';
+                                emergencyNotice.style.fontWeight = 'bold';
+                                emergencyNotice.style.textAlign = 'center';
+                                emergencyNotice.style.zIndex = '99999';
+                                emergencyNotice.style.boxShadow = '0 0 20px rgba(255, 0, 0, 0.8)';
+                                document.body.appendChild(emergencyNotice);
+                                
+                                // Guaranteed clear chart data - do this multiple times to ensure it happens
+                                for (let i = 0; i < 3; i++) {
+                                    // Force a complete reset of chart data
+                                    powerChart.data.labels = [];
+                                    powerChart.data.datasets[0].data = [];
+                                    powerChart.data.datasets[1].data = [];
+                                    powerChart.data.datasets[2].data = [];
+                                    powerChart.update();
+                                    console.log(`Emergency reset attempt ${i+1}/3: Chart data forcefully cleared`);
+                                }
+                                
+                                // Force reset all test data in memory
+                                currentTestData = {
+                                    frequencies: [],
+                                    baseline_levels: [],
+                                    hat_levels: [],
+                                    attenuations: [],
+                                    measurement_type: null,
+                                    contestant_id: null,
+                                    contestant_name: null,
+                                    hat_type: null,
+                                    baseline_in_progress: false
+                                };
+                                
+                                // Reload the page after a short delay, which is the ultimate reset
+                                setTimeout(() => {
+                                    if (emergencyNotice && emergencyNotice.parentNode) {
+                                        emergencyNotice.textContent = 'RELOADING PAGE TO ENSURE CLEAN STATE...';
+                                    }
+                                    setTimeout(() => {
+                                        window.location.reload();
+                                    }, 1000);
+                                }, 2000);
+                                
+                                return; // Skip further processing
+                            }
+                            
+                            // Standard reset handling for non-emergency resets
+                            // Force complete reset of chart data
+                            powerChart.data.labels = [];
+                            powerChart.data.datasets[0].data = [];
+                            powerChart.data.datasets[1].data = [];
+                            powerChart.data.datasets[2].data = [];
+                            powerChart.update();
+                            
+                            // Reset all test data
+                            currentTestData = {
+                                frequencies: [],
+                                baseline_levels: [],
+                                hat_levels: [],
+                                attenuations: [],
+                                measurement_type: null,
+                                contestant_id: null,
+                                contestant_name: null,
+                                hat_type: null,
+                                baseline_in_progress: false
+                            };
+                            
+                            // Update UI with reset message
+                            const recentTest = document.getElementById('recent-test');
+                            const testInfo = recentTest.querySelector('.test-info');
+                            testInfo.innerHTML = `
+                                <div class="contestant-name">RESET DETECTED</div>
+                                <div class="hat-type">New Baseline Measurement</div>
+                                <div class="attenuation">0.00 dB</div>
+                                <div class="test-date">All data cleared</div>
+                            `;
+                            
+                            // Display a prominent reset notification
+                            const resetMsg = document.createElement('div');
+                            resetMsg.className = 'sse-reset-notification';
+                            resetMsg.textContent = 'RESET DETECTED - ALL CHART DATA CLEARED';
+                            resetMsg.style.color = '#ffffff';
+                            resetMsg.style.backgroundColor = '#ff0000';
+                            resetMsg.style.padding = '15px';
+                            resetMsg.style.margin = '15px 0';
+                            resetMsg.style.textAlign = 'center';
+                            resetMsg.style.fontWeight = 'bold';
+                            resetMsg.style.fontSize = '18px';
+                            resetMsg.style.border = '3px solid #ffffff';
+                            resetMsg.style.borderRadius = '5px';
+                            
+                            testInfo.appendChild(resetMsg);
+                            
+                            // Remove the notification after a few seconds
+                            setTimeout(() => {
+                                if (resetMsg && resetMsg.parentNode) {
+                                    resetMsg.parentNode.removeChild(resetMsg);
+                                }
+                            }, 8000);
+                            
+                            return; // Skip further processing
+                        }
+                        
+                        // IMPORTANT FIX: Check for first baseline measurement
+                        // If we're getting baseline measurements (indicated by text in server log)
+                        // and this is the start of a new measurement series, clear data
+                        if (data.measurement_type === 'baseline') {
+                            // Check if this looks like the first measurement of a new baseline series
+                            // by looking at the measurement frequency (typically starts low)
+                            const isFirstBaseline = data.first_baseline === true ||    // Explicit marker
+                                                  data.frequency_mhz < 100 ||         // Very low freq typically indicates start
+                                                  (currentTestData.hat_levels && 
+                                                   currentTestData.hat_levels.some(level => level !== null) && 
+                                                   !currentTestData.baseline_in_progress);
+                            
+                            if (isFirstBaseline) {
+                                console.log("🔄 FIRST BASELINE MEASUREMENT DETECTED - FORCE CLEARING CHART DATA 🔄");
+                                
+                                // Force clear all chart data
+                                powerChart.data.labels = [];
+                                powerChart.data.datasets[0].data = [];
+                                powerChart.data.datasets[1].data = [];
+                                powerChart.data.datasets[2].data = [];
+                                powerChart.update();
+                                
+                                // Reset test data but keep the current measurement type
+                                currentTestData = {
+                                    frequencies: [],
+                                    baseline_levels: [],
+                                    hat_levels: [],
+                                    attenuations: [],
+                                    measurement_type: 'baseline',
+                                    contestant_id: data.contestant_id || null,
+                                    contestant_name: data.contestant_name || "New Baseline Test",
+                                    hat_type: null,
+                                    baseline_in_progress: true
+                                };
+                                
+                                // Update UI to show clear state
+                                const recentTest = document.getElementById('recent-test');
+                                const testInfo = recentTest.querySelector('.test-info');
+                                testInfo.innerHTML = `
+                                    <div class="contestant-name">NEW BASELINE TEST</div>
+                                    <div class="hat-type">Starting baseline measurement...</div>
+                                    <div class="attenuation">0.00 dB</div>
+                                    <div class="test-date">In Progress</div>
+                                `;
+                                
+                                // Add baseline indicator
+                                if (!document.querySelector('.test-in-progress')) {
+                                    const testInProgress = document.createElement('div');
+                                    testInProgress.className = 'test-in-progress';
+                                    testInProgress.innerHTML = '<div class="measuring-indicator">NEW BASELINE IN PROGRESS</div>';
+                                    testInfo.appendChild(testInProgress);
+                                }
+                            }
+                        }
+                        
+                        // Continue with normal event processing...
+                        if (data.event_type === 'test_complete') {
+                            // This is a final test result
+                            console.log('Test complete event received:', data);
+                            
+                            // Important: Do not reset or modify current test data or chart
+                            // The billboard update will handle the leaderboard/recent test updates
+                            // but we'll preserve the current chart data as-is since it likely has better frequency info
+                            
+                            // Mark the current state as completed but don't change the data
+                            console.log("Test complete - preserving current chart data");
+                            
+                            // Update the UI to remove the "in progress" indicator without changing chart data
+                            const testInProgress = document.querySelector('.test-in-progress');
+                            if (testInProgress) {
+                                testInProgress.remove();
+                            }
+                            
+                            return;
+                        } else if (data.event_type === 'billboard_update') {
+                            // This is a special update for the billboard with spectrum data
+                            console.log('Billboard update received:', data);
+                            
+                            // If this update includes spectrum data, update the chart
+                            if (data.spectrum_data) {
+                                // Check if this is a reset event
+                                if (data.spectrum_data.test_state === "reset") {
+                                    console.log("CRITICAL: Billboard reset event received - clearing all chart data");
+                                    
+                                    // Force a complete reset of chart data
+                                    powerChart.data.labels = [];
+                                    powerChart.data.datasets[0].data = [];
+                                    powerChart.data.datasets[1].data = [];
+                                    powerChart.data.datasets[2].data = [];
+                                    powerChart.update();
+                                    
+                                    // Force reset of all test data in memory
+                                    currentTestData = {
+                                        frequencies: [],
+                                        baseline_levels: [],
+                                        hat_levels: [],
+                                        attenuations: [],
+                                        measurement_type: null,
+                                        contestant_id: null,
+                                        contestant_name: null,
+                                        hat_type: null,
+                                        baseline_in_progress: false
+                                    };
+                                    
+                                    // Show reset state in the UI
+                                    const recentTest = document.getElementById('recent-test');
+                                    const testInfo = recentTest.querySelector('.test-info');
+                                    testInfo.innerHTML = `
+                                        <div class="contestant-name">New Baseline Test</div>
+                                        <div class="hat-type">All Previous Data Cleared</div>
+                                        <div class="attenuation">0.00 dB</div>
+                                        <div class="test-date">Ready for measurements</div>
+                                    `;
+                                    
+                                    // Add a visual indicator for the reset
+                                    const resetIndicator = document.createElement('div');
+                                    resetIndicator.className = 'billboard-reset-indicator';
+                                    resetIndicator.textContent = 'CHART DATA CLEARED FOR NEW TEST';
+                                    resetIndicator.style.color = '#ff5500';
+                                    resetIndicator.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                                    resetIndicator.style.padding = '10px';
+                                    resetIndicator.style.margin = '10px 0';
+                                    resetIndicator.style.textAlign = 'center';
+                                    resetIndicator.style.fontWeight = 'bold';
+                                    resetIndicator.style.border = '2px solid #ff5500';
+                                    resetIndicator.style.borderRadius = '5px';
+                                    
+                                    testInfo.appendChild(resetIndicator);
+                                    
+                                    // Remove the indicator after 5 seconds
+                                    setTimeout(() => {
+                                        if (resetIndicator && resetIndicator.parentNode) {
+                                            resetIndicator.parentNode.removeChild(resetIndicator);
+                                        }
+                                    }, 5000);
+                                }
+                                // Update with new spectrum data if it contains frequencies
+                                else if (data.spectrum_data.frequencies && data.spectrum_data.frequencies.length > 0) {
+                                    // Use the provided spectrum data to update the chart
+                                    const spectrumData = data.spectrum_data;
+                                    
+                                    // Update chart data
+                                    powerChart.data.labels = spectrumData.frequencies.map(f => f.toFixed(1));
+                                    powerChart.data.datasets[0].data = spectrumData.baseline_levels;
+                                    powerChart.data.datasets[1].data = spectrumData.hat_levels;
+                                    powerChart.data.datasets[2].data = spectrumData.attenuations;
+                                    powerChart.update();
+                                    
+                                    // Also update currentTestData
+                                    currentTestData.frequencies = [...spectrumData.frequencies];
+                                    currentTestData.baseline_levels = [...spectrumData.baseline_levels];
+                                    currentTestData.hat_levels = [...spectrumData.hat_levels];
+                                    currentTestData.attenuations = [...spectrumData.attenuations];
+                                }
+                            }
+                            
+                            return;
+                        }
+                        
+                        // This is a single frequency measurement update
+                        console.log('Frequency update:', data);
+                        
+                        // Store the contestant information if available
+                        if (data.contestant_id && !currentTestData.contestant_id) {
+                            currentTestData.contestant_id = data.contestant_id;
+                        }
+                        
+                        // Store contestant name and hat type if available
+                        if (data.contestant_name) {
+                            currentTestData.contestant_name = data.contestant_name;
+                        }
+                        
+                        if (data.hat_type) {
+                            currentTestData.hat_type = data.hat_type;
+                        }
+                        
+                        // Update measurement type
+                        currentTestData.measurement_type = data.measurement_type;
+                        
+                        // IMPORTANT FIX: Check if this is the first baseline measurement of a new test
+                        // If we receive a baseline measurement and we don't have a baseline test in progress, 
+                        // this indicates the start of a new baseline test - we should reset data
+                        if (data.measurement_type === 'baseline' && 
+                            (currentTestData.frequencies.length === 0 || 
+                             data.first_measurement === true || 
+                             (currentTestData.hat_levels.some(level => level !== null) && !currentTestData.baseline_in_progress))) {
+                            
+                            console.log("🔄 First baseline measurement detected - clearing all previous data");
+                            
+                            // Force a complete reset of all chart data
+                            powerChart.data.labels = [];
+                            powerChart.data.datasets[0].data = [];
+                            powerChart.data.datasets[1].data = [];
+                            powerChart.data.datasets[2].data = [];
+                            powerChart.update();
+                            
+                            // Reset the current test data
+                            currentTestData = {
+                                frequencies: [],
+                                baseline_levels: [],
+                                hat_levels: [],
+                                attenuations: [],
+                                measurement_type: 'baseline',
+                                contestant_id: data.contestant_id || null,
+                                contestant_name: data.contestant_name || "Baseline Measurement",
+                                hat_type: data.hat_type || null,
+                                baseline_in_progress: true
+                            };
+                            
+                            // Update UI to indicate new baseline test
+                            const recentTest = document.getElementById('recent-test');
+                            const testInfo = recentTest.querySelector('.test-info');
+                            testInfo.innerHTML = `
+                                <div class="contestant-name">NEW BASELINE TEST</div>
+                                <div class="hat-type">Starting baseline measurement...</div>
+                                <div class="attenuation">0.00 dB</div>
+                                <div class="test-date">In Progress</div>
+                            `;
+                            
+                            // Add the "measurement in progress" indicator
+                            const testInProgress = document.createElement('div');
+                            testInProgress.className = 'test-in-progress';
+                            testInProgress.innerHTML = '<div class="measuring-indicator">NEW BASELINE IN PROGRESS</div>';
+                            testInfo.appendChild(testInProgress);
+                        }
+                        
+                        // Process based on measurement type
+                        if (data.measurement_type === 'baseline') {
+                            // Set the baseline in progress flag
+                            currentTestData.baseline_in_progress = true;
+                        
+                            // Store baseline measurement
+                            const freqIndex = currentTestData.frequencies.indexOf(data.frequency_mhz);
+                            if (freqIndex === -1) {
+                                // New frequency
+                                currentTestData.frequencies.push(data.frequency_mhz);
+                                currentTestData.baseline_levels.push(data.power);
+                                
+                                // Sort the arrays by frequency
+                                const sortIndices = [...currentTestData.frequencies.keys()]
+                                    .sort((a, b) => currentTestData.frequencies[a] - currentTestData.frequencies[b]);
+                                
+                                currentTestData.frequencies = sortIndices.map(i => currentTestData.frequencies[i]);
+                                currentTestData.baseline_levels = sortIndices.map(i => currentTestData.baseline_levels[i]);
+                                
+                                // Add placeholder null values for hat and attenuation
+                                if (currentTestData.hat_levels.length < currentTestData.frequencies.length) {
+                                    currentTestData.hat_levels.push(null);
+                                    currentTestData.attenuations.push(null);
+                                }
+                            } else {
+                                // Update existing frequency
+                                currentTestData.baseline_levels[freqIndex] = data.power;
+                            }
+                        } else if (data.measurement_type === 'hat') {
+                            // If we're switching from baseline to hat, update the flag
+                            if (currentTestData.baseline_in_progress) {
+                                currentTestData.baseline_in_progress = false;
+                            }
+                            
+                            // Store hat measurement and attenuation if available
+                            const freqIndex = currentTestData.frequencies.indexOf(data.frequency_mhz);
+                            if (freqIndex === -1) {
+                                // New frequency
+                                currentTestData.frequencies.push(data.frequency_mhz);
+                                currentTestData.hat_levels.push(data.power);
+                                currentTestData.attenuations.push(data.attenuation || null);
+                                
+                                // Add placeholder null value for baseline if needed
+                                if (currentTestData.baseline_levels.length < currentTestData.frequencies.length) {
+                                    currentTestData.baseline_levels.push(null);
+                                }
+                                
+                                // Sort the arrays by frequency
+                                const sortIndices = [...currentTestData.frequencies.keys()]
+                                    .sort((a, b) => currentTestData.frequencies[a] - currentTestData.frequencies[b]);
+                                
+                                currentTestData.frequencies = sortIndices.map(i => currentTestData.frequencies[i]);
+                                currentTestData.baseline_levels = sortIndices.map(i => currentTestData.baseline_levels[i]);
+                                currentTestData.hat_levels = sortIndices.map(i => currentTestData.hat_levels[i]);
+                                currentTestData.attenuations = sortIndices.map(i => currentTestData.attenuations[i]);
+                            } else {
+                                // Update existing frequency
+                                currentTestData.hat_levels[freqIndex] = data.power;
+                                currentTestData.attenuations[freqIndex] = data.attenuation || null;
+                            }
+                        }
+                        
+                        // For debugging, log the state of currentTestData
+                        console.log("Current test data updated, frequencies:", currentTestData.frequencies.length);
+                        
+                        // Update the recent test information with current test data
+                        updateRecentTestWithCurrentData();
+                        
+                        // Update the charts with the real-time data
+                        updateChartsWithLiveData();
                     };
                     
                     frequencyEventSource.onerror = function(e) {
@@ -855,8 +1307,84 @@
             
             // Event handlers for data streaming
             function handleFrequencyUpdate(data) {
-                // Check if this is a measurement update or a test completion event
-                if (data.event_type === 'test_complete') {
+                // Always log all incoming events for debugging
+                console.log(`Frequency event received type=${data.event_type || 'unknown'}:`, data);
+                
+                // Check if this is a reset or clear event - THIS IS HIGHEST PRIORITY
+                if (data.event_type === 'test_reset' || data.event_type === 'clear_all' || 
+                    (data.event_type === 'billboard_update' && data.spectrum_data && data.spectrum_data.test_state === 'reset')) {
+                    
+                    // Log the event with high visibility
+                    console.log(`★★★ ${data.event_type.toUpperCase()}: CRITICAL RESET EVENT RECEIVED ★★★`, data);
+                    console.log(`★★★ FORCING COMPLETE CHART DATA RESET ★★★`);
+                    
+                    // GUARANTEED RESET: Reset currentTestData to completely empty state
+                    currentTestData = {
+                        frequencies: [],
+                        baseline_levels: [],
+                        hat_levels: [],
+                        attenuations: [],
+                        measurement_type: null,
+                        contestant_id: null,
+                        contestant_name: null,
+                        hat_type: null,
+                        baseline_in_progress: false
+                    };
+                    
+                    // Reset chart data with forced update
+                    powerChart.data.labels = [];
+                    powerChart.data.datasets[0].data = [];
+                    powerChart.data.datasets[1].data = [];
+                    powerChart.data.datasets[2].data = [];
+                    powerChart.update();
+                    
+                    // Update the recent test display to show reset state with visual feedback
+                    const recentTest = document.getElementById('recent-test');
+                    const testInfo = recentTest.querySelector('.test-info');
+                    
+                    // Use slightly different messages based on event type
+                    const titleText = data.event_type === 'clear_all' ? 'NEW BASELINE TEST' : 'NEW TEST';
+                    const subtitleText = data.event_type === 'clear_all' ? 'Starting baseline measurement...' : 'Ready for measurement';
+                    
+                    testInfo.innerHTML = `
+                        <div class="contestant-name">${titleText}</div>
+                        <div class="hat-type">${subtitleText}</div>
+                        <div class="attenuation">0.00 dB</div>
+                        <div class="test-date">Previous data cleared</div>
+                    `;
+                    
+                    // Remove any existing measurement indicators
+                    const testInProgress = document.querySelector('.test-in-progress');
+                    if (testInProgress) {
+                        testInProgress.remove();
+                    }
+                    
+                    // Show a "test reset" indicator with bright colors
+                    const resetIndicator = document.createElement('div');
+                    resetIndicator.className = 'test-reset-indicator';
+                    resetIndicator.textContent = data.event_type === 'clear_all' ? 
+                        'ALL DATA CLEARED - NEW BASELINE TEST STARTING' : 
+                        'TEST RESET - ALL PREVIOUS DATA CLEARED';
+                    resetIndicator.style.color = '#ffcc00';
+                    resetIndicator.style.fontWeight = 'bold';
+                    resetIndicator.style.textAlign = 'center';
+                    resetIndicator.style.padding = '10px';
+                    resetIndicator.style.marginTop = '10px';
+                    resetIndicator.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                    resetIndicator.style.border = '2px solid #ff5500';
+                    resetIndicator.style.borderRadius = '5px';
+                    testInfo.appendChild(resetIndicator);
+                    
+                    // Remove the indicator after 8 seconds (longer display for more visibility)
+                    setTimeout(() => {
+                        if (resetIndicator && resetIndicator.parentNode) {
+                            resetIndicator.parentNode.removeChild(resetIndicator);
+                        }
+                    }, 8000);
+                    
+                    console.log("Reset UI updated - indicator added to display");
+                    return;
+                } else if (data.event_type === 'test_complete') {
                     // This is a final test result
                     console.log('Test complete event received:', data);
                     
@@ -871,6 +1399,89 @@
                     const testInProgress = document.querySelector('.test-in-progress');
                     if (testInProgress) {
                         testInProgress.remove();
+                    }
+                    
+                    return;
+                } else if (data.event_type === 'billboard_update') {
+                    // This is a special update for the billboard with spectrum data
+                    console.log('Billboard update received:', data);
+                    
+                    // If this update includes spectrum data, update the chart
+                    if (data.spectrum_data) {
+                        // Check if this is a reset event
+                        if (data.spectrum_data.test_state === "reset") {
+                            console.log("CRITICAL: Billboard reset event received - clearing all chart data");
+                            
+                            // Force a complete reset of chart data
+                            powerChart.data.labels = [];
+                            powerChart.data.datasets[0].data = [];
+                            powerChart.data.datasets[1].data = [];
+                            powerChart.data.datasets[2].data = [];
+                            powerChart.update();
+                            
+                            // Force reset of all test data in memory
+                            currentTestData = {
+                                frequencies: [],
+                                baseline_levels: [],
+                                hat_levels: [],
+                                attenuations: [],
+                                measurement_type: null,
+                                contestant_id: null,
+                                contestant_name: null,
+                                hat_type: null,
+                                baseline_in_progress: false
+                            };
+                            
+                            // Show reset state in the UI
+                            const recentTest = document.getElementById('recent-test');
+                            const testInfo = recentTest.querySelector('.test-info');
+                            testInfo.innerHTML = `
+                                <div class="contestant-name">New Baseline Test</div>
+                                <div class="hat-type">All Previous Data Cleared</div>
+                                <div class="attenuation">0.00 dB</div>
+                                <div class="test-date">Ready for measurements</div>
+                            `;
+                            
+                            // Add a visual indicator for the reset
+                            const resetIndicator = document.createElement('div');
+                            resetIndicator.className = 'billboard-reset-indicator';
+                            resetIndicator.textContent = 'CHART DATA CLEARED FOR NEW TEST';
+                            resetIndicator.style.color = '#ff5500';
+                            resetIndicator.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                            resetIndicator.style.padding = '10px';
+                            resetIndicator.style.margin = '10px 0';
+                            resetIndicator.style.textAlign = 'center';
+                            resetIndicator.style.fontWeight = 'bold';
+                            resetIndicator.style.border = '2px solid #ff5500';
+                            resetIndicator.style.borderRadius = '5px';
+                            
+                            testInfo.appendChild(resetIndicator);
+                            
+                            // Remove the indicator after 5 seconds
+                            setTimeout(() => {
+                                if (resetIndicator && resetIndicator.parentNode) {
+                                    resetIndicator.parentNode.removeChild(resetIndicator);
+                                }
+                            }, 5000);
+                        }
+                        // Update with new spectrum data if it contains frequencies
+                        else if (data.spectrum_data.frequencies && data.spectrum_data.frequencies.length > 0) {
+                            // Use the provided spectrum data to update the chart
+                            const spectrumData = data.spectrum_data;
+                            
+                            // Update chart data
+                            powerChart.data.labels = spectrumData.frequencies.map(f => f.toFixed(1));
+                            powerChart.data.datasets[0].data = spectrumData.baseline_levels;
+                            powerChart.data.datasets[1].data = spectrumData.hat_levels;
+                            powerChart.data.datasets[2].data = spectrumData.attenuations;
+                            powerChart.update();
+                            
+                            // Also update currentTestData
+                            currentTestData.frequencies = [...spectrumData.frequencies];
+                            currentTestData.baseline_levels = [...spectrumData.baseline_levels];
+                            currentTestData.hat_levels = [...spectrumData.hat_levels];
+                            currentTestData.attenuations = [...spectrumData.attenuations];
+                        }
                     }
                     
                     return;
@@ -896,8 +1507,58 @@
                 // Update measurement type
                 currentTestData.measurement_type = data.measurement_type;
                 
+                // IMPORTANT FIX: Check if this is the first baseline measurement of a new test
+                // If we receive a baseline measurement and we don't have a baseline test in progress, 
+                // this indicates the start of a new baseline test - we should reset data
+                if (data.measurement_type === 'baseline' && 
+                    (currentTestData.frequencies.length === 0 || 
+                     data.first_measurement === true || 
+                     (currentTestData.hat_levels.some(level => level !== null) && !currentTestData.baseline_in_progress))) {
+                    
+                    console.log("🔄 First baseline measurement detected - clearing all previous data");
+                    
+                    // Force a complete reset of all chart data
+                    powerChart.data.labels = [];
+                    powerChart.data.datasets[0].data = [];
+                    powerChart.data.datasets[1].data = [];
+                    powerChart.data.datasets[2].data = [];
+                    powerChart.update();
+                    
+                    // Reset the current test data
+                    currentTestData = {
+                        frequencies: [],
+                        baseline_levels: [],
+                        hat_levels: [],
+                        attenuations: [],
+                        measurement_type: 'baseline',
+                        contestant_id: data.contestant_id || null,
+                        contestant_name: data.contestant_name || "Baseline Measurement",
+                        hat_type: data.hat_type || null,
+                        baseline_in_progress: true
+                    };
+                    
+                    // Update UI to indicate new baseline test
+                    const recentTest = document.getElementById('recent-test');
+                    const testInfo = recentTest.querySelector('.test-info');
+                    testInfo.innerHTML = `
+                        <div class="contestant-name">NEW BASELINE TEST</div>
+                        <div class="hat-type">Starting baseline measurement...</div>
+                        <div class="attenuation">0.00 dB</div>
+                        <div class="test-date">In Progress</div>
+                    `;
+                    
+                    // Add the "measurement in progress" indicator
+                    const testInProgress = document.createElement('div');
+                    testInProgress.className = 'test-in-progress';
+                    testInProgress.innerHTML = '<div class="measuring-indicator">NEW BASELINE IN PROGRESS</div>';
+                    testInfo.appendChild(testInProgress);
+                }
+                
                 // Process based on measurement type
                 if (data.measurement_type === 'baseline') {
+                    // Set the baseline in progress flag
+                    currentTestData.baseline_in_progress = true;
+                
                     // Store baseline measurement
                     const freqIndex = currentTestData.frequencies.indexOf(data.frequency_mhz);
                     if (freqIndex === -1) {
@@ -922,6 +1583,11 @@
                         currentTestData.baseline_levels[freqIndex] = data.power;
                     }
                 } else if (data.measurement_type === 'hat') {
+                    // If we're switching from baseline to hat, update the flag
+                    if (currentTestData.baseline_in_progress) {
+                        currentTestData.baseline_in_progress = false;
+                    }
+                    
                     // Store hat measurement and attenuation if available
                     const freqIndex = currentTestData.frequencies.indexOf(data.frequency_mhz);
                     if (freqIndex === -1) {
@@ -1045,31 +1711,259 @@
                 powerChart.update();
             }
             
-            // Polling fallback
-            function startPolling() {
-                if (!usePolling) return;
-                
-                // Poll for updates every 5 seconds
-                const pollInterval = 5000;
-                
-                function pollForUpdates() {
-                    fetch(`/billboard-updates?last_id=${lastId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.new_test) {
-                                updateBillboard(data);
-                                lastId = data.last_id;
+            // Function to update chart callbacks to use the window.frequencyLabels
+            function updateChartCallbacks() {
+                // Update tooltip callback to use window.frequencyLabels
+                powerChart.options.plugins.tooltip.callbacks.title = function(tooltipItems) {
+                    const freq = tooltipItems[0].label;
+                    if (freq) {
+                        const freqNum = parseFloat(freq);
+                        // Check if we have window.frequencyLabels and use them
+                        if (window.frequencyLabels && Object.keys(window.frequencyLabels).length > 0) {
+                            for (const [freqMhz, labelData] of Object.entries(window.frequencyLabels)) {
+                                if (Math.abs(freqNum - parseFloat(freqMhz)) < 0.1) {
+                                    if (labelData[1]) {
+                                        return `${freq} MHz (${labelData[0]}) - ${labelData[1]}`;
+                                    } else {
+                                        return `${freq} MHz (${labelData[0]})`;
+                                    }
+                                }
                             }
-                        })
-                        .catch(error => console.error('Polling error:', error))
-                        .finally(() => {
-                            if (usePolling) {
-                                setTimeout(pollForUpdates, pollInterval);
+                        }
+                        // If no matching label found or no labels available, just show frequency
+                        return `${freq} MHz`;
+                    }
+                    return '';
+                };
+                
+                // Update x-axis tick callback to use window.frequencyLabels
+                powerChart.options.scales.x.ticks.callback = function(value, index, values) {
+                    const freq = powerChart.data.labels[index];
+                    if (!freq) return '';
+                    
+                    // Make sure freq is a string
+                    const freqStr = freq.toString();
+                    
+                    // Try to get a label for this frequency
+                    const freqNum = parseFloat(freqStr);
+                    if (window.frequencyLabels && Object.keys(window.frequencyLabels).length > 0) {
+                        for (const [freqMhz, labelData] of Object.entries(window.frequencyLabels)) {
+                            if (Math.abs(freqNum - parseFloat(freqMhz)) < 0.1) {
+                                return `${freqStr} (${labelData[0]})`;
                             }
-                        });
+                        }
+                    }
+                    
+                    // If no label found, use a common band name based on frequency if possible
+                    if (freqNum >= 88 && freqNum <= 108) return `${freqStr} (FM)`;
+                    if (freqNum >= 470 && freqNum <= 806) return `${freqStr} (UHF)`;
+                    if (freqNum >= 2400 && freqNum <= 2500) return `${freqStr} (WiFi)`;
+                    if (freqNum >= 5100 && freqNum <= 5800) return `${freqStr} (5G WiFi)`;
+                    
+                    // Default case, just return the frequency
+                    return freqStr;
+                };
+            }
+            
+            // Common function to update the billboard with new data
+            function updateBillboard(data) {
+                // Log the entire data object for debugging
+                console.log("============== BILLBOARD UPDATE =============");
+                console.log("Received billboard update with data:", data);
+                console.log("============================================");
+                
+                // IMPORTANT FIX: Look for reset indicators in the data
+                // Check for explicit reset events or the start of a new baseline test
+                const isReset = data.reset === true || 
+                               (data.spectrum_data && data.spectrum_data.test_state === 'reset') ||
+                               (data.event_type === 'test_reset' || data.event_type === 'clear_all') ||
+                               (data.new_test && data.new_test.is_baseline_start === true);
+                
+                if (isReset) {
+                    console.log("🔄🔄🔄 RESET DETECTED IN BILLBOARD UPDATE - CLEARING ALL CHART DATA 🔄🔄🔄");
+                    
+                    // Force a complete reset of all chart data
+                    powerChart.data.labels = [];
+                    powerChart.data.datasets[0].data = [];
+                    powerChart.data.datasets[1].data = [];
+                    powerChart.data.datasets[2].data = [];
+                    powerChart.update();
+                    
+                    // Reset the current test data completely
+                    currentTestData = {
+                        frequencies: [],
+                        baseline_levels: [],
+                        hat_levels: [],
+                        attenuations: [],
+                        measurement_type: null,
+                        contestant_id: null,
+                        contestant_name: null,
+                        hat_type: null,
+                        baseline_in_progress: false
+                    };
+                    
+                    // Update UI to indicate reset
+                    const recentTest = document.getElementById('recent-test');
+                    const testInfo = recentTest.querySelector('.test-info');
+                    testInfo.innerHTML = `
+                        <div class="contestant-name">DATA RESET</div>
+                        <div class="hat-type">Waiting for new measurements</div>
+                        <div class="attenuation">0.00 dB</div>
+                        <div class="test-date">All previous data cleared</div>
+                    `;
+                    
+                    // Remove any existing measurement indicators
+                    const testInProgress = document.querySelector('.test-in-progress');
+                    if (testInProgress) {
+                        testInProgress.remove();
+                    }
+                    
+                    // Add a visual reset notification
+                    const resetNotification = document.createElement('div');
+                    resetNotification.className = 'reset-notification';
+                    resetNotification.textContent = 'CHART DATA CLEARED FOR NEW TEST';
+                    resetNotification.style.color = '#ff5500';
+                    resetNotification.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                    resetNotification.style.padding = '10px';
+                    resetNotification.style.margin = '10px 0';
+                    resetNotification.style.textAlign = 'center';
+                    resetNotification.style.fontWeight = 'bold';
+                    resetNotification.style.border = '2px solid #ff5500';
+                    resetNotification.style.borderRadius = '5px';
+                    testInfo.appendChild(resetNotification);
+                    
+                    // Remove the notification after 5 seconds
+                    setTimeout(() => {
+                        if (resetNotification && resetNotification.parentNode) {
+                            resetNotification.parentNode.removeChild(resetNotification);
+                        }
+                    }, 5000);
                 }
                 
-                pollForUpdates();
+                // Update the recent test display
+                if (data.new_test) {
+                    updateRecentTest(data.new_test);
+                    
+                    // Remove the "Measurement in Progress" indicator if it exists
+                    const testInProgress = document.querySelector('.test-in-progress');
+                    if (testInProgress) {
+                        testInProgress.remove();
+                    }
+                    
+                    // IMPORTANT FIX: Modified the data preservation behavior
+                    // We now only preserve measurement-specific fields if NOT a reset
+                    if (!isReset) {
+                        // This is a normal test completion, we can keep frequency data
+                        currentTestData.measurement_type = null;
+                        currentTestData.contestant_id = null;
+                        currentTestData.contestant_name = null;
+                        currentTestData.hat_type = null;
+                        currentTestData.baseline_in_progress = false;
+                        // We keep frequencies[], baseline_levels[], hat_levels[], and attenuations[] intact
+                    }
+                }
+                
+                // Update leaderboards
+                if (data.leaderboard_classic) {
+                    updateLeaderboard('classic', data.leaderboard_classic);
+                }
+                
+                if (data.leaderboard_hybrid) {
+                    updateLeaderboard('hybrid', data.leaderboard_hybrid);
+                }
+                
+                // Store frequency labels if available for chart tooltips and axis labels
+                if (data.frequency_labels) {
+                    console.log("Received frequency labels:", data.frequency_labels);
+                    window.frequencyLabels = data.frequency_labels;
+                }
+                
+                // Update charts with spectrum data ONLY if there's meaningful data
+                if (data.spectrum_data && Object.keys(data.spectrum_data).length > 0) {
+                    console.log("Received spectrum data:", data.spectrum_data);
+                    
+                    // IMPORTANT FIX: Changed data preservation logic
+                    // If this is a reset, we will always update chart (removing old data)
+                    // For normal updates, we still preserve good frequency data                    
+                    if (!isReset && data.new_test) {
+                        // Check if data has missing/bad frequencies
+                        const hasBadFrequencies = !data.spectrum_data.frequencies || 
+                                                  data.spectrum_data.frequencies.length === 0 || 
+                                                  data.spectrum_data.frequencies.every(f => f === 0 || f === '0' || f === '0.0');
+                        
+                        if (hasBadFrequencies) {
+                            console.warn("Test completion data has missing or zero frequencies - keeping current chart display");
+                            return; // Don't update the chart at all, keep showing what we already have
+                        }
+                    }
+                    
+                    // Create a copy of spectrum data to work with
+                    const updatedSpectrumData = {...data.spectrum_data};
+                    
+                    // Check if frequencies are missing or empty in the incoming data
+                    if (!updatedSpectrumData.frequencies || updatedSpectrumData.frequencies.length === 0) {
+                        console.warn("Missing frequencies in spectrum data - using saved frequencies from current test data");
+                        
+                        // Use frequencies from currentTestData if available
+                        if (currentTestData.frequencies && currentTestData.frequencies.length > 0) {
+                            updatedSpectrumData.frequencies = [...currentTestData.frequencies];
+                            console.log("Using saved frequencies:", updatedSpectrumData.frequencies);
+                        } else {
+                            console.error("No frequency data available - cannot update chart");
+                            return;
+                        }
+                    }
+                    
+                    // Ensure other required arrays exist and have correct length
+                    const freqLength = updatedSpectrumData.frequencies.length;
+                    
+                    // Check baseline levels
+                    if (!updatedSpectrumData.baseline_levels || updatedSpectrumData.baseline_levels.length !== freqLength) {
+                        if (currentTestData.baseline_levels && currentTestData.baseline_levels.length === freqLength) {
+                            updatedSpectrumData.baseline_levels = [...currentTestData.baseline_levels];
+                        } else {
+                            updatedSpectrumData.baseline_levels = Array(freqLength).fill(-85); // Default value
+                        }
+                    }
+                    
+                    // Check hat levels
+                    if (!updatedSpectrumData.hat_levels || updatedSpectrumData.hat_levels.length !== freqLength) {
+                        if (currentTestData.hat_levels && currentTestData.hat_levels.length === freqLength) {
+                            updatedSpectrumData.hat_levels = [...currentTestData.hat_levels];
+                        } else {
+                            updatedSpectrumData.hat_levels = Array(freqLength).fill(-85); // Default value
+                        }
+                    }
+                    
+                    // Check attenuations
+                    if (!updatedSpectrumData.attenuations || updatedSpectrumData.attenuations.length !== freqLength) {
+                        if (currentTestData.attenuations && currentTestData.attenuations.length === freqLength) {
+                            updatedSpectrumData.attenuations = [...currentTestData.attenuations];
+                        } else {
+                            // Calculate attenuations if possible
+                            updatedSpectrumData.attenuations = Array(freqLength).fill(0);
+                            for (let i = 0; i < freqLength; i++) {
+                                if (updatedSpectrumData.baseline_levels[i] !== null && updatedSpectrumData.hat_levels[i] !== null) {
+                                    updatedSpectrumData.attenuations[i] = updatedSpectrumData.baseline_levels[i] - updatedSpectrumData.hat_levels[i];
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Ensure frequencies are properly formatted as numbers
+                    updatedSpectrumData.frequencies = updatedSpectrumData.frequencies.map(f => 
+                        typeof f === 'string' ? parseFloat(f) : f
+                    );
+                    
+                    // Update the chart with our complete data
+                    updateCharts(updatedSpectrumData);
+                    
+                    // Save a copy of the data for future use
+                    currentTestData.frequencies = [...updatedSpectrumData.frequencies];
+                    currentTestData.baseline_levels = [...updatedSpectrumData.baseline_levels];
+                    currentTestData.hat_levels = [...updatedSpectrumData.hat_levels];
+                    currentTestData.attenuations = [...updatedSpectrumData.attenuations];
+                }
             }
             
             // Function to update a leaderboard table
@@ -1168,190 +2062,6 @@
                         }
                     }
                 }, 100);
-            }
-            
-            // Function to update chart callbacks to use the window.frequencyLabels
-            function updateChartCallbacks() {
-                // Update tooltip callback to use window.frequencyLabels
-                powerChart.options.plugins.tooltip.callbacks.title = function(tooltipItems) {
-                    const freq = tooltipItems[0].label;
-                    if (freq) {
-                        const freqNum = parseFloat(freq);
-                        // Check if we have window.frequencyLabels and use them
-                        if (window.frequencyLabels && Object.keys(window.frequencyLabels).length > 0) {
-                            for (const [freqMhz, labelData] of Object.entries(window.frequencyLabels)) {
-                                if (Math.abs(freqNum - parseFloat(freqMhz)) < 0.1) {
-                                    if (labelData[1]) {
-                                        return `${freq} MHz (${labelData[0]}) - ${labelData[1]}`;
-                                    } else {
-                                        return `${freq} MHz (${labelData[0]})`;
-                                    }
-                                }
-                            }
-                        }
-                        // If no matching label found or no labels available, just show frequency
-                        return `${freq} MHz`;
-                    }
-                    return '';
-                };
-                
-                // Update x-axis tick callback to use window.frequencyLabels
-                powerChart.options.scales.x.ticks.callback = function(value, index, values) {
-                    const freq = powerChart.data.labels[index];
-                    if (!freq) return '';
-                    
-                    // Make sure freq is a string
-                    const freqStr = freq.toString();
-                    
-                    // Try to get a label for this frequency
-                    const freqNum = parseFloat(freqStr);
-                    if (window.frequencyLabels && Object.keys(window.frequencyLabels).length > 0) {
-                        for (const [freqMhz, labelData] of Object.entries(window.frequencyLabels)) {
-                            if (Math.abs(freqNum - parseFloat(freqMhz)) < 0.1) {
-                                return `${freqStr} (${labelData[0]})`;
-                            }
-                        }
-                    }
-                    
-                    // If no label found, use a common band name based on frequency if possible
-                    if (freqNum >= 88 && freqNum <= 108) return `${freqStr} (FM)`;
-                    if (freqNum >= 470 && freqNum <= 806) return `${freqStr} (UHF)`;
-                    if (freqNum >= 2400 && freqNum <= 2500) return `${freqStr} (WiFi)`;
-                    if (freqNum >= 5100 && freqNum <= 5800) return `${freqStr} (5G WiFi)`;
-                    
-                    // Default case, just return the frequency
-                    return freqStr;
-                };
-            }
-            
-            // Common function to update the billboard with new data
-            function updateBillboard(data) {
-                // Log the entire data object for debugging
-                console.log("============== BILLBOARD UPDATE =============");
-                console.log("Received billboard update with data:", data);
-                console.log("============================================");
-                
-                // Update the recent test display
-                if (data.new_test) {
-                    updateRecentTest(data.new_test);
-                    
-                    // Remove the "Measurement in Progress" indicator if it exists
-                    const testInProgress = document.querySelector('.test-in-progress');
-                    if (testInProgress) {
-                        testInProgress.remove();
-                    }
-                    
-                    // IMPORTANT: Do NOT reset currentTestData completely anymore
-                    // Instead, we'll keep the frequency data and only reset measurement-specific fields
-                    // This ensures we'll have frequencies available even if the complete test data doesn't include them
-                    currentTestData.measurement_type = null;
-                    currentTestData.contestant_id = null;
-                    currentTestData.contestant_name = null;
-                    currentTestData.hat_type = null;
-                    
-                    // We keep frequencies[], baseline_levels[], hat_levels[], and attenuations[] intact
-                }
-                
-                // Update leaderboards
-                if (data.leaderboard_classic) {
-                    updateLeaderboard('classic', data.leaderboard_classic);
-                }
-                
-                if (data.leaderboard_hybrid) {
-                    updateLeaderboard('hybrid', data.leaderboard_hybrid);
-                }
-                
-                // Store frequency labels if available for chart tooltips and axis labels
-                if (data.frequency_labels) {
-                    console.log("Received frequency labels:", data.frequency_labels);
-                    window.frequencyLabels = data.frequency_labels;
-                }
-                
-                // Update charts with spectrum data ONLY if there's meaningful data
-                if (data.spectrum_data && Object.keys(data.spectrum_data).length > 0) {
-                    console.log("Received spectrum data:", data.spectrum_data);
-                    
-                    // Skip updating the chart entirely if this is a test completion AND we have no or bad frequency data
-                    // This ensures we keep displaying the streaming data which has correct frequencies
-                    if (data.new_test) {
-                        // Check if data has missing/bad frequencies
-                        const hasBadFrequencies = !data.spectrum_data.frequencies || 
-                                                  data.spectrum_data.frequencies.length === 0 || 
-                                                  data.spectrum_data.frequencies.every(f => f === 0 || f === '0' || f === '0.0');
-                        
-                        if (hasBadFrequencies) {
-                            console.warn("Test completion data has missing or zero frequencies - keeping current chart display");
-                            return; // Don't update the chart at all, keep showing what we already have
-                        }
-                    }
-                    
-                    // Create a copy of spectrum data to work with
-                    const updatedSpectrumData = {...data.spectrum_data};
-                    
-                    // Check if frequencies are missing or empty in the incoming data
-                    if (!updatedSpectrumData.frequencies || updatedSpectrumData.frequencies.length === 0) {
-                        console.warn("Missing frequencies in spectrum data - using saved frequencies from current test data");
-                        
-                        // Use frequencies from currentTestData if available
-                        if (currentTestData.frequencies && currentTestData.frequencies.length > 0) {
-                            updatedSpectrumData.frequencies = [...currentTestData.frequencies];
-                            console.log("Using saved frequencies:", updatedSpectrumData.frequencies);
-                        } else {
-                            console.error("No frequency data available - cannot update chart");
-                            return;
-                        }
-                    }
-                    
-                    // Ensure other required arrays exist and have correct length
-                    const freqLength = updatedSpectrumData.frequencies.length;
-                    
-                    // Check baseline levels
-                    if (!updatedSpectrumData.baseline_levels || updatedSpectrumData.baseline_levels.length !== freqLength) {
-                        if (currentTestData.baseline_levels && currentTestData.baseline_levels.length === freqLength) {
-                            updatedSpectrumData.baseline_levels = [...currentTestData.baseline_levels];
-                        } else {
-                            updatedSpectrumData.baseline_levels = Array(freqLength).fill(-85); // Default value
-                        }
-                    }
-                    
-                    // Check hat levels
-                    if (!updatedSpectrumData.hat_levels || updatedSpectrumData.hat_levels.length !== freqLength) {
-                        if (currentTestData.hat_levels && currentTestData.hat_levels.length === freqLength) {
-                            updatedSpectrumData.hat_levels = [...currentTestData.hat_levels];
-                        } else {
-                            updatedSpectrumData.hat_levels = Array(freqLength).fill(-85); // Default value
-                        }
-                    }
-                    
-                    // Check attenuations
-                    if (!updatedSpectrumData.attenuations || updatedSpectrumData.attenuations.length !== freqLength) {
-                        if (currentTestData.attenuations && currentTestData.attenuations.length === freqLength) {
-                            updatedSpectrumData.attenuations = [...currentTestData.attenuations];
-                        } else {
-                            // Calculate attenuations if possible
-                            updatedSpectrumData.attenuations = Array(freqLength).fill(0);
-                            for (let i = 0; i < freqLength; i++) {
-                                if (updatedSpectrumData.baseline_levels[i] !== null && updatedSpectrumData.hat_levels[i] !== null) {
-                                    updatedSpectrumData.attenuations[i] = updatedSpectrumData.baseline_levels[i] - updatedSpectrumData.hat_levels[i];
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Ensure frequencies are properly formatted as numbers
-                    updatedSpectrumData.frequencies = updatedSpectrumData.frequencies.map(f => 
-                        typeof f === 'string' ? parseFloat(f) : f
-                    );
-                    
-                    // Update the chart with our complete data
-                    updateCharts(updatedSpectrumData);
-                    
-                    // Save a copy of the data for future use
-                    currentTestData.frequencies = [...updatedSpectrumData.frequencies];
-                    currentTestData.baseline_levels = [...updatedSpectrumData.baseline_levels];
-                    currentTestData.hat_levels = [...updatedSpectrumData.hat_levels];
-                    currentTestData.attenuations = [...updatedSpectrumData.attenuations];
-                }
             }
             
             // Initial setup

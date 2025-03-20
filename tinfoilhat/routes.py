@@ -19,6 +19,8 @@ from flask import (
 import json
 import time
 from datetime import datetime
+import traceback
+import queue
 
 from tinfoilhat.db import get_db
 from tinfoilhat.scanner import Scanner
@@ -31,6 +33,10 @@ scanner = None
 
 # Global variable to track the latest frequency measurement
 latest_frequency_measurement = None
+
+# Dictionaries to store client queues for SSE streams
+freq_clients = {}
+billboard_clients = {}
 
 # Add a custom JSON encoder to handle datetime objects
 class DateTimeEncoder(json.JSONEncoder):
@@ -413,54 +419,175 @@ def start_baseline():
     :return: JSON response with baseline data
     :rtype: Response
     """
-    # Get baseline readings from HackRF
-    scanner = get_scanner()
-    if scanner is None:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Scanner initialization failed. Please check HackRF device connection.",
-                }
-            ),
-            500,
-        )
-
+    global latest_frequency_measurement
+    
     try:
-        baseline_data = scanner.get_baseline_readings()
+        print("\n" + "="*80)
+        print("*** NEW BASELINE TEST STARTING - CLEARING ALL PREVIOUS TEST DATA ***")
+        print("="*80)
+        
+        # First, call the force reset endpoint to immediately clear all displays
+        # This is a backup mechanism to ensure we reset even if SSE fails
+        try:
+            force_reset_all_displays()
+            print("RESET: Called force_reset_all_displays() to immediately reset all client displays")
+        except Exception as e:
+            print(f"Warning: force_reset_all_displays failed: {str(e)}")
+        
+        # Set a special short-lived global reset flag with high visibility timestamp
+        # This will be picked up by polling clients and force them to reset immediately
+        latest_frequency_measurement = {
+            'id': f"force_reset_{time.time()}",
+            'event_type': 'clear_all',
+            'timestamp': datetime.now(),
+            'message': 'IMMEDIATE RESET - New baseline test started',
+            'priority': 'high',
+            'reset_required': True
+        }
+        print("SET GLOBAL RESET FLAG: latest_frequency_measurement set to force reset")
+        
+        # First, explicitly clear all measurement data from the database
+        db = get_db()
+        db.execute("DELETE FROM measurement_cache")
+        db.commit()
+        print("DATABASE: Cleared all measurement data from database")
+        
+        # Second, explicitly clear all data from application memory
+        for key in ["BASELINE_DATA", "HAT_DATA", "ATTENUATION_DATA", "CURRENT_BASELINE"]:
+            if key in current_app.config:
+                del current_app.config[key]
+        print("MEMORY: Cleared all measurement data from application config")
+        
+        # Third, reset the test state to notify clients
+        print("NOTIFICATION: Calling reset_test_state() to notify clients...")
+        reset_test_state()
+        print("NOTIFICATION: Completed reset_test_state()")
+        
+        # CRITICAL: Force clients to update their display with empty data
+        print("\nCRITICAL: Sending FORCE CLEAR instructions to all clients")
+        
+        # Create and broadcast additional clear event with explicit CLEAR instruction
+        clear_event = {
+            'id': f"clear_all_{time.time()}",
+            'event_type': 'clear_all',
+            'timestamp': datetime.now(),
+            'message': 'All test data has been cleared for new baseline test'
+        }
+        
+        # Broadcast to all clients with high priority
+        clear_count = 0
+        print(f"Frequency Clients: {len(freq_clients)}")
+        for client_id, client_queue in freq_clients.items():
+            try:
+                # Force clear event to front of queue
+                old_queue_contents = list(client_queue.queue)
+                client_queue.queue.clear()
+                client_queue.put(clear_event)
+                # Put old items back after clear event
+                for old_item in old_queue_contents:
+                    client_queue.put(old_item)
+                clear_count += 1
+                print(f"  - Sent clear to freq client {client_id[:8]}...")
+            except Exception as e:
+                print(f"  - Failed to send clear event to freq client {client_id[:8]}: {str(e)}")
+                
+        print(f"Billboard Clients: {len(billboard_clients)}")
+        for client_id, client_queue in billboard_clients.items():
+            try:
+                # Force clear event to front of queue
+                old_queue_contents = list(client_queue.queue)
+                client_queue.queue.clear()
+                client_queue.put(clear_event)
+                # Put old items back after clear event
+                for old_item in old_queue_contents:
+                    client_queue.put(old_item)
+                clear_count += 1
+                print(f"  - Sent clear to billboard client {client_id[:8]}...")
+            except Exception as e:
+                print(f"  - Failed to send clear event to billboard client {client_id[:8]}: {str(e)}")
+        
+        print(f"CRITICAL: Sent force clear events to {clear_count} clients")
+        
+        # Set global latest measurement to clear event
+        latest_frequency_measurement = clear_event
+        print("GLOBAL: Updated latest_frequency_measurement with clear event")
+        
+        # Send additional empty spectrum data to force chart reset
+        empty_spectrum = {
+            'event_type': 'billboard_update',
+            'timestamp': datetime.now(),
+            'spectrum_data': {
+                'frequencies': [],
+                'baseline_levels': [],
+                'hat_levels': [],
+                'attenuations': [],
+                'test_state': "reset",
+                'timestamp': time.time()
+            }
+        }
+        
+        # Broadcast empty spectrum to all billboard clients
+        empty_count = 0
+        print("\nCRITICAL: Sending empty spectrum data")
+        for client_id, client_queue in billboard_clients.items():
+            try:
+                client_queue.put(empty_spectrum)
+                empty_count += 1
+                print(f"  - Sent empty spectrum to billboard client {client_id[:8]}...")
+            except Exception as e:
+                print(f"  - Failed to send empty spectrum to billboard client {client_id[:8]}: {str(e)}")
+                
+        print(f"CRITICAL: Sent empty spectrum data to {empty_count} billboard clients")
+        
+        # Very important: longer delay to allow clients to process the clear events
+        # This ensures clients have time to process events before they see new frequencies
+        print("\nDELAY: Waiting for clients to process clear events...")
+        time.sleep(0.5)  # 500ms delay
+        print("DELAY: Completed waiting period")
+        
+        print("NOTIFICATION: All clear events sent to all connected clients")
+        print("="*80 + "\n")
+        
+        # Get scanner instance
+        print("SCANNER: Initializing scanner...")
+        scanner = get_scanner()
+        if scanner is None:
+            print("ERROR: Scanner initialization failed")
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Scanner initialization failed. Please check HackRF device connection.",
+                    }
+                ),
+                500,
+            )
 
-        # Store in session for later use
-        current_app.config["CURRENT_BASELINE"] = baseline_data
+        # Return the frequencies to test
+        frequencies = [float(f) for f in scanner.frequencies]
+        print(f"SCANNER: Initialized baseline test with {len(frequencies)} frequencies")
+        print("="*80)
+        print("*** BASELINE TEST READY - ALL PREVIOUS DATA CLEARED ***")
+        print("="*80 + "\n")
 
-        # Return the data for visualization
         return jsonify(
             {
                 "status": "success",
-                "message": f"Baseline test completed with {scanner.samples_per_freq} samples per frequency.",
+                "message": "Baseline test started - all previous data cleared",
                 "data": {
-                    "frequencies": scanner.frequencies,
-                    "baseline": baseline_data,
-                    "samples_per_frequency": scanner.samples_per_freq,
+                    "frequencies": frequencies,
+                    "frequency_count": len(frequencies),
                 },
             }
         )
-    except RuntimeError as e:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": f"HackRF device error: {str(e)}. Please reconnect your device and try again.",
-                }
-            ),
-            500,
-        )
     except Exception as e:
-        current_app.logger.error(f"Error in baseline test: {str(e)}")
+        print(f"ERROR starting baseline test: {str(e)}")
+        traceback.print_exc()
         return (
             jsonify(
                 {
                     "status": "error",
-                    "message": f"An unexpected error occurred: {str(e)}",
+                    "message": f"Failed to start baseline test: {str(e)}",
                 }
             ),
             500,
@@ -470,260 +597,93 @@ def start_baseline():
 @bp.route("/test/measure", methods=["POST"])
 def measure_hat():
     """
-    Measure a hat's attenuation after baseline has been established.
+    Start the hat measurement test.
 
-    All calculations are performed server-side for consistency:
-    - Average attenuation is calculated using only valid measurements
-    - Effectiveness values for each frequency band (HF, VHF, UHF, SHF) are calculated
-    - Maximum and minimum attenuation frequencies are identified
-
-    The client is only responsible for displaying these server-calculated values.
-
-    :return: JSON response with test results
+    :return: JSON response with hat data
     :rtype: Response
     """
-    # Get the baseline data from config
-    baseline_data = current_app.config.get("CURRENT_BASELINE")
-    if not baseline_data:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Baseline test has not been run. Please run baseline first.",
-                }
-            ),
-            400,
-        )
-
-    # Get contestant ID from form
-    contestant_id = request.form.get("contestant_id")
-    if not contestant_id:
-        return (
-            jsonify({"status": "error", "message": "Contestant ID is required."}),
-            400,
-        )
-
-    # Get hat measurements from HackRF
-    scanner = get_scanner()
-    if scanner is None:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": "Scanner initialization failed. Please check HackRF device connection.",
-                }
-            ),
-            500,
-        )
-
     try:
-        hat_data = scanner.get_hat_readings()
-
-        # Calculate attenuation
-        attenuation_data = scanner.calculate_attenuation(baseline_data, hat_data)
-
-        # All measurements from scanner are considered valid
-        valid_measurements = [True] * len(attenuation_data)
-
-        # Calculate average using only valid measurements
-        total_attenuation = 0
-        valid_count = 0
-        for i, att in enumerate(attenuation_data):
-            if valid_measurements[i]:
-                total_attenuation += att
-                valid_count += 1
-
-        average_attenuation = float(total_attenuation / valid_count) if valid_count > 0 else 0.0
-        print(f"DEBUG - Calculated average attenuation in measure_hat: {average_attenuation}")
-
-        # Calculate effectiveness for different frequency bands using standard RF band names
-        # Only include valid measurements in these calculations
-        hf_values = [
-            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 2 <= f < 30 and valid_measurements[i]
-        ]  # HF: 2-30 MHz
-        vhf_values = [
-            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 30 <= f < 300 and valid_measurements[i]
-        ]  # VHF: 30-300 MHz
-        uhf_values = [
-            attenuation_data[i] for i, f in enumerate(scanner.frequencies) if 300 <= f < 3000 and valid_measurements[i]
-        ]  # UHF: 300 MHz - 3 GHz
-        shf_values = [
-            attenuation_data[i]
-            for i, f in enumerate(scanner.frequencies)
-            if 3000 <= f <= 5900 and valid_measurements[i]
-        ]  # SHF: 3-30 GHz
-
-        effectiveness = {
-            "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
-            "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
-            "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
-            "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
-        }
-
-        # Find peak and minimum attenuation (only consider valid measurements)
-        valid_attenuation_with_idx = [
-            (i, att) for i, (att, valid) in enumerate(zip(attenuation_data, valid_measurements)) if valid
-        ]
-
-        if valid_attenuation_with_idx:
-            max_idx, max_att = max(valid_attenuation_with_idx, key=lambda x: x[1])
-            min_idx, min_att = min(valid_attenuation_with_idx, key=lambda x: x[1])
-
-            max_attenuation = float(max_att)
-            max_attenuation_freq = float(scanner.frequencies[max_idx])
-
-            min_attenuation = float(min_att)
-            min_attenuation_freq = float(scanner.frequencies[min_idx])
-        else:
-            # Default values if no valid measurements
-            max_attenuation = 0.0
-            max_attenuation_freq = 0.0
-            min_attenuation = 0.0
-            min_attenuation_freq = 0.0
-
-        # Save results to database
-        db = get_db()
-
-        # Get hat type from request
-        hat_type = request.form.get("hat_type", "classic")
-
-        # Check if this is the best score for this contestant BEFORE inserting the new result
-        # BUT make sure we only compare against scores of the same hat type
-        best_score_result = db.execute(
-            """
-            SELECT COUNT(*) as count, MAX(average_attenuation) as best
-            FROM test_result
-            WHERE contestant_id = ? AND hat_type = ?
-            """,
-            (contestant_id, hat_type),
-        ).fetchone()
-
-        # Check if the contestant has any previous entries of this hat type
-        has_previous_entries = best_score_result and best_score_result["count"] > 0
-
-        # First score for this hat type is always the best
-        # Otherwise, compare with previous best for this hat type
-        previous_best_score = best_score_result["best"] if has_previous_entries else None
-        is_best = not has_previous_entries or (has_previous_entries and average_attenuation > previous_best_score)
-
-        # Add test result
-        cursor = db.execute(
-            """
-            INSERT INTO test_result (contestant_id, average_attenuation, is_best_score, hat_type)
-            VALUES (?, ?, ?, ?)
-            """,
-            (contestant_id, average_attenuation, 1 if is_best else 0, hat_type),
-        )
-        test_result_id = cursor.lastrowid
-
-        # Add individual frequency measurements
-        for i, freq in enumerate(scanner.frequencies):
-            db.execute(
-                """
-                INSERT INTO test_data
-                (test_result_id, frequency, baseline_level, hat_level, attenuation)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    test_result_id,
-                    float(freq),
-                    float(baseline_data[i]),
-                    float(hat_data[i]),
-                    float(attenuation_data[i]),
+        print("\n" + "="*80)
+        print("HAT MEASUREMENT REQUESTED - CHECKING FOR VALID BASELINE DATA")
+        
+        # Don't reset - we need to keep the baseline data
+        # But do ensure we clear any previous hat data before starting a new hat measurement
+        if "HAT_DATA" in current_app.config:
+            del current_app.config["HAT_DATA"]
+            print("Cleared previous HAT_DATA from memory")
+            
+        if "ATTENUATION_DATA" in current_app.config:
+            del current_app.config["ATTENUATION_DATA"]
+            print("Cleared previous ATTENUATION_DATA from memory")
+            
+        # Make sure we have baseline data and it's valid
+        if "BASELINE_DATA" not in current_app.config or not current_app.config["BASELINE_DATA"]:
+            error_msg = "Baseline data not found. Please run the baseline test first."
+            print(f"ERROR: {error_msg}")
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": error_msg,
+                    }
                 ),
+                400,
             )
 
-        # If this is the best score, reset previous best scores
-        if is_best:
-            # Reset previous best scores (exclude the one we just added)
-            db.execute(
-                """
-                UPDATE test_result
-                SET is_best_score = 0
-                WHERE contestant_id = ? AND id != ? AND hat_type = ?
-                """,
-                (contestant_id, test_result_id, hat_type),
+        # Check that we have a reasonable amount of baseline data
+        baseline_count = len(current_app.config["BASELINE_DATA"])
+        if baseline_count < 5:  # At least 5 frequency measurements
+            error_msg = f"Insufficient baseline data ({baseline_count} frequencies). Please run a complete baseline test."
+            print(f"ERROR: {error_msg}")
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": error_msg,
+                    }
+                ),
+                400,
             )
 
-        db.commit()
-
-        # Get the contestant name for the response
-        contestant_result = db.execute("SELECT name FROM contestant WHERE id = ?", (contestant_id,)).fetchone()
-        contestant_name = contestant_result["name"] if contestant_result else "Unknown"
-
-        # Prepare a message about the score
-        if average_attenuation < 0:
-            score_message = (
-                f"Warning: The hat shows negative attenuation ({average_attenuation:.2f} dB), "
-                f"which means it's amplifying signals instead of blocking them."
+        # Get scanner instance
+        scanner = get_scanner()
+        if scanner is None:
+            print("ERROR: Scanner initialization failed")
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Scanner initialization failed. Please check HackRF device connection.",
+                    }
+                ),
+                500,
             )
-            if is_best:
-                score_message += f" This is still your best {hat_type} score so far."
-            else:
-                score_message += f" Your previous best {hat_type} score of {previous_best_score:.2f} dB is better."
-        else:
-            if is_best:
-                score_message = (
-                    f"This is the best {hat_type} score for {contestant_name} "
-                    f"with an attenuation of {average_attenuation:.2f} dB."
-                )
-            else:
-                score_message = (
-                    f"Not the best {hat_type} score for {contestant_name}. Previous best: "
-                    f"{previous_best_score:.2f} dB, Current: {average_attenuation:.2f} dB."
-                )
 
-        # Convert frequencies to standard Python list to ensure JSON serialization
-        frequencies_json = [float(f) for f in scanner.frequencies]
-        baseline_json = [float(b) for b in baseline_data]
-        hat_data_json = [float(h) for h in hat_data]
-        attenuation_json = [float(a) for a in attenuation_data]
+        # Get the baseline data keys (frequency Hz values)
+        baseline_frequencies = [int(freq_key) for freq_key in current_app.config["BASELINE_DATA"].keys()]
+        frequencies = [float(freq_hz) / 1e6 for freq_hz in baseline_frequencies]  # Convert to MHz
+        
+        print(f"Starting hat measurement with {len(frequencies)} frequencies from baseline data")
+        print("="*80 + "\n")
 
-        # Return test results
         return jsonify(
             {
                 "status": "success",
-                "message": score_message,
+                "message": "Hat measurement started",
                 "data": {
-                    "frequencies": frequencies_json,
-                    "baseline": baseline_json,
-                    "hat_measurements": hat_data_json,
-                    "attenuation": attenuation_json,
-                    "average_attenuation": average_attenuation,
-                    "is_best_score": is_best,
-                    "samples_per_frequency": scanner.samples_per_freq,
-                    "contestant_name": contestant_name,
-                    "effectiveness": effectiveness,
-                    "max_attenuation": {
-                        "value": max_attenuation,
-                        "frequency": max_attenuation_freq,
-                        "frequency_mhz": max_attenuation_freq / 1e6,
-                    },
-                    "min_attenuation": {
-                        "value": min_attenuation,
-                        "frequency": min_attenuation_freq,
-                        "frequency_mhz": min_attenuation_freq / 1e6,
-                    },
+                    "frequencies": frequencies,
+                    "frequency_count": len(frequencies),
                 },
             }
         )
-    except RuntimeError as e:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "message": f"HackRF device error: {str(e)}. Please reconnect your device and try again.",
-                }
-            ),
-            500,
-        )
     except Exception as e:
-        current_app.logger.error(f"Error in hat measurement: {str(e)}")
+        print(f"Error starting hat measurement: {str(e)}")
+        traceback.print_exc()
         return (
             jsonify(
                 {
                     "status": "error",
-                    "message": f"An unexpected error occurred: {str(e)}",
+                    "message": f"Failed to start hat measurement: {str(e)}",
                 }
             ),
             500,
@@ -1063,7 +1023,7 @@ def save_results():
             "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
             "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
             "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
-            "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
+            "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0
         }
 
         # Find peak and minimum attenuation (only consider valid measurements)
@@ -1235,14 +1195,14 @@ def save_results():
                 hf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 2 <= f < 30]  # HF: 2-30 MHz
                 vhf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 30 <= f < 300]  # VHF: 30-300 MHz
                 uhf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
-                shf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 3000 <= f <= 6000]  # SHF: 3-30 GHz
+                shf_values = [attenuations[i] for i, f in enumerate(frequencies_mhz) if 3000 <= f <= 5900]  # SHF: 3-30 GHz
                 
                 # Calculate average for each band
                 effectiveness = {
                     "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
                     "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
                     "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
-                    "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
+                    "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0
                 }
                 
                 # Find peak and minimum attenuation
@@ -1458,252 +1418,345 @@ def get_leaderboard_data(hat_type):
 
 @bp.route("/billboard-updates", methods=["GET"])
 def billboard_updates():
-    """Send SSE events when new test results are added."""
-    last_id = request.args.get('last_id', type=int, default=0)
+    """
+    Handle billboard updates either via SSE or polling.
     
-    # Check if this is an SSE request (EventSource connection) or regular HTTP request (polling)
-    is_sse = request.headers.get('Accept') == 'text/event-stream'
+    If request is from EventSource, setup SSE stream.
+    Otherwise return JSON data for polling clients.
     
-    # For polling requests (non-SSE), just return the latest data as JSON
+    Query Parameters:
+    - last_id: Last event ID received (for polling)
+    - force_clear: If 1, forces empty data with reset state (for troubleshooting)
+    
+    :return: SSE stream or JSON response
+    :rtype: Response
+    """
+    is_sse = request.headers.get('accept') == 'text/event-stream'
+    last_id = request.args.get('last_id', 0, type=int)
+    force_clear = request.args.get('force_clear', 0, type=int)
+    
+    # Check if this is a force clear request (for troubleshooting)
+    if force_clear == 1:
+        print("CRITICAL: Force clear request received - returning empty data")
+        return jsonify({
+            "last_id": last_id,
+            "spectrum_data": {
+                "frequencies": [],
+                "baseline_levels": [],
+                "hat_levels": [],
+                "attenuations": [],
+                "test_state": "reset",
+                "timestamp": time.time()
+            },
+            "message": "Chart data cleared by force_clear request"
+        })
+    
+    # Function to normalize numpy values to native Python types
+    def normalize_value(val):
+        """Convert numpy types to native Python types for JSON serialization."""
+        if val is None:
+            return None
+        if hasattr(val, 'item'):
+            return val.item()
+        return val
+    
     if not is_sse:
-        # Get the database connection
-        db = get_db()
-        
-        # Get any new test results
-        new_test = db.execute("""
-            SELECT t.id as max_id, c.name, t.hat_type, ROUND(t.average_attenuation, 2) as attenuation, 
-                   t.test_date as date
-            FROM test_result t
-            JOIN contestant c ON t.contestant_id = c.id
-            WHERE t.id > ?
-            ORDER BY t.id DESC
-            LIMIT 1
-        """, (last_id,)).fetchone()
-        
-        if not new_test or not new_test["max_id"]:
-            # No new tests, return empty data
-            return jsonify({
-                'last_id': last_id,
-                'new_test': None,
-                'leaderboard_classic': [],
-                'leaderboard_hybrid': [],
-                'spectrum_data': {}
-            })
-        
-        # Format date for display
-        formatted_date = new_test["date"]
-        
-        # Get leaderboards data
-        leaderboard_classic = get_leaderboard_data('classic')
-        leaderboard_hybrid = get_leaderboard_data('hybrid')
-        
-        # Get spectrum data for the charts
-        spectrum_data = {}
-        test_data_points = db.execute("""
-            SELECT frequency, baseline_level, hat_level, attenuation
-            FROM test_data
-            WHERE test_result_id = ?
-            ORDER BY frequency
-        """, (new_test["max_id"],)).fetchall()
-        
-        # Initialize these variables with empty lists before the conditional block
-        frequencies = []
-        baseline_levels = []
-        hat_levels = []
-        attenuations = []
-        
-        if test_data_points:
-            frequencies = [round(point["frequency"] / 1e6, 2) for point in test_data_points]  # Convert to MHz
-            baseline_levels = [point["baseline_level"] for point in test_data_points]
-            hat_levels = [point["hat_level"] for point in test_data_points]
-            attenuations = [point["attenuation"] for point in test_data_points]
+        # This is a regular HTTP request, likely polling
+        # Respond with JSON instead of SSE
+        try:
+            # Initialize reset flags
+            reset_detected = False
+            reset_message = None
             
-            # Calculate effectiveness for different frequency bands using standard RF band names
-            hf_values = [attenuations[i] for i, f in enumerate(frequencies) if 2 <= f < 30]  # HF: 2-30 MHz
-            vhf_values = [attenuations[i] for i, f in enumerate(frequencies) if 30 <= f < 300]  # VHF: 30-300 MHz
-            uhf_values = [attenuations[i] for i, f in enumerate(frequencies) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
-            shf_values = [attenuations[i] for i, f in enumerate(frequencies) if 3000 <= f <= 6000]  # SHF: 3-30 GHz
-            
-            # Calculate average for each band
-            effectiveness = {
-                "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
-                "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
-                "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
-                "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
-            }
-            
-            # Find peak and minimum attenuation
-            if attenuations:
-                max_idx = attenuations.index(max(attenuations))
-                min_idx = attenuations.index(min(attenuations))
+            # MODIFICATION: Check for reset events first, before doing anything else
+            # If latest_frequency_measurement indicates a reset, prioritize sending that
+            if latest_frequency_measurement and latest_frequency_measurement.get('event_type') in ['test_reset', 'clear_all']:
+                # Check if this is a high-priority reset that absolutely must be handled
+                if latest_frequency_measurement.get('reset_required', False):
+                    print(f"⚠️ CRITICAL: Found mandatory reset event - forcing client reset")
+                    return jsonify({
+                        "last_id": last_id,
+                        "reset_detected": True,
+                        "reset_message": latest_frequency_measurement.get('message', 'Mandatory test reset required'),
+                        "spectrum_data": {
+                            "frequencies": [],
+                            "baseline_levels": [],
+                            "hat_levels": [],
+                            "attenuations": [],
+                            "test_state": "reset",
+                            "timestamp": time.time()
+                        }
+                    })
                 
-                max_attenuation = {
-                    "value": attenuations[max_idx],
-                    "frequency": frequencies[max_idx]
+                # Calculate how old the reset event is (in seconds)
+                event_time = latest_frequency_measurement.get('timestamp')
+                age_seconds = 0
+                if isinstance(event_time, datetime):
+                    age_seconds = (datetime.now() - event_time).total_seconds()
+                
+                # Only use reset events that are less than 10 seconds old to prevent
+                # old reset events from continuously triggering
+                if age_seconds < 10:
+                    print(f"Found recent reset event ({age_seconds}s old) - sending reset signal to polling client")
+                    return jsonify({
+                        "last_id": last_id,
+                        "message": latest_frequency_measurement.get('message', 'Test reset detected'),
+                        "spectrum_data": {
+                            "frequencies": [],
+                            "baseline_levels": [],
+                            "hat_levels": [],
+                            "attenuations": [],
+                            "test_state": "reset",
+                            "timestamp": time.time()
+                        }
+                    })
+            
+            db = get_db()
+        
+            # Fetch new test results based on last_id
+            new_results = db.execute(
+                """
+                SELECT t.id, t.test_date, t.average_attenuation, t.hat_type, c.name
+                FROM test_result t
+                JOIN contestant c ON t.contestant_id = c.id
+                WHERE t.id > ?
+                ORDER BY t.id DESC
+                LIMIT 1
+                """,
+                (last_id,)
+            ).fetchall()
+            
+            # Only get the most recent result
+            new_test = None
+            max_id = last_id
+            
+            if new_results:
+                result = new_results[0]
+                max_id = result['id']
+                
+                # Format date for display
+                result_date = format_datetime(result['test_date'])
+                
+                new_test = {
+                    'max_id': result['id'],
+                    'name': result['name'],
+                    'hat_type': result['hat_type'],
+                    'attenuation': result['average_attenuation'],
+                    'date': result_date
                 }
                 
-                min_attenuation = {
-                    "value": attenuations[min_idx],
-                    "frequency": frequencies[min_idx]
-                }
-            else:
-                max_attenuation = {"value": 0.0, "frequency": 0.0}
-                min_attenuation = {"value": 0.0, "frequency": 0.0}
-            
-            # Always populate spectrum_data with whatever we have (empty lists if no data)
-            spectrum_data = {
-                'frequencies': frequencies,
-                'baseline_levels': baseline_levels,
-                'hat_levels': hat_levels,
-                'attenuations': attenuations,
-                'effectiveness': effectiveness,
-                'max_attenuation': max_attenuation,
-                'min_attenuation': min_attenuation
-            }
-            
-            # Get frequency labels from scanner
-            frequency_labels = {}
-            scanner = get_scanner()
-            if scanner and hasattr(scanner, "frequency_labels"):
-                frequency_labels = scanner.frequency_labels
-            
-            # Prepare and send the event data
-            event_data = {
-                'last_id': new_test["max_id"],
-                'new_test': {
-                    'name': new_test["name"],
-                    'hat_type': new_test["hat_type"],
-                    'attenuation': new_test["attenuation"],
-                    'date': formatted_date,
-                },
-                'leaderboard_classic': leaderboard_classic,
-                'leaderboard_hybrid': leaderboard_hybrid,
-                'spectrum_data': spectrum_data,
-                'frequency_labels': frequency_labels
-            }
-            
-            return jsonify(event_data)
-        
-    # For SSE connections:
-    def generate():
-        nonlocal last_id
-        app = current_app._get_current_object()  # Get the actual application object
-        
-        while True:
-            # Create a new application context for each iteration
-            with app.app_context():
-                db = get_db()
-                # Get any new test results
-                new_test = db.execute("""
-                    SELECT t.id as max_id, c.name, t.hat_type, ROUND(t.average_attenuation, 2) as attenuation, 
-                           t.test_date as date
-                    FROM test_result t
-                    JOIN contestant c ON t.contestant_id = c.id
-                    WHERE t.id > ?
-                    ORDER BY t.id DESC
-                    LIMIT 1
-                """, (last_id,)).fetchone()
+                # Get spectrum data for this test
+                spectrum_data = db.execute(
+                    """
+                    SELECT frequency, baseline_level, hat_level, attenuation
+                    FROM test_data
+                    WHERE test_result_id = ?
+                    ORDER BY frequency
+                    """,
+                    (result['id'],)
+                ).fetchall()
                 
-                if new_test and new_test["max_id"]:
-                    # Format date for display
-                    formatted_date = new_test["date"]
+                # Send spectrum data only if we have a new test
+                if spectrum_data:
+                    frequencies = [row['frequency'] for row in spectrum_data]
+                    baseline_levels = [row['baseline_level'] for row in spectrum_data]
+                    hat_levels = [row['hat_level'] for row in spectrum_data]
+                    attenuations = [row['attenuation'] for row in spectrum_data]
                     
-                    # Get leaderboards data
-                    leaderboard_classic = get_leaderboard_data('classic')
-                    leaderboard_hybrid = get_leaderboard_data('hybrid')
-                    
-                    # Get spectrum data for the charts
-                    spectrum_data = {}
-                    test_data_points = db.execute("""
-                        SELECT frequency, baseline_level, hat_level, attenuation
-                        FROM test_data
-                        WHERE test_result_id = ?
-                        ORDER BY frequency
-                    """, (new_test["max_id"],)).fetchall()
-                    
-                    # Initialize these variables with empty lists before the conditional block
-                    frequencies = []
-                    baseline_levels = []
-                    hat_levels = []
-                    attenuations = []
-                    
-                    if test_data_points:
-                        frequencies = [round(point["frequency"] / 1e6, 2) for point in test_data_points]  # Convert to MHz
-                        baseline_levels = [point["baseline_level"] for point in test_data_points]
-                        hat_levels = [point["hat_level"] for point in test_data_points]
-                        attenuations = [point["attenuation"] for point in test_data_points]
-                    
-                    # Calculate effectiveness for different frequency bands using standard RF band names
-                    hf_values = [attenuations[i] for i, f in enumerate(frequencies) if 2 <= f < 30]  # HF: 2-30 MHz
-                    vhf_values = [attenuations[i] for i, f in enumerate(frequencies) if 30 <= f < 300]  # VHF: 30-300 MHz
-                    uhf_values = [attenuations[i] for i, f in enumerate(frequencies) if 300 <= f < 3000]  # UHF: 300 MHz - 3 GHz
-                    shf_values = [attenuations[i] for i, f in enumerate(frequencies) if 3000 <= f <= 6000]  # SHF: 3-30 GHz
-                    
-                    # Calculate average for each band
+                    # For now, using simplified effectiveness calculation
+                    # We'll update this with the actual calculation later
                     effectiveness = {
-                        "hf_band": float(sum(hf_values) / len(hf_values)) if hf_values else 0.0,
-                        "vhf_band": float(sum(vhf_values) / len(vhf_values)) if vhf_values else 0.0,
-                        "uhf_band": float(sum(uhf_values) / len(uhf_values)) if uhf_values else 0.0,
-                        "shf_band": float(sum(shf_values) / len(shf_values)) if shf_values else 0.0,
+                        "hf_band": 0.0,
+                        "vhf_band": 0.0,
+                        "uhf_band": 0.0,
+                        "shf_band": 0.0
                     }
                     
-                    # Find peak and minimum attenuation
-                    if attenuations:
-                        max_idx = attenuations.index(max(attenuations))
-                        min_idx = attenuations.index(min(attenuations))
+                    # Calculate band-specific effectiveness
+                    valid_attens = [a for a in attenuations if a is not None]
+                    avg_atten = sum(valid_attens) / len(valid_attens) if valid_attens else 0
+                    
+                    # Get min/max attenuation
+                    if valid_attens:
+                        max_atten = max(valid_attens)
+                        max_atten_idx = attenuations.index(max_atten)
+                        max_atten_freq = frequencies[max_atten_idx]
                         
-                        max_attenuation = {
-                            "value": attenuations[max_idx],
-                            "frequency": frequencies[max_idx]
-                        }
-                        
-                        min_attenuation = {
-                            "value": attenuations[min_idx],
-                            "frequency": frequencies[min_idx]
-                        }
+                        min_atten = min(valid_attens)
+                        min_atten_idx = attenuations.index(min_atten)
+                        min_atten_freq = frequencies[min_atten_idx]
                     else:
-                        max_attenuation = {"value": 0.0, "frequency": 0.0}
-                        min_attenuation = {"value": 0.0, "frequency": 0.0}
+                        max_atten = 0
+                        max_atten_freq = 0
+                        min_atten = 0
+                        min_atten_freq = 0
+            
+            # Get leaderboard data for each hat type
+            leaderboard_classic = get_leaderboard_data('classic')
+            leaderboard_hybrid = get_leaderboard_data('hybrid')
+            
+            # If we have active measurements, use those first (these are the measurements in progress)
+            if "BASELINE_DATA" in current_app.config and current_app.config["BASELINE_DATA"]:
+                baseline_data = current_app.config.get("BASELINE_DATA", {})
+                hat_data = current_app.config.get("HAT_DATA", {})
+                attenuation_data = current_app.config.get("ATTENUATION_DATA", {})
+                
+                # Get frequency lists (convert from string keys to float values)
+                try:
+                    # Determine test state first to properly structure the response
+                    test_state = "baseline_only"
+                    if hat_data:
+                        test_state = "baseline_and_hat"
                     
-                    # Always populate spectrum_data with whatever we have (empty lists if no data)
-                    spectrum_data = {
-                        'frequencies': frequencies,
-                        'baseline_levels': baseline_levels,
-                        'hat_levels': hat_levels,
-                        'attenuations': attenuations,
-                        'effectiveness': effectiveness,
-                        'max_attenuation': max_attenuation,
-                        'min_attenuation': min_attenuation
-                    }
+                    # Make a sorted list of all unique frequencies
+                    all_frequencies = sorted([int(freq) for freq in set(baseline_data.keys()) | set(hat_data.keys())])
                     
-                    # Get frequency labels from scanner
-                    frequency_labels = {}
-                    scanner = get_scanner()
-                    if scanner and hasattr(scanner, "frequency_labels"):
-                        frequency_labels = scanner.frequency_labels
-                    
-                    # Prepare and send the event data
-                    event_data = {
-                        'last_id': new_test["max_id"],
-                        'new_test': {
-                            'name': new_test["name"],
-                            'hat_type': new_test["hat_type"],
-                            'attenuation': new_test["attenuation"],
-                            'date': formatted_date,
-                        },
-                        'leaderboard_classic': leaderboard_classic,
-                        'leaderboard_hybrid': leaderboard_hybrid,
-                        'spectrum_data': spectrum_data,
-                        'frequency_labels': frequency_labels
-                    }
-                    
-                    # Convert to JSON and yield SSE format - use the DateTimeEncoder for datetime objects
-                    yield f'data: {json.dumps(event_data, cls=DateTimeEncoder)}\n\n'
-                    
-            # Add a delay to avoid hammering the database
-            time.sleep(1)
+                    if all_frequencies:
+                        frequencies = [round(freq / 1e6, 2) for freq in all_frequencies]  # Convert to MHz for display
+                        baseline_levels = [normalize_value(baseline_data.get(str(freq), None)) for freq in all_frequencies]
+                        hat_levels = [normalize_value(hat_data.get(str(freq), None)) for freq in all_frequencies]
+                        attenuations = [normalize_value(attenuation_data.get(str(freq), None)) for freq in all_frequencies]
+                        
+                        # Calculate effectiveness for different frequency bands
+                        effectiveness = {"hf_band": 0.0, "vhf_band": 0.0, "uhf_band": 0.0, "shf_band": 0.0}
+                        
+                        # Only calculate effectiveness if we have hat measurements
+                        if hat_data:
+                            # Get valid attenuation values for each band
+                            hf_band = [att for i, att in enumerate(attenuations) if frequencies[i] <= 30 and att is not None]
+                            vhf_band = [att for i, att in enumerate(attenuations) if 30 < frequencies[i] <= 300 and att is not None]
+                            uhf_band = [att for i, att in enumerate(attenuations) if 300 < frequencies[i] <= 3000 and att is not None]
+                            shf_band = [att for i, att in enumerate(attenuations) if frequencies[i] > 3000 and att is not None]
+                            
+                            # Calculate average attenuation for each band
+                            effectiveness["hf_band"] = sum(hf_band) / len(hf_band) if hf_band else 0
+                            effectiveness["vhf_band"] = sum(vhf_band) / len(vhf_band) if vhf_band else 0
+                            effectiveness["uhf_band"] = sum(uhf_band) / len(uhf_band) if uhf_band else 0
+                            effectiveness["shf_band"] = sum(shf_band) / len(shf_band) if shf_band else 0
+                                                    
+                        # Calculate min/max attenuation
+                        valid_attens = [a for a in attenuations if a is not None]
+                        if valid_attens:
+                            max_atten = max(valid_attens)
+                            max_atten_idx = attenuations.index(max_atten)
+                            max_atten_freq = frequencies[max_atten_idx]
+                            
+                            min_atten = min(valid_attens)
+                            min_atten_idx = attenuations.index(min_atten)
+                            min_atten_freq = frequencies[min_atten_idx]
+                        else:
+                            max_atten = 0
+                            max_atten_freq = 0
+                            min_atten = 0
+                            min_atten_freq = 0
+                        
+                        # Structure the spectrum data for the response
+                        spectrum_data_dict = {
+                            "frequencies": frequencies,
+                            "baseline_levels": baseline_levels,
+                            "hat_levels": hat_levels,
+                            "attenuations": attenuations,
+                            "effectiveness": effectiveness,
+                            "max_attenuation": {"value": max_atten, "frequency": max_atten_freq},
+                            "min_attenuation": {"value": min_atten, "frequency": min_atten_freq},
+                            "test_state": test_state
+                        }
+                except Exception as e:
+                    print(f"Error processing spectrum data: {str(e)}")
+                    traceback.print_exc()
+                    spectrum_data_dict = {}
+            else:
+                # Check for an empty data marker from reset_test_state
+                spectrum_data_dict = {
+                    "frequencies": [],
+                    "baseline_levels": [],
+                    "hat_levels": [],
+                    "attenuations": [],
+                    "effectiveness": {"hf_band": 0.0, "vhf_band": 0.0, "uhf_band": 0.0, "shf_band": 0.0},
+                    "max_attenuation": {"value": 0.0, "frequency": 0.0},
+                    "min_attenuation": {"value": 0.0, "frequency": 0.0},
+                    "test_state": "reset"
+                }
+                
+                # Check if there's a reset event
+                if latest_frequency_measurement and latest_frequency_measurement.get('event_type') in ['test_reset', 'clear_all']:
+                    print("Found reset event in latest_frequency_measurement, sending empty data")
+                    # Ensure we send a test_state reset for polling requests too
+                    spectrum_data_dict["test_state"] = "reset"
+                    # Ready to set reset flags in the response later
+                    reset_detected = True
+                    reset_message = latest_frequency_measurement.get('message', 'Test state has been reset')
+                else:
+                    reset_detected = False
+                    reset_message = None
+            
+            # Build the response
+            response_data = {
+                "last_id": max_id,
+                "leaderboard_classic": leaderboard_classic,
+                "leaderboard_hybrid": leaderboard_hybrid
+            }
+            
+            # Add reset flags if needed
+            if reset_detected:
+                response_data["reset_detected"] = True
+                response_data["reset_message"] = reset_message
+            
+            # Add new test data if available
+            if new_test:
+                response_data["new_test"] = new_test
+            
+            # Add spectrum data if available
+            if spectrum_data_dict:
+                response_data["spectrum_data"] = spectrum_data_dict
+            
+            # Return the JSON response
+            return jsonify(response_data)
+            
+        except Exception as e:
+            print(f"Error in billboard polling: {str(e)}")
+            traceback.print_exc()
+            return jsonify({"error": str(e)}), 500
     
-    # Set appropriate headers for SSE
+    # For SSE requests, set up a stream
+    def generate():
+        # Create a unique client ID
+        client_id = id(time.time())
+        
+        # Create a queue for this client
+        billboard_clients[client_id] = queue.Queue()
+        
+        try:
+            # Send initial data
+            initial_data = {
+                'event_type': 'connection_established',
+                'timestamp': datetime.now()
+            }
+            
+            yield f"data: {json.dumps(initial_data, cls=DateTimeEncoder)}\n\n"
+            
+            while True:
+                try:
+                    # Get data from the queue with timeout (to allow for keepalive)
+                    data = billboard_clients[client_id].get(timeout=3.0)
+                    
+                    # Convert to JSON and yield in SSE format
+                    yield f"data: {json.dumps(data, cls=DateTimeEncoder)}\n\n"
+                    
+                except queue.Empty:
+                    # Send a keepalive comment every few seconds
+                    yield ": keepalive\n\n"
+                    
+                except Exception as e:
+                    print(f"Error in billboard-updates stream: {str(e)}")
+                    yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        finally:
+            # Clean up when the client disconnects
+            if client_id in billboard_clients:
+                del billboard_clients[client_id]
+                print(f"Billboard client {client_id} disconnected")
+    
+    # Return the response with SSE headers
     response = Response(stream_with_context(generate()), mimetype='text/event-stream')
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['X-Accel-Buffering'] = 'no'  # Disable proxy buffering
@@ -1996,3 +2049,218 @@ def delete_test_result_admin(result_id):
     except Exception as e:
         db.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@bp.route("/test/cancel", methods=["POST"])
+def cancel_test():
+    """
+    Cancel the current test and reset state.
+
+    :return: JSON response with status
+    :rtype: Response
+    """
+    try:
+        # Reset all test state to ensure clean start for next test
+        reset_test_state()
+        
+        return jsonify(
+            {
+                "status": "success",
+                "message": "Test cancelled and state reset successfully.",
+            }
+        )
+    except Exception as e:
+        print(f"Error canceling test: {str(e)}")
+        traceback.print_exc()
+        return jsonify(
+            {
+                "status": "error",
+                "message": f"Error canceling test: {str(e)}",
+            }
+        ), 500
+
+
+def broadcast_test_event(event_data):
+    """
+    Broadcast an event to all connected clients across different SSE endpoints.
+    
+    :param event_data: The event data to broadcast
+    :type event_data: dict
+    """
+    # Send to frequency stream clients
+    for client_queue in freq_clients.values():
+        try:
+            client_queue.put(event_data)
+        except:
+            # Ignore errors for disconnected clients
+            pass
+            
+    # Send to billboard clients
+    for client_queue in billboard_clients.values():
+        try:
+            client_queue.put(event_data)
+        except:
+            # Ignore errors for disconnected clients
+            pass
+    
+    # Store the latest event for new clients
+    global latest_frequency_measurement
+    latest_frequency_measurement = event_data
+
+def reset_test_state():
+    """
+    Reset all test state to ensure clean transitions between tests.
+    This should be called when starting a new test or abandoning an existing one.
+    """
+    # Clear stored measurements from database
+    try:
+        db = get_db()
+        db.execute("DELETE FROM measurement_cache")
+        db.commit()
+        print("Cleared all measurement cache data from database")
+    except Exception as e:
+        print(f"Error clearing measurement cache: {str(e)}")
+    
+    # Clear in-memory config data
+    try:
+        # Clear all measurement-related data from app config
+        for key in ["BASELINE_DATA", "HAT_DATA", "ATTENUATION_DATA", "CURRENT_BASELINE"]:
+            if key in current_app.config:
+                del current_app.config[key]
+        print("Cleared all measurement data from application config")
+    except Exception as e:
+        print(f"Error clearing config data: {str(e)}")
+    
+    # Reset the latest frequency measurement and broadcast to clients
+    try:
+        # Create a reset event to be sent to all clients
+        reset_event = {
+            'id': f"test_reset_{time.time()}",
+            'event_type': 'test_reset',
+            'timestamp': datetime.now(),
+            'message': 'Test state has been reset',
+            'force_client_reload': True  # Add this flag to make clients reload completely
+        }
+        
+        # Force a direct broadcast to ALL connected clients
+        # First to frequency stream clients
+        print(f"Broadcasting test_reset to {len(freq_clients)} frequency clients")
+        sent_to_freq = 0
+        for client_id, client_queue in freq_clients.items():
+            try:
+                client_queue.put(reset_event)
+                sent_to_freq += 1
+            except Exception as e:
+                print(f"Failed to send reset to freq client {client_id}: {str(e)}")
+        print(f"Successfully sent test_reset to {sent_to_freq} frequency clients")
+            
+        # Then to billboard clients
+        print(f"Broadcasting test_reset to {len(billboard_clients)} billboard clients")
+        sent_to_bb = 0
+        for client_id, client_queue in billboard_clients.items():
+            try:
+                client_queue.put(reset_event)
+                sent_to_bb += 1
+            except Exception as e:
+                print(f"Failed to send reset to billboard client {client_id}: {str(e)}")
+        print(f"Successfully sent test_reset to {sent_to_bb} billboard clients")
+        
+        # Also store as latest measurement so new clients get it
+        global latest_frequency_measurement
+        latest_frequency_measurement = reset_event
+        
+        # Send additional billboard update with empty spectrum data to force chart reset
+        billboard_update = {
+            'event_type': 'billboard_update',
+            'timestamp': datetime.now(),
+            'spectrum_data': {
+                'frequencies': [],
+                'baseline_levels': [],
+                'hat_levels': [],
+                'attenuations': [],
+                'effectiveness': {"hf_band": 0.0, "vhf_band": 0.0, "uhf_band": 0.0, "shf_band": 0.0},
+                'max_attenuation': {"value": 0.0, "frequency": 0.0},
+                'min_attenuation': {"value": 0.0, "frequency": 0.0},
+                'test_state': "reset",
+                'progress': {'count': 0, 'percent': 0}
+            }
+        }
+        
+        # Broadcast billboard update to all billboard clients
+        print(f"Broadcasting billboard_update reset to {len(billboard_clients)} billboard clients")
+        sent_bb_update = 0
+        for client_id, client_queue in billboard_clients.items():
+            try:
+                client_queue.put(billboard_update)
+                sent_bb_update += 1
+            except:
+                print(f"Failed to send billboard_update to client {client_id}")
+        print(f"Successfully sent billboard_update to {sent_bb_update} billboard clients")
+        
+        print("Reset frequency measurement data and notified all clients")
+    except Exception as e:
+        print(f"Error resetting frequency measurement: {str(e)}")
+        traceback.print_exc()
+    
+    # Log the reset
+    print("Test state has been fully reset - ready for new test")
+
+def force_reset_all_displays():
+    """
+    Force all connected clients to reset their displays immediately.
+    
+    This is a more aggressive reset operation that ensures all clients
+    get the reset notification with an emergency flag that forces client-side
+    emergency handling, causing a complete data flush and clear before
+    any new data points are loaded.
+    
+    Note: This should be called at the start of baseline tests to ensure
+    graphs are completely cleared.
+    """
+    global latest_frequency_measurement
+    
+    # Create an emergency reset event that all clients should prioritize
+    emergency_reset = {
+        'event_type': 'test_reset',
+        'emergency': True,  # Critical flag that clients will recognize
+        'message': 'EMERGENCY RESET - CLEAR ALL DISPLAYS IMMEDIATELY',
+        'timestamp': datetime.now().isoformat()
+    }
+    
+    # Convert to SSE format for frequency stream clients
+    freq_event = f"data: {json.dumps(emergency_reset)}\n\n"
+    
+    # Send to all frequency stream clients
+    print(f"Sending emergency reset to {len(frequency_clients)} clients")
+    reset_sent_count = 0
+    
+    for client in list(frequency_clients):
+        try:
+            # We add this to the beginning of each client's queue to ensure it's processed next
+            client_queue = frequency_queues[client]
+            
+            # Add to front of queue but preserve old queue contents after reset
+            old_queue_contents = list(client_queue.queue)
+            with client_queue.mutex:
+                client_queue.queue.clear()
+                client_queue.put_nowait(freq_event)  # Add reset event first
+                
+                # Put back the old contents (they'll be processed after reset)
+                for item in old_queue_contents:
+                    client_queue.put_nowait(item)
+                    
+            reset_sent_count += 1
+        except Exception as e:
+            print(f"Error sending emergency reset to client: {e}")
+    
+    # Also force reset billboard clients
+    for client_id in list(billboard_clients.keys()):
+        billboard_clients[client_id]['reset_detected'] = True
+        billboard_clients[client_id]['reset_message'] = "EMERGENCY RESET"
+    
+    # Update latest measurement to include emergency reset flag
+    if latest_frequency_measurement:
+        latest_frequency_measurement['emergency_reset'] = True
+    
+    print(f"Emergency reset sent to {reset_sent_count} clients successfully")
+    return reset_sent_count
