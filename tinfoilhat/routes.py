@@ -357,7 +357,7 @@ def get_leaderboard():
     if search:
         contestants_query += " WHERE LOWER(name) LIKE LOWER(?)"
         contestants_params = [f"%{search}%"]
-    
+
     contestants = db.execute(contestants_query, contestants_params).fetchall()
 
     # Convert to list of dictionaries for JSON serialization
@@ -495,8 +495,8 @@ def start_baseline():
                 "hat_type": "baseline",
                 "attenuation": 0.0,
                 "date": "In Progress",
-                "is_baseline_start": True
-            }
+                "is_baseline_start": True,
+            },
         }
 
         # Broadcast to all clients with high priority
@@ -1273,17 +1273,19 @@ def save_results():
                         "name": contestant["name"],
                         "hat_type": contestant["hat_type"],
                         "attenuation": test_result["average_attenuation"],
-                        "date": format_datetime(datetime.now())
-                    }
+                        "date": format_datetime(datetime.now()),
+                    },
                 }
 
                 # Update the global variable to notify SSE clients of test completion
                 global latest_frequency_measurement
                 latest_frequency_measurement = test_complete_data
-                
+
                 # Broadcast the test completion event to all clients
                 broadcast_test_event(test_complete_data)
-                print(f"Broadcasting test completion for {contestant['name']} with score {test_result['average_attenuation']:.2f}dB")
+                print(
+                    f"Broadcasting test completion for {contestant['name']} with score {test_result['average_attenuation']:.2f}dB"
+                )
 
         except Exception as e:
             print(f"Error emitting test_complete event: {str(e)}")
@@ -1885,13 +1887,13 @@ def admin():
     # Build the contestants query
     contestants_query = "SELECT id, name, phone_number, email, notes, created FROM contestant"
     contestants_params = []
-    
+
     if search:
         contestants_query += " WHERE LOWER(name) LIKE LOWER(?)"
         contestants_params.append(f"%{search}%")
-    
+
     contestants_query += " ORDER BY name"
-    
+
     # Get all contestants
     contestants_rows = db.execute(contestants_query, contestants_params).fetchall()
 
@@ -1923,13 +1925,13 @@ def admin():
         JOIN contestant c ON tr.contestant_id = c.id
     """
     test_results_params = []
-    
+
     if search:
         test_results_query += " WHERE LOWER(c.name) LIKE LOWER(?)"
         test_results_params.append(f"%{search}%")
-    
+
     test_results_query += " ORDER BY tr.test_date DESC"
-    
+
     test_results_rows = db.execute(test_results_query, test_results_params).fetchall()
 
     # Convert Row objects to dictionaries for JSON serialization
@@ -2188,18 +2190,18 @@ def broadcast_test_event(event_data):
     # Update event_data with latest leaderboard data if this is a test_complete event
     if event_data.get("event_type") == "test_complete":
         # Get latest leaderboard data to ensure clients have up-to-date info
-        db = get_db()
-        
+        get_db()
+
         # Get leaderboard data for classic hats
         leaderboard_classic = get_leaderboard_data("classic")
-        
+
         # Get leaderboard data for hybrid hats
         leaderboard_hybrid = get_leaderboard_data("hybrid")
-        
+
         # Add the leaderboard data to the event
         event_data["leaderboard_classic"] = leaderboard_classic
         event_data["leaderboard_hybrid"] = leaderboard_hybrid
-        
+
         print(f"Added fresh leaderboard data to test_complete event for hat_type: {event_data.get('hat_type')}")
 
     # Send to frequency stream clients
