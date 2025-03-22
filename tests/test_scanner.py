@@ -129,9 +129,14 @@ def test_frequency_gain_selection():
         patch("os.path.exists", return_value=True),
         patch("os.makedirs"),
         patch("tempfile.mkdtemp", return_value="/tmp/mock_hackrf"),
+        patch("subprocess.run", return_value=MagicMock(returncode=0, stdout="HackRF One detected")),
     ):
-        # Initialize Scanner
+        # Initialize Scanner with mocked HackRF detection
         scanner = Scanner()
+        # Ensure HackRF is available
+        scanner.hackrf_available = True
+        scanner._check_hackrf = MagicMock(return_value=True)
+        scanner.refresh_hackrf = MagicMock(return_value=True)
 
         # Mock file operations to avoid file not found errors
         with (
@@ -160,9 +165,14 @@ def test_average_measurements():
         patch("os.path.exists", return_value=True),
         patch("os.makedirs"),
         patch("tempfile.mkdtemp", return_value="/tmp/mock_hackrf"),
+        patch("subprocess.run", return_value=MagicMock(returncode=0, stdout="HackRF One detected")),
     ):
         # Initialize Scanner
         scanner = Scanner()
+        # Ensure HackRF is available
+        scanner.hackrf_available = True
+        scanner._check_hackrf = MagicMock(return_value=True)
+        scanner.refresh_hackrf = MagicMock(return_value=True)
 
         # Generate mock measurements
         measurements = [-82.1, -83.5, -81.9, -82.7, -82.0]
