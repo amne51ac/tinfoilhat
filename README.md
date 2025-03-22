@@ -16,6 +16,19 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 
 ## Recent Updates
 
+### JavaScript Modularization (April 2025)
+- Restructured the monolithic JavaScript in billboard.html into modular components:
+  - `ChartManager.js`: Handles chart initialization, updates, and configuration
+  - `DataManager.js`: Manages test data tracking and processing
+  - `LeaderboardManager.js`: Handles leaderboard updates and display
+  - `UIManager.js`: Manages UI updates and notifications
+  - `EventHandler.js`: Processes all Server-Sent Events
+  - `billboard.js`: Main application script that initializes and connects components
+- Improved code organization with clear separation of concerns
+- Enhanced maintainability with well-documented component interfaces
+- Reduced complexity by isolating functionality into logical modules
+- Added comprehensive JSDoc comments to all components
+
 ### UI and Testing Workflow Improvements (March 2025)
 - Redesigned testing flow to separate baseline and hat measurement phases
 - Added a dedicated "Continue to Hat Measurement" modal with contestant selection
@@ -61,6 +74,57 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 - Added proper validation for HackRF's supported frequency range (1 MHz to 6 GHz)
 - Enhanced error detection and recovery during measurements
 - Better feedback for connection and measurement issues
+
+## To-Do List for Improvements
+
+### 1. Frontend Restructuring
+- [x] Modularize the 2000+ line JavaScript in billboard.html into logical components (Chart, Leaderboard, EventHandling)
+  - Completed: JS code has been modularized into ChartManager, DataManager, LeaderboardManager, UIManager, EventHandler, and billboard components
+- [ ] Implement consistent error handling patterns across all frontend components
+- [ ] Remove duplicate code in event handlers, particularly reset/error handling logic
+- [ ] Create proper error boundaries around chart rendering operations
+- [ ] Refactor the SSE event handling to reduce complexity
+- [ ] Consider migrating to a proper frontend framework (Vue.js or React)
+
+### 2. Backend Improvements
+- [ ] Improve test coverage for routes.py (currently at 32%)
+- [ ] Improve test coverage for scanner.py (currently at 47%)
+- [ ] Fix SQLite timestamp converter deprecation warning
+- [ ] Implement proper error handling for HackRF connection failures
+- [ ] Create a more explicit API contract between frontend and backend
+- [ ] Add input validation to all API endpoints
+
+### 3. Architecture Enhancements
+- [ ] Reduce tight coupling between frontend and backend
+- [ ] Consider implementing WebSockets instead of SSE for more reliable bidirectional communication
+- [ ] Implement proper dependency injection for better testability
+- [ ] Create a service layer between routes and database access
+- [ ] Separate data access logic from business logic
+- [ ] Document API endpoints with OpenAPI/Swagger
+
+### 4. Performance Optimization
+- [ ] Optimize chart rendering for large datasets
+- [ ] Implement pagination for leaderboard data
+- [ ] Add caching for frequently accessed data
+- [ ] Optimize SQLite queries with proper indexes
+- [ ] Reduce unnecessary DOM manipulations in the frontend
+
+### 5. Code Quality & Maintenance
+- [ ] Implement TypeScript for frontend code to improve type safety
+- [ ] Add JSDoc comments to JavaScript functions
+- [ ] Create comprehensive integration tests for the testing workflow
+- [ ] Standardize error messages across the application
+- [ ] Implement logging for debugging and monitoring
+- [ ] Create Docker container for easier deployment
+- [ ] Add automated UI testing
+
+### 6. User Experience Improvements
+- [ ] Improve mobile responsiveness
+- [ ] Add keyboard shortcuts for common operations
+- [ ] Implement better visual feedback for system status
+- [ ] Create a dark/light theme toggle
+- [ ] Add user preferences for chart display options
+- [ ] Implement accessibility improvements (ARIA attributes, keyboard navigation)
 
 ## Requirements
 
