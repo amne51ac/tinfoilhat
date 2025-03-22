@@ -16,6 +16,14 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 
 ## Recent Updates
 
+### Database Improvements (April 2025)
+- Addressed SQLite timestamp converter deprecation warning by:
+  - Implementing custom timestamp adapter and converter functions
+  - Registering them with SQLite instead of using the deprecated default converters
+  - Adding robust fallback options for various timestamp formats
+  - Created comprehensive tests for timestamp handling
+- Improved database connection handling to prevent warnings in Python 3.12+
+
 ### Centralized Error Handling (April 2025)
 - Created a new `ErrorHandler.js` component to centralize error handling:
   - Standardized error logging with severity levels (error, warning, info)
@@ -107,7 +115,7 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 ### 2. Backend Improvements
 - [ ] Improve test coverage for routes.py (currently at 32%)
 - [ ] Improve test coverage for scanner.py (currently at 47%)
-- [ ] Fix SQLite timestamp converter deprecation warning
+- [x] Fix SQLite timestamp converter deprecation warning
 - [ ] Implement proper error handling for HackRF connection failures
 - [ ] Create a more explicit API contract between frontend and backend
 - [ ] Add input validation to all API endpoints
