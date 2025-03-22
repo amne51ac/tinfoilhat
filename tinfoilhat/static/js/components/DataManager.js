@@ -4,10 +4,21 @@
  */
 
 class DataManager {
-    constructor() {
+    constructor(errorHandler) {
         // Create object to store the current test data
         this.currentTestData = this.getEmptyTestData();
         this.frequencyLabels = {};
+        this.errorHandler = errorHandler;
+        
+        // Create safe versions of critical methods
+        if (this.errorHandler) {
+            this.handleFrequencyMeasurement = this.errorHandler.makeSafe(
+                this, 'DataManager', 'handleFrequencyMeasurement', this.handleFrequencyMeasurement
+            );
+            this.updateWithSpectrumData = this.errorHandler.makeSafe(
+                this, 'DataManager', 'updateWithSpectrumData', this.updateWithSpectrumData
+            );
+        }
     }
 
     /**
@@ -32,7 +43,15 @@ class DataManager {
      * Reset all test data to empty state
      */
     resetData() {
-        this.currentTestData = this.getEmptyTestData();
+        try {
+            this.currentTestData = this.getEmptyTestData();
+        } catch (error) {
+            if (this.errorHandler) {
+                this.errorHandler.handleError('DataManager', 'resetData', error);
+            } else {
+                console.error('Error resetting data:', error);
+            }
+        }
     }
 
     /**
@@ -40,8 +59,22 @@ class DataManager {
      * @param {Object} labels - Frequency labels
      */
     setFrequencyLabels(labels) {
-        if (!labels) return;
-        this.frequencyLabels = labels;
+        try {
+            if (!labels) {
+                if (this.errorHandler) {
+                    this.errorHandler.handleError('DataManager', 'setFrequencyLabels', 
+                        'Invalid frequency labels', 'warning');
+                }
+                return;
+            }
+            this.frequencyLabels = labels;
+        } catch (error) {
+            if (this.errorHandler) {
+                this.errorHandler.handleError('DataManager', 'setFrequencyLabels', error);
+            } else {
+                console.error('Error setting frequency labels:', error);
+            }
+        }
     }
 
     /**
@@ -58,33 +91,50 @@ class DataManager {
      * @returns {boolean} True if data was processed
      */
     handleFrequencyMeasurement(data) {
-        // Store contestant information if available
-        if (data.contestant_id && !this.currentTestData.contestant_id) {
-            this.currentTestData.contestant_id = data.contestant_id;
+        try {
+            if (!data || (!data.frequency_mhz && data.frequency_mhz !== 0)) {
+                if (this.errorHandler) {
+                    this.errorHandler.handleError('DataManager', 'handleFrequencyMeasurement', 
+                        'Invalid frequency measurement data', 'warning');
+                }
+                return false;
+            }
+            
+            // Store contestant information if available
+            if (data.contestant_id && !this.currentTestData.contestant_id) {
+                this.currentTestData.contestant_id = data.contestant_id;
+            }
+            
+            // Store contestant name and hat type if available
+            if (data.contestant_name) {
+                this.currentTestData.contestant_name = data.contestant_name;
+            }
+            
+            if (data.hat_type) {
+                this.currentTestData.hat_type = data.hat_type;
+            }
+            
+            // Update measurement type
+            this.currentTestData.measurement_type = data.measurement_type;
+            
+            // Check if this is a baseline measurement
+            if (data.measurement_type === 'baseline') {
+                return this.handleBaselineMeasurement(data);
+            } 
+            // Check if this is a hat measurement
+            else if (data.measurement_type === 'hat') {
+                return this.handleHatMeasurement(data);
+            }
+            
+            return false;
+        } catch (error) {
+            if (this.errorHandler) {
+                this.errorHandler.handleError('DataManager', 'handleFrequencyMeasurement', error);
+            } else {
+                console.error('Error handling frequency measurement:', error);
+            }
+            return false;
         }
-        
-        // Store contestant name and hat type if available
-        if (data.contestant_name) {
-            this.currentTestData.contestant_name = data.contestant_name;
-        }
-        
-        if (data.hat_type) {
-            this.currentTestData.hat_type = data.hat_type;
-        }
-        
-        // Update measurement type
-        this.currentTestData.measurement_type = data.measurement_type;
-        
-        // Check if this is a baseline measurement
-        if (data.measurement_type === 'baseline') {
-            return this.handleBaselineMeasurement(data);
-        } 
-        // Check if this is a hat measurement
-        else if (data.measurement_type === 'hat') {
-            return this.handleHatMeasurement(data);
-        }
-        
-        return false;
     }
 
     /**
@@ -182,25 +232,38 @@ class DataManager {
      * @param {Object} spectrumData - Spectrum data
      */
     updateWithSpectrumData(spectrumData) {
-        if (!spectrumData || !spectrumData.frequencies || spectrumData.frequencies.length === 0) {
+        try {
+            if (!spectrumData || !spectrumData.frequencies || spectrumData.frequencies.length === 0) {
+                if (this.errorHandler) {
+                    this.errorHandler.handleError('DataManager', 'updateWithSpectrumData', 
+                        'Invalid spectrum data', 'warning');
+                }
+                return false;
+            }
+            
+            this.currentTestData.frequencies = [...spectrumData.frequencies];
+            
+            if (spectrumData.baseline_levels) {
+                this.currentTestData.baseline_levels = [...spectrumData.baseline_levels];
+            }
+            
+            if (spectrumData.hat_levels) {
+                this.currentTestData.hat_levels = [...spectrumData.hat_levels];
+            }
+            
+            if (spectrumData.attenuations) {
+                this.currentTestData.attenuations = [...spectrumData.attenuations];
+            }
+            
+            return true;
+        } catch (error) {
+            if (this.errorHandler) {
+                this.errorHandler.handleError('DataManager', 'updateWithSpectrumData', error);
+            } else {
+                console.error('Error updating with spectrum data:', error);
+            }
             return false;
         }
-        
-        this.currentTestData.frequencies = [...spectrumData.frequencies];
-        
-        if (spectrumData.baseline_levels) {
-            this.currentTestData.baseline_levels = [...spectrumData.baseline_levels];
-        }
-        
-        if (spectrumData.hat_levels) {
-            this.currentTestData.hat_levels = [...spectrumData.hat_levels];
-        }
-        
-        if (spectrumData.attenuations) {
-            this.currentTestData.attenuations = [...spectrumData.attenuations];
-        }
-        
-        return true;
     }
 
     /**

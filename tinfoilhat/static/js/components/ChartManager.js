@@ -4,9 +4,23 @@
  */
 
 class ChartManager {
-    constructor() {
+    constructor(errorHandler) {
         this.powerChart = null;
         this.chartInitialized = false;
+        this.errorHandler = errorHandler;
+        
+        // Create safe versions of critical methods
+        if (this.errorHandler) {
+            this.updateChart = this.errorHandler.makeSafe(
+                this, 'ChartManager', 'updateChart', this.updateChart
+            );
+            this.updateWithLiveData = this.errorHandler.makeSafe(
+                this, 'ChartManager', 'updateWithLiveData', this.updateWithLiveData
+            );
+            this.updateChartCallbacks = this.errorHandler.makeSafe(
+                this, 'ChartManager', 'updateChartCallbacks', this.updateChartCallbacks
+            );
+        }
     }
 
     /**
@@ -15,213 +29,229 @@ class ChartManager {
      * @returns {Chart} - The chart instance
      */
     initializeChart(canvasElement) {
-        const ctx = canvasElement.getContext('2d');
-        
-        // Initialize with empty data initially
-        this.powerChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [
-                    {
-                        label: 'Baseline (dBm)',
-                        data: [],
-                        borderColor: 'rgba(51, 255, 51, 0.8)',
-                        backgroundColor: 'rgba(51, 255, 51, 0.1)',
-                        tension: 0.2,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 0,
-                        yAxisID: 'y'
-                    }, 
-                    {
-                        label: 'With Hat (dBm)',
-                        data: [],
-                        borderColor: 'rgba(0, 200, 255, 0.8)',
-                        backgroundColor: 'rgba(0, 200, 255, 0.1)',
-                        tension: 0.2,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 0,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: 'Attenuation (dB)',
-                        data: [],
-                        borderColor: 'rgba(255, 204, 0, 0.8)',
-                        backgroundColor: 'rgba(255, 204, 0, 0.1)',
-                        tension: 0.2,
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        pointHoverRadius: 0,
-                        yAxisID: 'attenuation'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'RF SPECTRUM ANALYSIS',
-                        color: '#33ff33',
-                        font: {
-                            size: 18,
-                            family: "'Press Start 2P', cursive",
-                            weight: 'bold'
+        try {
+            if (!canvasElement) {
+                throw new Error('Canvas element is required to initialize chart');
+            }
+            
+            const ctx = canvasElement.getContext('2d');
+            if (!ctx) {
+                throw new Error('Failed to get 2D context from canvas element');
+            }
+            
+            // Initialize with empty data initially
+            this.powerChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'Baseline (dBm)',
+                            data: [],
+                            borderColor: 'rgba(51, 255, 51, 0.8)',
+                            backgroundColor: 'rgba(51, 255, 51, 0.1)',
+                            tension: 0.2,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                            yAxisID: 'y'
+                        }, 
+                        {
+                            label: 'With Hat (dBm)',
+                            data: [],
+                            borderColor: 'rgba(0, 200, 255, 0.8)',
+                            backgroundColor: 'rgba(0, 200, 255, 0.1)',
+                            tension: 0.2,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                            yAxisID: 'y'
                         },
-                        padding: {
-                            top: 10,
-                            bottom: 20
+                        {
+                            label: 'Attenuation (dB)',
+                            data: [],
+                            borderColor: 'rgba(255, 204, 0, 0.8)',
+                            backgroundColor: 'rgba(255, 204, 0, 0.1)',
+                            tension: 0.2,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                            yAxisID: 'attenuation'
                         }
-                    },
-                    legend: {
-                        labels: {
-                            color: '#33ff33',
-                            font: {
-                                family: "'VT323', monospace",
-                                size: 18
-                            },
-                            boxWidth: 15,
-                            padding: 15
-                        }
-                    },
-                    tooltip: {
-                        titleFont: {
-                            family: "'VT323', monospace",
-                            size: 18
-                        },
-                        bodyFont: {
-                            family: "'VT323', monospace",
-                            size: 17
-                        },
-                        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                        borderColor: '#33ff33',
-                        borderWidth: 1,
-                        padding: 12,
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.datasetIndex === 2) {
-                                    // Attenuation dataset
-                                    const value = context.parsed.y;
-                                    const colorCode = value < 0 ? '🔴' : '🟢'; // Red for negative, green for positive
-                                    return `${label}${value.toFixed(2)} dB ${colorCode}`;
-                                } else {
-                                    return `${label}${context.parsed.y.toFixed(2)} dBm`;
-                                }
-                            },
-                            title: function(tooltipItems) {
-                                const freq = tooltipItems[0].label;
-                                if (freq) {
-                                    return `${freq} MHz`;
-                                }
-                                return '';
-                            }
-                        }
-                    }
+                    ]
                 },
-                scales: {
-                    x: {
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
                         title: {
                             display: true,
-                            text: 'FREQUENCY (MHz)',
+                            text: 'RF SPECTRUM ANALYSIS',
                             color: '#33ff33',
                             font: {
+                                size: 18,
+                                family: "'Press Start 2P', cursive",
+                                weight: 'bold'
+                            },
+                            padding: {
+                                top: 10,
+                                bottom: 20
+                            }
+                        },
+                        legend: {
+                            labels: {
+                                color: '#33ff33',
+                                font: {
+                                    family: "'VT323', monospace",
+                                    size: 18
+                                },
+                                boxWidth: 15,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            titleFont: {
                                 family: "'VT323', monospace",
                                 size: 18
                             },
-                            padding: {
-                                top: 10
-                            }
-                        },
-                        ticks: {
-                            color: '#33ff33',
-                            font: {
+                            bodyFont: {
                                 family: "'VT323', monospace",
-                                size: 16
+                                size: 17
                             },
-                            maxRotation: 45,
-                            minRotation: 45,
-                            callback: function(value, index, values) {
-                                const freq = this.chart.data.labels[index];
-                                if (!freq) return '';
-                                
-                                // Default case, just return the frequency
-                                return freq;
+                            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                            borderColor: '#33ff33',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.datasetIndex === 2) {
+                                        // Attenuation dataset
+                                        const value = context.parsed.y;
+                                        const colorCode = value < 0 ? '🔴' : '🟢'; // Red for negative, green for positive
+                                        return `${label}${value.toFixed(2)} dB ${colorCode}`;
+                                    } else {
+                                        return `${label}${context.parsed.y.toFixed(2)} dBm`;
+                                    }
+                                },
+                                title: function(tooltipItems) {
+                                    const freq = tooltipItems[0].label;
+                                    if (freq) {
+                                        return `${freq} MHz`;
+                                    }
+                                    return '';
+                                }
                             }
-                        },
-                        grid: {
-                            color: 'rgba(51, 255, 51, 0.08)',
-                            tickBorderDash: [4, 4]
                         }
                     },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'SIGNAL LEVEL (dBm)',
-                            color: '#33ff33',
-                            font: {
-                                family: "'VT323', monospace",
-                                size: 18
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'FREQUENCY (MHz)',
+                                color: '#33ff33',
+                                font: {
+                                    family: "'VT323', monospace",
+                                    size: 18
+                                },
+                                padding: {
+                                    top: 10
+                                }
                             },
-                            padding: {
-                                bottom: 10
-                            }
-                        },
-                        ticks: {
-                            color: '#33ff33',
-                            font: {
-                                family: "'VT323', monospace",
-                                size: 16
-                            }
-                        },
-                        grid: {
-                            color: 'rgba(51, 255, 51, 0.08)',
-                            tickBorderDash: [4, 4]
-                        },
-                        min: -100,
-                        max: -60
-                    },
-                    attenuation: {
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'ATTENUATION (dB)',
-                            color: '#ffcc00',
-                            font: {
-                                family: "'VT323', monospace",
-                                size: 18
+                            ticks: {
+                                color: '#33ff33',
+                                font: {
+                                    family: "'VT323', monospace",
+                                    size: 16
+                                },
+                                maxRotation: 45,
+                                minRotation: 45,
+                                callback: function(value, index, values) {
+                                    const freq = this.chart.data.labels[index];
+                                    if (!freq) return '';
+                                    
+                                    // Default case, just return the frequency
+                                    return freq;
+                                }
                             },
-                            padding: {
-                                bottom: 10
+                            grid: {
+                                color: 'rgba(51, 255, 51, 0.08)',
+                                tickBorderDash: [4, 4]
                             }
                         },
-                        ticks: {
-                            color: '#ffcc00',
-                            font: {
-                                family: "'VT323', monospace",
-                                size: 16
-                            }
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'SIGNAL LEVEL (dBm)',
+                                color: '#33ff33',
+                                font: {
+                                    family: "'VT323', monospace",
+                                    size: 18
+                                },
+                                padding: {
+                                    bottom: 10
+                                }
+                            },
+                            ticks: {
+                                color: '#33ff33',
+                                font: {
+                                    family: "'VT323', monospace",
+                                    size: 16
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(51, 255, 51, 0.08)',
+                                tickBorderDash: [4, 4]
+                            },
+                            min: -100,
+                            max: -60
                         },
-                        grid: {
-                            drawOnChartArea: false,
-                            color: 'rgba(255, 204, 0, 0.08)',
-                            tickBorderDash: [4, 4]
-                        },
-                        min: -10,
-                        max: 10
+                        attenuation: {
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'ATTENUATION (dB)',
+                                color: '#ffcc00',
+                                font: {
+                                    family: "'VT323', monospace",
+                                    size: 18
+                                },
+                                padding: {
+                                    bottom: 10
+                                }
+                            },
+                            ticks: {
+                                color: '#ffcc00',
+                                font: {
+                                    family: "'VT323', monospace",
+                                    size: 16
+                                }
+                            },
+                            grid: {
+                                drawOnChartArea: false,
+                                color: 'rgba(255, 204, 0, 0.08)',
+                                tickBorderDash: [4, 4]
+                            },
+                            min: -10,
+                            max: 10
+                        }
                     }
                 }
+            });
+            
+            this.chartInitialized = true;
+            return this.powerChart;
+        } catch (error) {
+            if (this.errorHandler) {
+                this.errorHandler.handleError('ChartManager', 'initializeChart', error);
+            } else {
+                console.error('Failed to initialize chart:', error);
             }
-        });
-        
-        this.chartInitialized = true;
-        return this.powerChart;
+            throw error; // Re-throw to allow calling code to handle it
+        }
     }
 
     /**
@@ -290,25 +320,44 @@ class ChartManager {
      * @param {Object} spectrumData - Spectrum data with frequencies, baseline levels, hat levels, and attenuations
      */
     updateChart(spectrumData) {
-        if (!this.chartInitialized || !this.powerChart) return;
-        
-        if (!spectrumData.frequencies || spectrumData.frequencies.length === 0) {
-            console.warn("Missing frequencies in spectrum data");
+        if (!this.chartInitialized || !this.powerChart) {
+            if (this.errorHandler) {
+                this.errorHandler.handleError('ChartManager', 'updateChart', 
+                    'Chart not initialized', 'warning');
+            }
             return;
         }
         
-        // Format frequencies to 1 decimal place
-        const formattedLabels = spectrumData.frequencies.map(f => {
-            const fNum = typeof f === 'string' ? parseFloat(f) : f;
-            return fNum.toFixed(1);
-        });
+        if (!spectrumData || !spectrumData.frequencies || spectrumData.frequencies.length === 0) {
+            if (this.errorHandler) {
+                this.errorHandler.handleError('ChartManager', 'updateChart', 
+                    'Missing frequencies in spectrum data', 'warning');
+            } else {
+                console.warn("Missing frequencies in spectrum data");
+            }
+            return;
+        }
         
-        // Update chart data
-        this.powerChart.data.labels = formattedLabels;
-        this.powerChart.data.datasets[0].data = spectrumData.baseline_levels || [];
-        this.powerChart.data.datasets[1].data = spectrumData.hat_levels || [];
-        this.powerChart.data.datasets[2].data = spectrumData.attenuations || [];
-        this.powerChart.update();
+        try {
+            // Format frequencies to 1 decimal place
+            const formattedLabels = spectrumData.frequencies.map(f => {
+                const fNum = typeof f === 'string' ? parseFloat(f) : f;
+                return fNum.toFixed(1);
+            });
+            
+            // Update chart data
+            this.powerChart.data.labels = formattedLabels;
+            this.powerChart.data.datasets[0].data = spectrumData.baseline_levels || [];
+            this.powerChart.data.datasets[1].data = spectrumData.hat_levels || [];
+            this.powerChart.data.datasets[2].data = spectrumData.attenuations || [];
+            this.powerChart.update();
+        } catch (error) {
+            if (this.errorHandler) {
+                this.errorHandler.handleError('ChartManager', 'updateChart', error);
+            } else {
+                console.error('Error updating chart:', error);
+            }
+        }
     }
 
     /**

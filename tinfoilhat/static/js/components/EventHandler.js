@@ -4,17 +4,32 @@
  */
 
 class EventHandler {
-    constructor(chartManager, dataManager, leaderboardManager, uiManager) {
+    constructor(chartManager, dataManager, leaderboardManager, uiManager, errorHandler) {
         this.chartManager = chartManager;
         this.dataManager = dataManager;
         this.leaderboardManager = leaderboardManager;
         this.uiManager = uiManager;
+        this.errorHandler = errorHandler;
         
         this.eventSource = null;
         this.frequencyEventSource = null;
         this.lastId = 0;
         this.usePolling = false;
         this.pollingInterval = null;
+        this.reconnectAttempts = 0;
+        this.maxReconnectAttempts = 5;
+        this.reconnectDelay = 3000; // 3 seconds
+        
+        // Create safe versions of critical methods
+        if (this.errorHandler) {
+            this.handleBillboardUpdate = this.errorHandler.makeSafe(
+                this, 'EventHandler', 'handleBillboardUpdate', this.handleBillboardUpdate
+            );
+            
+            this.handleFrequencyEvent = this.errorHandler.makeSafe(
+                this, 'EventHandler', 'handleFrequencyEvent', this.handleFrequencyEvent
+            );
+        }
     }
 
     /**
@@ -32,14 +47,27 @@ class EventHandler {
             this.eventSource = new EventSource(`/billboard-updates?last_id=${this.lastId}`);
             
             this.eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log('Received SSE message:', data);
-                this.handleBillboardUpdate(data);
-                this.lastId = data.last_id;
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Received SSE message:', data);
+                    this.handleBillboardUpdate(data);
+                    this.lastId = data.last_id;
+                } catch (error) {
+                    if (this.errorHandler) {
+                        this.errorHandler.handleError('EventHandler', 'eventSource.onmessage', error);
+                    } else {
+                        console.error('Error handling billboard update:', error);
+                    }
+                }
             };
             
             this.eventSource.onerror = (e) => {
-                console.log('SSE connection error, falling back to polling...');
+                if (this.errorHandler) {
+                    this.errorHandler.handleError('EventHandler', 'eventSource.onerror', 
+                        'SSE connection error, falling back to polling...', 'warning');
+                } else {
+                    console.log('SSE connection error, falling back to polling...');
+                }
                 this.eventSource.close();
                 this.usePolling = true;
                 this.startPolling();
@@ -49,21 +77,70 @@ class EventHandler {
             this.frequencyEventSource = new EventSource('/frequency-stream');
             
             this.frequencyEventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log('Frequency stream event received:', data);
-                this.handleFrequencyEvent(data);
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Frequency stream event received:', data);
+                    this.handleFrequencyEvent(data);
+                } catch (error) {
+                    if (this.errorHandler) {
+                        this.errorHandler.handleError('EventHandler', 'frequencyEventSource.onmessage', error);
+                    } else {
+                        console.error('Error handling frequency event:', error);
+                    }
+                }
             };
             
             this.frequencyEventSource.onerror = (e) => {
-                console.log('Frequency stream connection error');
+                // Log the error
+                if (this.errorHandler) {
+                    this.errorHandler.handleError('EventHandler', 'frequencyEventSource.onerror', 
+                        'Frequency stream connection error', 'warning');
+                } else {
+                    console.log('Frequency stream connection error');
+                }
+                
                 this.frequencyEventSource.close();
-                // Try to reconnect after a short delay
-                setTimeout(() => {
-                    this.frequencyEventSource = new EventSource('/frequency-stream');
-                }, 3000);
+                
+                // Implement exponential backoff for reconnection
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    const delay = this.reconnectDelay * Math.pow(1.5, this.reconnectAttempts - 1);
+                    console.log(`Attempting to reconnect in ${delay/1000} seconds (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+                    
+                    setTimeout(() => {
+                        try {
+                            this.frequencyEventSource = new EventSource('/frequency-stream');
+                            // Reset reconnect attempts on successful connection
+                            this.frequencyEventSource.onopen = () => {
+                                this.reconnectAttempts = 0;
+                                console.log('Frequency stream reconnection successful');
+                            };
+                            
+                            // Re-attach event handlers
+                            this.frequencyEventSource.onmessage = this.frequencyEventSource.onmessage;
+                            this.frequencyEventSource.onerror = this.frequencyEventSource.onerror;
+                        } catch (error) {
+                            if (this.errorHandler) {
+                                this.errorHandler.handleError('EventHandler', 'frequencyEventSource.reconnect', error);
+                            }
+                        }
+                    }, delay);
+                } else {
+                    // Max retries exceeded, show error and fall back to polling
+                    console.error('Max reconnection attempts exceeded for frequency stream');
+                    this.uiManager.showNotification(
+                        'Connection to the measurement stream has been lost. Data updates will be delayed.',
+                        'error', 
+                        0
+                    );
+                }
             };
         } catch (e) {
-            console.log('Error setting up SSE, falling back to polling:', e);
+            if (this.errorHandler) {
+                this.errorHandler.handleError('EventHandler', 'setupSSE', e);
+            } else {
+                console.log('Error setting up SSE, falling back to polling:', e);
+            }
             this.usePolling = true;
             this.startPolling();
         }
@@ -99,13 +176,22 @@ class EventHandler {
         
         this.pollingInterval = setInterval(() => {
             fetch(`/billboard-updates?last_id=${this.lastId}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     this.handleBillboardUpdate(data);
                     this.lastId = data.last_id;
                 })
                 .catch(error => {
-                    console.error('Error polling for updates:', error);
+                    if (this.errorHandler) {
+                        this.errorHandler.handleError('EventHandler', 'startPolling.fetch', error);
+                    } else {
+                        console.error('Error polling for updates:', error);
+                    }
                 });
         }, 5000); // Poll every 5 seconds
     }
