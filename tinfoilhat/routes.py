@@ -855,6 +855,7 @@ def measure_frequency():
                 "message": f"Measured power at {freq_mhz} MHz: {power:.2f} dBm",
                 "data": {
                     "frequency_mhz": freq_mhz,
+                    "frequency": freq_hz,  # Add frequency in Hz as expected by tests
                     "power": power,
                     "measurement_type": measurement_type,
                     "is_baseline": measurement_type == "baseline",
@@ -1284,7 +1285,8 @@ def save_results():
                 # Broadcast the test completion event to all clients
                 broadcast_test_event(test_complete_data)
                 print(
-                    f"Broadcasting test completion for {contestant['name']} with score {test_result['average_attenuation']:.2f}dB"
+                    f"Broadcasting test completion for {contestant['name']} "
+                    f"with score {test_result['average_attenuation']:.2f}dB"
                 )
 
         except Exception as e:
