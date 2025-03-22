@@ -4,12 +4,56 @@ Database module for the Tinfoil Hat Competition application.
 This module handles database connections and schema initialization.
 """
 
+import datetime
 import sqlite3
 from pathlib import Path
 
 import click
 from flask import current_app, g
 from flask.cli import with_appcontext
+
+
+def adapt_datetime_iso(val):
+    """
+    Adapt datetime.datetime to ISO 8601 format string for SQLite storage.
+
+    :param val: The datetime object to adapt
+    :type val: datetime.datetime
+    :return: ISO formatted date string
+    :rtype: str
+    """
+    return val.isoformat()
+
+
+def convert_timestamp(val):
+    """
+    Convert SQLite timestamp string to datetime.datetime object.
+
+    :param val: The timestamp value from the database
+    :type val: bytes
+    :return: A datetime object
+    :rtype: datetime.datetime
+    """
+    try:
+        return datetime.datetime.fromisoformat(val.decode())
+    except (ValueError, AttributeError):
+        # Fall back for older format timestamps without timezone info
+        try:
+            return datetime.datetime.strptime(val.decode(), "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            # Final fallback for any other timestamp format
+            return datetime.datetime.fromisoformat(val.decode().split(".")[0])
+
+
+def register_custom_converters():
+    """
+    Register custom adapters and converters for SQLite to handle timestamps properly.
+    """
+    # Register the adapter for datetime objects
+    sqlite3.register_adapter(datetime.datetime, adapt_datetime_iso)
+
+    # Register the converter for timestamp fields
+    sqlite3.register_converter("timestamp", convert_timestamp)
 
 
 def get_db():
@@ -20,6 +64,9 @@ def get_db():
     :rtype: sqlite3.Connection
     """
     if "db" not in g:
+        # Register custom timestamp converters to avoid deprecation warnings
+        register_custom_converters()
+
         g.db = sqlite3.connect(current_app.config["DATABASE"], detect_types=sqlite3.PARSE_DECLTYPES)
         g.db.row_factory = sqlite3.Row
 

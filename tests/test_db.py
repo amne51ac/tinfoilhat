@@ -4,6 +4,7 @@ Tests for the database module of the Tinfoil Hat Competition application.
 These tests verify the functionality of the database operations.
 """
 
+import datetime
 import os
 import sqlite3
 import tempfile
@@ -11,7 +12,7 @@ import tempfile
 import pytest
 
 from tinfoilhat.app import create_app
-from tinfoilhat.db import close_db, get_db, init_db
+from tinfoilhat.db import adapt_datetime_iso, close_db, convert_timestamp, get_db, init_db
 
 
 @pytest.fixture
@@ -135,3 +136,69 @@ def test_db_transaction_rollback(app):
         # Verify the contestant was not added
         contestant = db.execute("SELECT * FROM contestant WHERE name = ?", ("Rollback Team",)).fetchone()
         assert contestant is None
+
+
+def test_timestamp_adapter():
+    """Test the datetime adapter function."""
+    now = datetime.datetime(2025, 4, 1, 12, 30, 45)
+    result = adapt_datetime_iso(now)
+    assert result == "2025-04-01T12:30:45"
+
+    # Test with timezone info
+    now_tz = datetime.datetime(2025, 4, 1, 12, 30, 45, tzinfo=datetime.timezone(datetime.timedelta(hours=-5)))
+    result_tz = adapt_datetime_iso(now_tz)
+    assert result_tz == "2025-04-01T12:30:45-05:00"
+
+
+def test_timestamp_converter():
+    """Test the timestamp converter function."""
+    # Test ISO format
+    timestamp_str = b"2025-04-01T12:30:45"
+    result = convert_timestamp(timestamp_str)
+    assert isinstance(result, datetime.datetime)
+    assert result.year == 2025
+    assert result.month == 4
+    assert result.day == 1
+    assert result.hour == 12
+    assert result.minute == 30
+    assert result.second == 45
+
+    # Test standard SQLite format
+    sqlite_timestamp = b"2025-04-01 12:30:45"
+    result = convert_timestamp(sqlite_timestamp)
+    assert isinstance(result, datetime.datetime)
+    assert result.year == 2025
+    assert result.month == 4
+    assert result.day == 1
+    assert result.hour == 12
+    assert result.minute == 30
+    assert result.second == 45
+
+
+def test_timestamp_storage_and_retrieval(app):
+    """Test storing and retrieving timestamps in the database."""
+    with app.app_context():
+        db = get_db()
+
+        # Create a test table with timestamp column
+        db.execute("CREATE TABLE IF NOT EXISTS timestamp_test (id INTEGER PRIMARY KEY, ts TIMESTAMP)")
+
+        # Insert a datetime
+        now = datetime.datetime.now()
+        db.execute("INSERT INTO timestamp_test (ts) VALUES (?)", (now,))
+        db.commit()
+
+        # Retrieve the timestamp
+        row = db.execute("SELECT ts FROM timestamp_test").fetchone()
+        retrieved_time = row["ts"]
+
+        # Verify it's a datetime object with the same data
+        assert isinstance(retrieved_time, datetime.datetime)
+
+        # Compare with original datetime (excluding microseconds which might be truncated)
+        assert retrieved_time.year == now.year
+        assert retrieved_time.month == now.month
+        assert retrieved_time.day == now.day
+        assert retrieved_time.hour == now.hour
+        assert retrieved_time.minute == now.minute
+        assert retrieved_time.second == now.second
