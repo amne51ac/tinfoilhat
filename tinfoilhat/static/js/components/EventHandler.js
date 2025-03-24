@@ -29,6 +29,14 @@ class EventHandler {
             this.handleFrequencyEvent = this.errorHandler.makeSafe(
                 this, 'EventHandler', 'handleFrequencyEvent', this.handleFrequencyEvent
             );
+            
+            this.handleReset = this.errorHandler.makeSafe(
+                this, 'EventHandler', 'handleReset', this.handleReset
+            );
+            
+            this.handleTestCompletion = this.errorHandler.makeSafe(
+                this, 'EventHandler', 'handleTestCompletion', this.handleTestCompletion
+            );
         }
     }
 
@@ -197,6 +205,68 @@ class EventHandler {
     }
 
     /**
+     * Centralized method to handle reset operations
+     * @param {Object} data - Data object containing reset information
+     * @param {boolean} isEmergency - Whether this is an emergency reset
+     */
+    handleReset(data, isEmergency = false) {
+        if (isEmergency) {
+            console.log("🔥🔥🔥 EMERGENCY RESET DETECTED - FORCING IMMEDIATE CHART RESET 🔥🔥🔥");
+            this.uiManager.showEmergencyReset();
+        } else {
+            console.log("🔄🔄🔄 RESET DETECTED - CLEARING ALL CHART DATA 🔄🔄🔄");
+        }
+        
+        // Reset the chart
+        this.chartManager.resetChart();
+        
+        // Reset the data manager
+        this.dataManager.resetData();
+        
+        // Update UI to indicate reset
+        if (data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true)) {
+            this.uiManager.showBaselineInProgress();
+            
+            // Set baseline_in_progress flag in data manager
+            this.dataManager.currentTestData.measurement_type = 'baseline';
+            this.dataManager.currentTestData.baseline_in_progress = true;
+        } else {
+            this.uiManager.showDataReset();
+        }
+        
+        // Add a visual reset notification
+        this.uiManager.showResetNotificationInUI();
+    }
+
+    /**
+     * Centralized method to handle test completion
+     * @param {Object} data - Test completion data
+     */
+    handleTestCompletion(data) {
+        console.log("🏆 TEST COMPLETION EVENT RECEIVED - Updating recent test and leaderboards");
+        
+        // Create a test object from the test completion data
+        const testData = {
+            name: data.contestant_name || "Unknown",
+            hat_type: data.hat_type ? (data.hat_type.charAt(0).toUpperCase() + data.hat_type.slice(1)) : "Classic",
+            attenuation: parseFloat(data.average_attenuation || 0),
+            date: new Date().toLocaleString()
+        };
+        
+        // Update the recent test display
+        this.uiManager.updateRecentTest(testData);
+        
+        // Update leaderboards if they're included in the event
+        if (data.leaderboard_classic) {
+            this.leaderboardManager.updateLeaderboard('classic', data.leaderboard_classic);
+        }
+        
+        if (data.leaderboard_hybrid) {
+            this.leaderboardManager.updateLeaderboard('hybrid', data.leaderboard_hybrid);
+        }
+    }
+
+    /**
      * Handle billboard update event
      * @param {Object} data - Billboard update data
      */
@@ -213,43 +283,12 @@ class EventHandler {
                        (data.new_test && data.new_test.is_baseline_start === true);
         
         if (isReset) {
-            console.log("🔄🔄🔄 RESET DETECTED IN BILLBOARD UPDATE - CLEARING ALL CHART DATA 🔄🔄🔄");
-            
-            // Reset the chart
-            this.chartManager.resetChart();
-            
-            // Reset the data manager
-            this.dataManager.resetData();
-            
-            // Update UI to indicate reset
-            if (data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true)) {
-                this.uiManager.showBaselineInProgress();
-                
-                // Set baseline_in_progress flag in data manager
-                this.dataManager.currentTestData.measurement_type = 'baseline';
-                this.dataManager.currentTestData.baseline_in_progress = true;
-            } else {
-                this.uiManager.showDataReset();
-            }
-            
-            // Add a visual reset notification
-            this.uiManager.showResetNotificationInUI();
+            this.handleReset(data);
         }
         
         // Check for test completion events
         if (data.event_type === "test_complete") {
-            console.log("🏆 TEST COMPLETION EVENT RECEIVED - Updating recent test and leaderboards");
-            
-            // Create a test object from the test completion data
-            const testData = {
-                name: data.contestant_name || "Unknown",
-                hat_type: data.hat_type || "classic",
-                attenuation: data.average_attenuation || 0.0,
-                date: new Date().toLocaleString()
-            };
-            
-            // Update the recent test display
-            this.uiManager.updateRecentTest(testData);
+            this.handleTestCompletion(data);
         }
         
         // Update the recent test display if there's new test data
@@ -378,54 +417,14 @@ class EventHandler {
     handleFrequencyEvent(data) {
         // Check if this is a reset event (highest priority)
         if (data.event_type === 'clear_all' || data.event_type === 'test_reset') {
-            console.log("🚨 CRITICAL: Direct reset event received via frequency stream - performing IMMEDIATE reset");
-            
-            // Check for emergency flag which indicates highest-priority reset
-            if (data.emergency === true) {
-                console.log("🔥🔥🔥 EMERGENCY RESET DETECTED - FORCING IMMEDIATE CHART RESET 🔥🔥🔥");
-                this.uiManager.showEmergencyReset();
-            }
-            
-            // Reset chart and data
-            this.chartManager.resetChart();
-            this.dataManager.resetData();
-            
-            // Update UI based on reset type
-            if (data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true)) {
-                this.uiManager.showBaselineInProgress();
-                this.dataManager.currentTestData.measurement_type = 'baseline';
-                this.dataManager.currentTestData.baseline_in_progress = true;
-            } else {
-                this.uiManager.showDataReset();
-            }
-            
+            const isEmergency = data.emergency === true;
+            this.handleReset(data, isEmergency);
             return;
         }
         
         // Check for test completion events
         if (data.event_type === 'test_complete') {
-            console.log("🏆 TEST COMPLETION EVENT RECEIVED in frequency stream handler");
-            
-            // Create test data from the completion event
-            const testData = {
-                name: data.contestant_name || "Unknown",
-                hat_type: data.hat_type ? (data.hat_type.charAt(0).toUpperCase() + data.hat_type.slice(1)) : "Classic",
-                attenuation: parseFloat(data.average_attenuation || 0),
-                date: new Date().toLocaleString()
-            };
-            
-            // Update recent test display
-            this.uiManager.updateRecentTest(testData);
-            
-            // Update leaderboards if they're included in the event
-            if (data.leaderboard_classic) {
-                this.leaderboardManager.updateLeaderboard('classic', data.leaderboard_classic);
-            }
-            
-            if (data.leaderboard_hybrid) {
-                this.leaderboardManager.updateLeaderboard('hybrid', data.leaderboard_hybrid);
-            }
-            
+            this.handleTestCompletion(data);
             return;
         }
         
@@ -438,21 +437,7 @@ class EventHandler {
             if (data.spectrum_data) {
                 // Check if this is a reset event
                 if (data.spectrum_data.test_state === "reset") {
-                    console.log("CRITICAL: Billboard reset event received - clearing all chart data");
-                    
-                    // Reset chart and data
-                    this.chartManager.resetChart();
-                    this.dataManager.resetData();
-                    
-                    // Update UI based on reset type
-                    if (data.baseline_start === true || (data.new_test && data.new_test.is_baseline_start === true)) {
-                        this.uiManager.showBaselineInProgress();
-                        this.dataManager.currentTestData.measurement_type = 'baseline';
-                        this.dataManager.currentTestData.baseline_in_progress = true;
-                    } else {
-                        this.uiManager.showDataReset();
-                    }
-                    
+                    this.handleReset(data);
                     return;
                 }
                 // Update with new spectrum data if it contains frequencies
