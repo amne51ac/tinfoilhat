@@ -2411,3 +2411,33 @@ def force_reset_all_displays():
 
     print(f"Emergency reset sent to {reset_sent_count} clients successfully")
     return reset_sent_count
+
+@bp.route("/rules")
+def rules():
+    """
+    Display the rules flyer.
+
+    :return: Rendered template
+    :rtype: str
+    """
+    return render_template("rules_flyer.html")
+
+@bp.route("/prizes")
+def prizes():
+    """
+    Display the prizes flyer.
+
+    :return: Rendered template
+    :rtype: str
+    """
+    return render_template("prizes_flyer.html")
+
+@bp.route("/rf_attenuation")
+def rf_attenuation():
+    """
+    Display the RF attenuation guide flyer.
+
+    :return: Rendered template
+    :rtype: str
+    """
+    return render_template("rf_attenuation_flyer.html")

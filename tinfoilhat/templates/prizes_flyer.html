@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tinfoil Hat Contest Prizes</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #000;
+            color: #33ff33;
+            font-family: 'IBM Plex Mono', monospace;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .prizes-card {
+            background-color: #111;
+            border: 2px solid #33ff33;
+            border-radius: 5px;
+            padding: 30px;
+            width: 850px;
+            height: 1100px;
+            box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
+            position: relative;
+            overflow-y: auto;
+        }
+        
+        .prizes-card::before {
+            content: "PRIZES.TXT";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #33ff33;
+            color: #000;
+            font-size: 0.8em;
+            padding: 2px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 0 0 5px #33ff33;
+            font-size: 1.8vw;
+        }
+        
+        .prize-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid rgba(51, 255, 51, 0.3);
+            border-radius: 3px;
+        }
+        
+        .prize-section h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.2vw;
+            margin-bottom: 10px;
+            color: #bbffbb;
+        }
+        
+        .prize-section p {
+            margin: 0 0 15px 0;
+            line-height: 1.5;
+            font-size: 1vw;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        
+        .prize-section ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .prize-section li {
+            margin: 10px 0;
+            padding-left: 25px;
+            position: relative;
+            font-size: 1vw;
+            font-family: 'Share Tech Mono', monospace;
+        }
+        
+        .prize-section li::before {
+            content: ">";
+            position: absolute;
+            left: 0;
+            color: #33ff33;
+        }
+        
+        .prize-item {
+            color: #bbffbb;
+            text-shadow: 0 0 2px rgba(51, 255, 51, 0.3);
+        }
+        
+        .category-description {
+            color: #99ee99;
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        .sponsors-section {
+            margin-top: 30px;
+            text-align: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.2vw;
+            color: #99ee99;
+        }
+
+        .sponsors-section img {
+            height: 100px;
+            margin: 0 15px;
+            vertical-align: middle;
+        }
+
+        .sponsor-text {
+            display: inline-block;
+            margin: 0 15px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="prizes-card">
+        <h1>TINFOIL HAT CONTEST PRIZES</h1>
+        
+        <div class="prize-section">
+            <h2>CLASSIC</h2>
+            <p class="category-description">Build a hat out of purely tinfoil that blocks the most RF energy.</p>
+            <ul>
+                <li><span class="prize-item">Extreme Badge to Cypher Con 2026</span></li>
+                <li><span class="prize-item">RTL SDR V3 Software Defined Radio</span></li>
+                <li><span class="prize-item">Women In Security and Privacy Travel Mug</span></li>
+                <li><span class="prize-item">$100,000 Movie Prop Money</span></li>
+            </ul>
+        </div>
+        
+        <div class="prize-section">
+            <h2>HYBRID</h2>
+            <p class="category-description">Build a hat out of tinfoil and a non-tinfoil material that blocks the most RF energy.</p>
+            <ul>
+                <li><span class="prize-item">Extreme Badge to Cypher Con 2026</span></li>
+                <li><span class="prize-item">RTL SDR V3 Software Defined Radio</span></li>
+                <li><span class="prize-item">Women In Security and Privacy Travel Mug</span></li>
+                <li><span class="prize-item">$50,000 Movie Prop Money</span></li>
+            </ul>
+        </div>
+        
+        <div class="prize-section">
+            <h2>STYLE</h2>
+            <p class="category-description">Build the coolest looking tinfoil hat according to definitely not-biased panel of totally expert judges.</p>
+            <ul>
+                <li><span class="prize-item">Women In Security and Privacy Travel Mug</span></li>
+                <li><span class="prize-item">$10,000 Movie Prop Money</span></li>
+            </ul>
+        </div>
+
+        <div class="sponsors-section">
+            <p>Sponsored by:</p>
+            <img src="/static/img/wisp_logo.webp" alt="WISP Logo">
+            <img src="/static/img/cyphercon_logo.png" alt="CypherCon Logo">
+            <span class="sponsor-text">crashoverride.ai</span>
+        </div>
+    </div>
+</body>
+</html> 
