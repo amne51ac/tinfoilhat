@@ -96,6 +96,7 @@
             margin: 2rem 0;
             box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
             position: relative;
+            scroll-margin-top: 80px;
         }
 
         .section::before {
@@ -109,6 +110,7 @@
             padding: 2px 10px;
             font-family: 'Press Start 2P', cursive;
             font-weight: bold;
+            z-index: 1;
         }
 
         .section h2 {
@@ -118,11 +120,13 @@
             text-align: center;
             font-size: 1.5rem;
             text-shadow: 0 0 2px var(--terminal-green);
+            position: relative;
+            z-index: 1;
         }
 
         .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            display: flex;
+            flex-direction: column;
             gap: 2rem;
             margin-top: 2rem;
         }
@@ -133,6 +137,7 @@
             border-radius: 3px;
             padding: 1.5rem;
             transition: all 0.3s ease;
+            width: 100%;
         }
 
         .card:hover {
@@ -143,14 +148,16 @@
         .card h3 {
             font-family: 'Press Start 2P', cursive;
             color: var(--terminal-light-green);
-            margin-bottom: 1rem;
+            margin-bottom: 1.5rem;
             font-size: 1rem;
             text-shadow: 0 0 2px var(--terminal-green);
+            text-align: center;
         }
 
         .card p {
             font-family: 'Share Tech Mono', monospace;
             line-height: 1.6;
+            margin-bottom: 1rem;
         }
 
         .features {
@@ -314,6 +321,10 @@
             .section {
                 padding: 1.5rem;
             }
+
+            .card {
+                padding: 1rem;
+            }
         }
 
         .category {
@@ -385,9 +396,301 @@
             background: rgba(51, 255, 51, 0.2);
             border-color: var(--terminal-green);
         }
+
+        .card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .category-details, .equipment-details {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .category-item h4 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .category-item p {
+            color: var(--terminal-light-green);
+            line-height: 1.6;
+        }
+
+        .equipment-details p {
+            color: var(--terminal-light-green);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .equipment-details a {
+            color: var(--terminal-green);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .equipment-details a:hover {
+            color: var(--terminal-light-green);
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .content-section {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .content-section h3 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .content-section p {
+            font-family: 'Share Tech Mono', monospace;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .content-section ol {
+            list-style-position: inside;
+            margin-left: 1rem;
+        }
+
+        .content-section li {
+            font-family: 'Share Tech Mono', monospace;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .content-section ul {
+            list-style-type: none;
+            margin-left: 1rem;
+        }
+
+        .content-section ul li {
+            font-family: 'Share Tech Mono', monospace;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .content-section ul li:before {
+            content: ">";
+            position: absolute;
+            left: 0;
+            color: var(--terminal-green);
+        }
+
+        .chart-container {
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        .rf-chart {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1rem;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .rf-chart th,
+        .rf-chart td {
+            padding: 0.75rem;
+            text-align: left;
+            border: 1px solid rgba(51, 255, 51, 0.3);
+        }
+
+        .rf-chart th {
+            background: rgba(51, 255, 51, 0.1);
+            color: var(--terminal-light-green);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.7rem;
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .rf-chart td {
+            color: var(--terminal-light-green);
+        }
+
+        .rf-chart tr:hover {
+            background: rgba(51, 255, 51, 0.05);
+        }
+
+        .chart-note {
+            font-size: 0.9rem;
+            color: var(--terminal-dark-green);
+            font-style: italic;
+            margin-top: 1rem;
+            text-align: center;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (max-width: 768px) {
+            .rf-chart {
+                font-size: 0.8rem;
+            }
+
+            .rf-chart th,
+            .rf-chart td {
+                padding: 0.5rem;
+            }
+        }
+
+        .graph-container {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 2rem;
+            background: rgba(51, 255, 51, 0.05);
+            border: 1px solid rgba(51, 255, 51, 0.3);
+            border-radius: 3px;
+            padding: 1rem;
+        }
+
+        .attenuation-graph {
+            width: 100%;
+            height: 100%;
+        }
+
+        .attenuation-graph text {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        @media (max-width: 768px) {
+            .graph-container {
+                height: 300px;
+            }
+
+            .attenuation-graph text {
+                font-size: 14px;
+            }
+        }
+
+        /* Navigation Menu Styles */
+        .nav-menu {
+            position: sticky;
+            top: 0;
+            background: var(--terminal-card-bg);
+            border-bottom: 2px solid var(--terminal-green);
+            z-index: 1000;
+            padding: 0.5rem 1rem;
+            box-shadow: 0 2px 10px rgba(51, 255, 51, 0.1);
+            margin-bottom: 1rem;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: var(--terminal-light-green);
+            text-decoration: none;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--terminal-green);
+            border-color: var(--terminal-green);
+            text-shadow: 0 0 5px var(--terminal-green);
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        .hamburger span {
+            width: 25px;
+            height: 2px;
+            background-color: var(--terminal-green);
+            transition: all 0.3s ease;
+        }
+
+        @media (max-width: 768px) {
+            .hamburger {
+                display: flex;
+            }
+
+            .nav-links {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: var(--terminal-card-bg);
+                flex-direction: column;
+                padding: 1rem;
+                gap: 1rem;
+                border-bottom: 2px solid var(--terminal-green);
+            }
+
+            .nav-links.active {
+                display: flex;
+            }
+
+            .nav-links a {
+                width: 100%;
+                text-align: center;
+                padding: 0.75rem;
+            }
+
+            .hamburger.active span:nth-child(1) {
+                transform: rotate(45deg) translate(5px, 5px);
+            }
+
+            .hamburger.active span:nth-child(2) {
+                opacity: 0;
+            }
+
+            .hamburger.active span:nth-child(3) {
+                transform: rotate(-45deg) translate(5px, -5px);
+            }
+        }
     </style>
 </head>
 <body>
+    <nav class="nav-menu">
+        <div class="nav-container">
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <div class="nav-links">
+                <a href="#about">About</a>
+                <a href="#how-it-works">How It Works</a>
+                <a href="#details">Details</a>
+                <a href="#rules">Rules</a>
+                <a href="#rf-guide">RF Guide</a>
+            </div>
+        </div>
+    </nav>
+
     <header class="header">
         <div class="container">
             <h1>TINFOIL HAT COMPETITION</h1>
@@ -397,110 +700,268 @@
 
     <div class="main-content">
         <main class="content">
-            <section class="section" data-label="ABOUT.TXT">
+            <section class="section" data-label="ABOUT.TXT" id="about">
                 <div class="container">
                     <h2>About the Competition</h2>
                     <p>The Tinfoil Hat Competition is a unique event that tests the signal attenuation properties of contestant-made tinfoil hats. Using professional RF testing equipment, we measure how effectively your hat blocks various radio frequencies.</p>
                 </div>
             </section>
 
-            <section class="section features" data-label="HOW_IT_WORKS.TXT">
+            <section class="section features" data-label="HOW_IT_WORKS.TXT" id="how-it-works">
                 <div class="container">
                     <h2>How It Works</h2>
-                    <div class="grid">
-                        <div class="card">
-                            <h3>1. Create Your Hat</h3>
-                            <p><span class="bullet">></span> Design and build your tinfoil hat using any materials you choose</p>
-                            <p><span class="bullet">></span> Be creative and innovative in your approach to RF shielding!</p>
-                        </div>
-                        <div class="card">
-                            <h3>2. Testing Process</h3>
-                            <p><span class="bullet">></span> Your hat will be tested using a HackRF One device</p>
-                            <p><span class="bullet">></span> We measure signal attenuation from 88.5 MHz to 6 GHz</p>
-                        </div>
-                        <div class="card">
-                            <h3>3. Results & Scoring</h3>
-                            <p><span class="bullet">></span> We compare signal strength with and without the hat</p>
-                            <p><span class="bullet">></span> Calculate average attenuation in decibels (dB)</p>
-                        </div>
+                    <div class="content-section">
+                        <h3>1. Create Your Hat</h3>
+                        <p>Design and build your tinfoil hat using any materials you choose. Be creative and innovative in your approach to RF shielding!</p>
+                        
+                        <h3>2. Testing Process</h3>
+                        <p>Your hat will be tested using a HackRF One device, measuring signal attenuation from 88.5 MHz to 6 GHz.</p>
+                        
+                        <h3>3. Results & Scoring</h3>
+                        <p>We compare signal strength with and without the hat, calculating average attenuation in decibels (dB).</p>
                     </div>
                 </div>
             </section>
 
-            <section class="section" data-label="DETAILS.TXT">
+            <section class="section" data-label="DETAILS.TXT" id="details">
                 <div class="container">
                     <h2>Competition Details</h2>
-                    <div class="grid">
-                        <div class="card">
-                            <h3>Categories</h3>
-                            <p><span class="bullet">></span> Classic</p>
-                            <p><span class="bullet">></span> Hybrid</p>
-                            <p><span class="bullet">></span> Style</p>
+                    <div class="content-section">
+                        <h3>Categories</h3>
+                        <div class="category-details">
+                            <div class="category-item">
+                                <h4>Classic</h4>
+                                <p>Pure tinfoil hats that showcase the traditional art of RF shielding. No additional materials allowed.</p>
+                            </div>
+                            <div class="category-item">
+                                <h4>Hybrid</h4>
+                                <p>Innovative designs that combine tinfoil with other materials to create unique and effective shielding solutions.</p>
+                            </div>
+                            <div class="category-item">
+                                <h4>Style</h4>
+                                <p>Show off your creativity with unique designs that catch the eye while maintaining functionality.</p>
+                            </div>
                         </div>
-                        <div class="card">
-                            <h3>Testing Equipment</h3>
-                            <p><span class="bullet">></span> HackRF One with telescoping antenna</p>
-                            <p><span class="bullet">></span> Professional RF measurement tools</p>
-                            <p><span class="bullet">></span> Standardized testing environment</p>
+
+                        <h3>Testing Equipment</h3>
+                        <div class="equipment-details">
+                            <p>We use the <a href="https://greatscottgadgets.com/hackrf/" target="_blank" rel="noopener noreferrer">HackRF One</a> as our SDR of choice, selected for its exceptional frequency range from 1 MHz to 6 GHz. This wide range allows us to test your hat's effectiveness across various radio frequencies.</p>
+                            <p>Our testing environment is standardized using the <a href="https://github.com/amne51ac/tinfoilhat" target="_blank" rel="noopener noreferrer">official Tinfoil Hat Competition software</a>, ensuring fair and consistent measurements for all participants.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section class="section" data-label="RULES.TXT">
+            <section class="section" data-label="RULES.TXT" id="rules">
                 <div class="container">
                     <h2>Competition Rules</h2>
-                    <div class="grid">
-                        <div class="card">
-                            <h3>Categories</h3>
-                            <p><span class="bullet">></span> Build a hat out of purely tinfoil to compete in the <span class="category">classic</span> category</p>
-                            <p><span class="bullet">></span> Build a hat out of tinfoil plus other materials to compete in the <span class="category">hybrid</span> category</p>
-                            <p><span class="bullet">></span> You can also win on style!</p>
-                        </div>
-                        <div class="card">
-                            <h3>Supplies</h3>
-                            <p><span class="bullet">></span> We will provide a limited amount of tinfoil</p>
-                            <p><span class="bullet">></span> You are welcome to bring your own supplies</p>
-                        </div>
-                        <div class="card">
-                            <h3>Basic Rules</h3>
-                            <p><span class="bullet">></span> The wearer must be able to see</p>
-                            <p><span class="bullet">></span> You can test as many times as you want</p>
-                            <p><span class="bullet">></span> You are not allowed to interfere with or manipulate the test equipment</p>
-                            <p><span class="bullet">></span> Please be courteous of the other participants</p>
-                        </div>
-                        <div class="card">
-                            <h3>Testing Process</h3>
-                            <p><span class="bullet">1.</span> TFH staff will run a baseline with nothing on the mannequin</p>
-                            <p><span class="bullet">2.</span> You will be asked to place your hat on the mannequin</p>
-                            <p><span class="bullet">3.</span> The scoring test will be performed on your hat</p>
-                            <p><span class="bullet">4.</span> Your best score will be used for the competition results</p>
-                        </div>
+                    <div class="content-section">
+                        <h3>Categories</h3>
+                        <p>Build a hat out of purely tinfoil to compete in the <span class="category">classic</span> category, or combine tinfoil with other materials for the <span class="category">hybrid</span> category. You can also win on style!</p>
+
+                        <h3>Supplies</h3>
+                        <p>We will provide a limited amount of tinfoil, but you are welcome to bring your own supplies.</p>
+
+                        <h3>Basic Rules</h3>
+                        <p>The wearer must be able to see, and you can test as many times as you want. You are not allowed to interfere with or manipulate the test equipment. Please be courteous of the other participants.</p>
+
+                        <h3>Testing Process</h3>
+                        <ol>
+                            <li>TFH staff will run a baseline with nothing on the mannequin</li>
+                            <li>You will be asked to place your hat on the mannequin</li>
+                            <li>The scoring test will be performed on your hat</li>
+                            <li>Your best score will be used for the competition results</li>
+                        </ol>
                     </div>
                 </div>
             </section>
 
-            <section class="section" data-label="RF_GUIDE.TXT">
+            <section class="section" data-label="RF_GUIDE.TXT" id="rf-guide">
                 <div class="container">
                     <h2>About RF Attenuation</h2>
-                    <div class="grid">
-                        <div class="card">
-                            <h3>Measurement</h3>
-                            <p><span class="bullet">></span> We measure RF attenuation by comparing signal strength before and after passing through shielding material</p>
-                            <p><span class="bullet">></span> The difference, calculated in decibels, gives us the attenuation value</p>
-                            <p><span class="bullet">></span> We test across different frequencies to determine overall shielding effectiveness</p>
+                    <div class="content-section">
+                        <h3>Understanding RF Shielding</h3>
+                        <p>Radio Frequency (RF) shielding is the practice of reducing electromagnetic field penetration by blocking it with conductive or magnetic materials. In our competition, we focus on measuring how effectively your tinfoil hat can block various radio frequencies, from common FM radio (88.5 MHz) up to 6 GHz, which includes most modern wireless communications.</p>
+
+                        <h3>The Science Behind It</h3>
+                        <p>When an electromagnetic wave hits a conductive material like aluminum foil, it induces an electric current in the material. This current creates its own electromagnetic field that opposes the incoming wave, effectively canceling it out. The effectiveness of this shielding depends on several factors:</p>
+                        <ul>
+                            <li>Conductivity of the material</li>
+                            <li>Thickness of the shielding</li>
+                            <li>Frequency of the incoming wave</li>
+                            <li>Presence of gaps or holes in the shield</li>
+                        </ul>
+
+                        <h3>Attenuation Properties of Aluminum Foil</h3>
+                        <div class="chart-container">
+                            <div class="graph-container">
+                                <svg class="attenuation-graph" viewBox="0 0 1000 400" preserveAspectRatio="xMidYMid meet">
+                                    <!-- Background -->
+                                    <rect width="1000" height="400" fill="rgba(51, 255, 51, 0.05)"/>
+                                    
+                                    <!-- Grid Lines -->
+                                    <g class="grid-lines">
+                                        <!-- Horizontal lines -->
+                                        <line x1="50" y1="100" x2="950" y2="100" stroke="rgba(51, 255, 51, 0.2)" stroke-width="1"/>
+                                        <line x1="50" y1="200" x2="950" y2="200" stroke="rgba(51, 255, 51, 0.2)" stroke-width="1"/>
+                                        <line x1="50" y1="300" x2="950" y2="300" stroke="rgba(51, 255, 51, 0.2)" stroke-width="1"/>
+                                        <line x1="50" y1="400" x2="950" y2="400" stroke="rgba(51, 255, 51, 0.2)" stroke-width="1"/>
+                                    </g>
+
+                                    <!-- Y-axis labels -->
+                                    <g class="y-axis-labels" font-family="'Share Tech Mono', monospace" font-size="20" fill="var(--terminal-light-green)">
+                                        <text x="80" y="120" text-anchor="end">100 dB</text>
+                                        <text x="80" y="220" text-anchor="end">75 dB</text>
+                                        <text x="80" y="320" text-anchor="end">50 dB</text>
+                                        <text x="80" y="420" text-anchor="end">25 dB</text>
+                                    </g>
+
+                                    <!-- Y-axis line -->
+                                    <line x1="90" y1="100" x2="90" y2="400" stroke="rgba(51, 255, 51, 0.3)" stroke-width="1"/>
+
+                                    <!-- Data points and lines -->
+                                    <g class="data-points">
+                                        <!-- 1 MHz -->
+                                        <circle cx="150" cy="120" r="6" fill="var(--terminal-green)"/>
+                                        <text x="150" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">1 MHz</text>
+                                        <text x="150" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">>100 dB</text>
+                                        
+                                        <!-- 10 MHz -->
+                                        <circle cx="250" cy="120" r="6" fill="var(--terminal-green)"/>
+                                        <text x="250" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">10 MHz</text>
+                                        <text x="250" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">>100 dB</text>
+                                        
+                                        <!-- 100 MHz -->
+                                        <circle cx="350" cy="140" r="6" fill="var(--terminal-green)"/>
+                                        <text x="350" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">100 MHz</text>
+                                        <text x="350" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">90 dB</text>
+                                        
+                                        <!-- 500 MHz -->
+                                        <circle cx="450" cy="180" r="6" fill="var(--terminal-green)"/>
+                                        <text x="450" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">500 MHz</text>
+                                        <text x="450" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">70 dB</text>
+                                        
+                                        <!-- 1 GHz -->
+                                        <circle cx="550" cy="220" r="6" fill="var(--terminal-green)"/>
+                                        <text x="550" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">1 GHz</text>
+                                        <text x="550" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">60 dB</text>
+                                        
+                                        <!-- 2 GHz -->
+                                        <circle cx="650" cy="260" r="6" fill="var(--terminal-green)"/>
+                                        <text x="650" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">2 GHz</text>
+                                        <text x="650" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">50 dB</text>
+                                        
+                                        <!-- 3 GHz -->
+                                        <circle cx="750" cy="280" r="6" fill="var(--terminal-green)"/>
+                                        <text x="750" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">3 GHz</text>
+                                        <text x="750" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">45 dB</text>
+                                        
+                                        <!-- 4 GHz -->
+                                        <circle cx="850" cy="300" r="6" fill="var(--terminal-green)"/>
+                                        <text x="850" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">4 GHz</text>
+                                        <text x="850" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">40 dB</text>
+                                        
+                                        <!-- 6 GHz -->
+                                        <circle cx="950" cy="340" r="6" fill="var(--terminal-green)"/>
+                                        <text x="950" y="380" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="18" fill="var(--terminal-light-green)">6 GHz</text>
+                                        <text x="950" y="395" text-anchor="middle" font-family="'Share Tech Mono', monospace" font-size="16" fill="var(--terminal-dark-green)">30 dB</text>
+                                    </g>
+
+                                    <!-- Connecting lines -->
+                                    <path d="M150,120 L250,120 L350,140 L450,180 L550,220 L650,260 L750,280 L850,300 L900,320 L950,340" 
+                                          stroke="var(--terminal-green)" 
+                                          stroke-width="2" 
+                                          fill="none"/>
+                                </svg>
+                            </div>
+                            <p class="chart-note">* Attenuation values are approximate for a single layer of heavy-duty aluminum foil (0.024mm thick). Higher frequencies are more difficult to shield effectively.</p>
                         </div>
-                        <div class="card">
-                            <h3>Faraday Shields</h3>
-                            <p><span class="bullet">></span> A Faraday shield is a conductive enclosure that blocks external electric fields</p>
-                            <p><span class="bullet">></span> For optimal shielding, the material must be conductive, continuous (no gaps), and ideally grounded</p>
-                            <p><span class="bullet">></span> Any opening in a Faraday shield can significantly reduce its effectiveness</p>
-                        </div>
-                        <div class="card">
-                            <h3>Key Points</h3>
-                            <p><span class="bullet">></span> Openings larger than 1/10th of the wavelength allow significant signal leakage</p>
-                            <p><span class="bullet">></span> Multiple small holes are better than one large hole of the same total area</p>
-                            <p><span class="bullet">></span> Mesh screens can provide ventilation while maintaining shielding if the mesh size is small enough</p>
+
+                        <h3>Measurement Process</h3>
+                        <p>We measure RF attenuation using a HackRF One software-defined radio (SDR) device. The process involves:</p>
+                        <ol>
+                            <li>Establishing a baseline by measuring signal strength without any shielding</li>
+                            <li>Measuring signal strength with your hat in place</li>
+                            <li>Calculating the difference in decibels (dB) between these measurements</li>
+                        </ol>
+                        <p>A higher dB value indicates better shielding. For example, 20 dB means the signal is reduced to 1/100th of its original strength.</p>
+
+                        <h3>Faraday Cage Principles</h3>
+                        <p>A Faraday cage is an enclosure formed by conductive material that blocks external electric fields. For optimal shielding:</p>
+                        <ul>
+                            <li>The material must be conductive (like aluminum foil)</li>
+                            <li>The enclosure should be continuous with no gaps</li>
+                            <li>Ideally, the shield should be grounded</li>
+                            <li>Any openings should be smaller than 1/10th of the wavelength of the highest frequency you want to block</li>
+                        </ul>
+
+                        <h3>Common Challenges</h3>
+                        <p>Building an effective RF shield presents several challenges:</p>
+                        <ul>
+                            <li>Ventilation needs vs. shielding effectiveness</li>
+                            <li>Visibility requirements vs. complete coverage</li>
+                            <li>Comfort vs. material thickness</li>
+                            <li>Style vs. functionality</li>
+                        </ul>
+
+                        <h3>Design Tips</h3>
+                        <p>To maximize your hat's shielding effectiveness:</p>
+                        <ul>
+                            <li>Use multiple layers of foil for better shielding</li>
+                            <li>Ensure good contact between layers</li>
+                            <li>Minimize gaps and seams</li>
+                            <li>Consider the wavelength of the frequencies you want to block</li>
+                            <li>Use conductive tape to seal seams</li>
+                        </ul>
+
+                        <h3>Frequency Considerations</h3>
+                        <p>Different frequencies require different shielding approaches:</p>
+                        <ul>
+                            <li>FM Radio (88.5 MHz): Wavelength ≈ 3.4 meters</li>
+                            <li>WiFi (2.4 GHz): Wavelength ≈ 12.5 cm</li>
+                            <li>5G (6 GHz): Wavelength ≈ 5 cm</li>
+                        </ul>
+                        <p>This means that gaps or holes that might not affect FM radio shielding could significantly impact WiFi or 5G shielding.</p>
+
+                        <h3>Signal Leakage</h3>
+                        <div class="chart-container">
+                            <table class="rf-chart">
+                                <thead>
+                                    <tr>
+                                        <th>Hole Size</th>
+                                        <th>Signal Leakage</th>
+                                        <th>Example Applications</th>
+                                        <th>Shielding Effectiveness</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>λ/10</td>
+                                        <td>Minimal</td>
+                                        <td>Ventilation Holes</td>
+                                        <td>Excellent</td>
+                                    </tr>
+                                    <tr>
+                                        <td>λ/5</td>
+                                        <td>Low</td>
+                                        <td>Mesh Screens</td>
+                                        <td>Good</td>
+                                    </tr>
+                                    <tr>
+                                        <td>λ/2</td>
+                                        <td>Moderate</td>
+                                        <td>Large Vents</td>
+                                        <td>Fair</td>
+                                    </tr>
+                                    <tr>
+                                        <td>λ</td>
+                                        <td>Significant</td>
+                                        <td>Openings</td>
+                                        <td>Poor</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <p class="chart-note">λ (lambda) represents the wavelength of the frequency being blocked</p>
                         </div>
                     </div>
                 </div>
@@ -556,5 +1017,38 @@
             <p>© 2025 Tinfoil Hat Competition. All rights reserved.</p>
         </div>
     </footer>
+
+    <script>
+        // Mobile menu functionality
+        const hamburger = document.querySelector('.hamburger');
+        const navLinks = document.querySelector('.nav-links');
+
+        hamburger.addEventListener('click', () => {
+            hamburger.classList.toggle('active');
+            navLinks.classList.toggle('active');
+        });
+
+        // Close menu when clicking a link
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburger.classList.remove('active');
+                navLinks.classList.remove('active');
+            });
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
 </body>
 </html>
