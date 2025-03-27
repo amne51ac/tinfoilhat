@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tinfoil Hat Competition - Cyphercon 2025</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --terminal-green: #33ff33;
+            --terminal-light-green: #bbffbb;
+            --terminal-dark-green: #99ee99;
+            --terminal-bg: #000;
+            --terminal-card-bg: #111;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--terminal-bg);
+            color: var(--terminal-green);
+            font-family: 'IBM Plex Mono', monospace;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: var(--terminal-card-bg);
+            border: 2px solid var(--terminal-green);
+            border-radius: 5px;
+            padding: 2rem;
+            margin: 2rem auto;
+            width: 90%;
+            max-width: 1200px;
+            box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
+            position: relative;
+        }
+
+        .header::before {
+            content: "TINFOIL_HAT.TXT";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--terminal-green);
+            color: var(--terminal-bg);
+            font-size: 0.8em;
+            padding: 2px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-weight: bold;
+        }
+
+        .header h1 {
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            margin: 2rem 0 1rem;
+            text-shadow: 0 0 5px var(--terminal-green);
+            font-size: 2rem;
+        }
+
+        .header p {
+            text-align: center;
+            font-size: 1.2rem;
+            color: var(--terminal-light-green);
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .main-content {
+            display: flex;
+            gap: 2rem;
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .content {
+            flex: 1;
+        }
+
+        .sidebar {
+            width: 300px;
+            flex-shrink: 0;
+        }
+
+        .section {
+            background-color: var(--terminal-card-bg);
+            border: 2px solid var(--terminal-green);
+            border-radius: 5px;
+            padding: 2rem;
+            margin: 2rem 0;
+            box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
+            position: relative;
+        }
+
+        .section::before {
+            content: attr(data-label);
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--terminal-green);
+            color: var(--terminal-bg);
+            font-size: 0.8em;
+            padding: 2px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-weight: bold;
+        }
+
+        .section h2 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            margin-bottom: 2rem;
+            text-align: center;
+            font-size: 1.5rem;
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: rgba(51, 255, 51, 0.1);
+            border: 1px solid rgba(51, 255, 51, 0.3);
+            border-radius: 3px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: var(--terminal-green);
+            box-shadow: 0 0 10px rgba(51, 255, 51, 0.2);
+        }
+
+        .card h3 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .card p {
+            font-family: 'Share Tech Mono', monospace;
+            line-height: 1.6;
+        }
+
+        .features {
+            background: var(--terminal-card-bg);
+        }
+
+        .features .card {
+            background: rgba(51, 255, 51, 0.05);
+        }
+
+        .cta {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: var(--terminal-card-bg);
+            border: 2px solid var(--terminal-green);
+            border-radius: 5px;
+            margin: 2rem 0;
+            box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
+        }
+
+        .cta h2 {
+            color: var(--terminal-light-green);
+            margin-bottom: 2rem;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--terminal-green);
+            color: var(--terminal-bg);
+            text-decoration: none;
+            border-radius: 3px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        .button:hover {
+            background: var(--terminal-light-green);
+            box-shadow: 0 0 10px var(--terminal-green);
+        }
+
+        .footer {
+            background: var(--terminal-card-bg);
+            color: var(--terminal-dark-green);
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+            border-top: 2px solid var(--terminal-green);
+        }
+
+        .logos {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            height: 60px;
+            width: auto;
+            filter: brightness(0) saturate(100%) invert(100%) sepia(100%) saturate(1000%) hue-rotate(90deg) brightness(100%) contrast(100%);
+        }
+
+        .bullet {
+            color: var(--terminal-green);
+            margin-right: 0.5rem;
+        }
+
+        .event-card {
+            background: rgba(51, 255, 51, 0.1);
+            border: 1px solid rgba(51, 255, 51, 0.3);
+            border-radius: 3px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .event-card:hover {
+            border-color: var(--terminal-green);
+            box-shadow: 0 0 10px rgba(51, 255, 51, 0.2);
+        }
+
+        .event-card h3 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .event-card p {
+            font-family: 'Share Tech Mono', monospace;
+            line-height: 1.6;
+            margin-bottom: 0.5rem;
+        }
+
+        .event-card .date {
+            color: var(--terminal-light-green);
+            font-weight: bold;
+        }
+
+        .event-card .location {
+            color: var(--terminal-dark-green);
+        }
+
+        .sponsors-card {
+            background: rgba(51, 255, 51, 0.1);
+            border: 1px solid rgba(51, 255, 51, 0.3);
+            border-radius: 3px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .sponsors-card h3 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            margin-bottom: 1rem;
+            font-size: 0.8rem;
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .sponsors-card .sponsor-logos {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sponsors-card .sponsor-logo {
+            height: 40px;
+            width: auto;
+            filter: brightness(0) saturate(100%) invert(100%) sepia(100%) saturate(1000%) hue-rotate(90deg) brightness(100%) contrast(100%);
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+                padding: 0 1rem;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+
+            .logos {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .section {
+                padding: 1.5rem;
+            }
+        }
+
+        .category {
+            color: #ff5555;
+            text-shadow: 0 0 2px rgba(255, 0, 0, 0.7);
+            font-weight: bold;
+        }
+
+        .event-sponsors {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(51, 255, 51, 0.3);
+        }
+
+        .event-sponsors h4 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            margin-bottom: 1rem;
+            font-size: 0.7rem;
+            text-shadow: 0 0 2px var(--terminal-green);
+        }
+
+        .event-sponsors .sponsor-logos {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 1rem;
+            width: 100%;
+            padding: 0.5rem;
+        }
+
+        .event-sponsors .sponsor-logo {
+            width: 100%;
+            height: auto;
+            max-height: 60px;
+            object-fit: contain;
+            filter: brightness(0) saturate(100%) invert(100%) sepia(100%) saturate(1000%) hue-rotate(90deg) brightness(100%) contrast(100%);
+        }
+
+        .event-sponsors p {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.6rem;
+            color: var(--terminal-light-green);
+            text-shadow: 0 0 2px var(--terminal-green);
+            text-align: center;
+            width: 100%;
+        }
+
+        .event-sponsors .sponsor-logos a {
+            width: 100%;
+            display: block;
+            transition: opacity 0.3s ease;
+        }
+
+        .event-sponsors .sponsor-logos a:hover {
+            opacity: 0.8;
+        }
+
+        .event-sponsors .sponsor-logos a p {
+            margin: 0;
+            padding: 0.5rem;
+            background: rgba(51, 255, 51, 0.1);
+            border: 1px solid rgba(51, 255, 51, 0.3);
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .event-sponsors .sponsor-logos a:hover p {
+            background: rgba(51, 255, 51, 0.2);
+            border-color: var(--terminal-green);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <h1>TINFOIL HAT COMPETITION</h1>
+            <p>Stop the mind control, protect your brainwaves, and win prizes - build the best RF-blocking hat out of tinfoil.</p>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <main class="content">
+            <section class="section" data-label="ABOUT.TXT">
+                <div class="container">
+                    <h2>About the Competition</h2>
+                    <p>The Tinfoil Hat Competition is a unique event that tests the signal attenuation properties of contestant-made tinfoil hats. Using professional RF testing equipment, we measure how effectively your hat blocks various radio frequencies.</p>
+                </div>
+            </section>
+
+            <section class="section features" data-label="HOW_IT_WORKS.TXT">
+                <div class="container">
+                    <h2>How It Works</h2>
+                    <div class="grid">
+                        <div class="card">
+                            <h3>1. Create Your Hat</h3>
+                            <p><span class="bullet">></span> Design and build your tinfoil hat using any materials you choose</p>
+                            <p><span class="bullet">></span> Be creative and innovative in your approach to RF shielding!</p>
+                        </div>
+                        <div class="card">
+                            <h3>2. Testing Process</h3>
+                            <p><span class="bullet">></span> Your hat will be tested using a HackRF One device</p>
+                            <p><span class="bullet">></span> We measure signal attenuation from 88.5 MHz to 6 GHz</p>
+                        </div>
+                        <div class="card">
+                            <h3>3. Results & Scoring</h3>
+                            <p><span class="bullet">></span> We compare signal strength with and without the hat</p>
+                            <p><span class="bullet">></span> Calculate average attenuation in decibels (dB)</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" data-label="DETAILS.TXT">
+                <div class="container">
+                    <h2>Competition Details</h2>
+                    <div class="grid">
+                        <div class="card">
+                            <h3>Categories</h3>
+                            <p><span class="bullet">></span> Classic</p>
+                            <p><span class="bullet">></span> Hybrid</p>
+                            <p><span class="bullet">></span> Style</p>
+                        </div>
+                        <div class="card">
+                            <h3>Testing Equipment</h3>
+                            <p><span class="bullet">></span> HackRF One with telescoping antenna</p>
+                            <p><span class="bullet">></span> Professional RF measurement tools</p>
+                            <p><span class="bullet">></span> Standardized testing environment</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" data-label="RULES.TXT">
+                <div class="container">
+                    <h2>Competition Rules</h2>
+                    <div class="grid">
+                        <div class="card">
+                            <h3>Categories</h3>
+                            <p><span class="bullet">></span> Build a hat out of purely tinfoil to compete in the <span class="category">classic</span> category</p>
+                            <p><span class="bullet">></span> Build a hat out of tinfoil plus other materials to compete in the <span class="category">hybrid</span> category</p>
+                            <p><span class="bullet">></span> You can also win on style!</p>
+                        </div>
+                        <div class="card">
+                            <h3>Supplies</h3>
+                            <p><span class="bullet">></span> We will provide a limited amount of tinfoil</p>
+                            <p><span class="bullet">></span> You are welcome to bring your own supplies</p>
+                        </div>
+                        <div class="card">
+                            <h3>Basic Rules</h3>
+                            <p><span class="bullet">></span> The wearer must be able to see</p>
+                            <p><span class="bullet">></span> You can test as many times as you want</p>
+                            <p><span class="bullet">></span> You are not allowed to interfere with or manipulate the test equipment</p>
+                            <p><span class="bullet">></span> Please be courteous of the other participants</p>
+                        </div>
+                        <div class="card">
+                            <h3>Testing Process</h3>
+                            <p><span class="bullet">1.</span> TFH staff will run a baseline with nothing on the mannequin</p>
+                            <p><span class="bullet">2.</span> You will be asked to place your hat on the mannequin</p>
+                            <p><span class="bullet">3.</span> The scoring test will be performed on your hat</p>
+                            <p><span class="bullet">4.</span> Your best score will be used for the competition results</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" data-label="RF_GUIDE.TXT">
+                <div class="container">
+                    <h2>About RF Attenuation</h2>
+                    <div class="grid">
+                        <div class="card">
+                            <h3>Measurement</h3>
+                            <p><span class="bullet">></span> We measure RF attenuation by comparing signal strength before and after passing through shielding material</p>
+                            <p><span class="bullet">></span> The difference, calculated in decibels, gives us the attenuation value</p>
+                            <p><span class="bullet">></span> We test across different frequencies to determine overall shielding effectiveness</p>
+                        </div>
+                        <div class="card">
+                            <h3>Faraday Shields</h3>
+                            <p><span class="bullet">></span> A Faraday shield is a conductive enclosure that blocks external electric fields</p>
+                            <p><span class="bullet">></span> For optimal shielding, the material must be conductive, continuous (no gaps), and ideally grounded</p>
+                            <p><span class="bullet">></span> Any opening in a Faraday shield can significantly reduce its effectiveness</p>
+                        </div>
+                        <div class="card">
+                            <h3>Key Points</h3>
+                            <p><span class="bullet">></span> Openings larger than 1/10th of the wavelength allow significant signal leakage</p>
+                            <p><span class="bullet">></span> Multiple small holes are better than one large hole of the same total area</p>
+                            <p><span class="bullet">></span> Mesh screens can provide ventilation while maintaining shielding if the mesh size is small enough</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <aside class="sidebar">
+            <section class="section" data-label="EVENTS.TXT">
+                <h2>Upcoming Events</h2>
+                <div class="event-card">
+                    <h3>Cyphercon 2025</h3>
+                    <p class="date">April 3-4, 2025</p>
+                    <p class="location">Milwaukee, WI</p>
+                    <p><span class="bullet">></span> Join us for the first Tinfoil Hat Competition!</p>
+                    <div class="event-sponsors">
+                        <h4>Sponsored by:</h4>
+                        <div class="sponsor-logos">
+                            <a href="https://wisporg.com" target="_blank" rel="noopener noreferrer">
+                                <img src="../tinfoilhat/static/img/wisp_logo.webp" alt="WISP Logo" class="sponsor-logo">
+                            </a>
+                            <a href="https://cyphercon.com" target="_blank" rel="noopener noreferrer">
+                                <img src="../tinfoilhat/static/img/cyphercon_logo.png" alt="Cyphercon Logo" class="sponsor-logo">
+                            </a>
+                            <a href="https://crashoverride.ai" target="_blank" rel="noopener noreferrer">
+                                <p>crashoverride.ai</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="event-card">
+                    <h3>THOTcon 2025</h3>
+                    <p class="date">May 30-31, 2025</p>
+                    <p class="location">Chicago, IL</p>
+                    <p><span class="bullet">></span> Second stop on the Tinfoil Hat Tour!</p>
+                    <div class="event-sponsors">
+                        <h4>Sponsored by:</h4>
+                        <div class="sponsor-logos">
+                            <a href="https://wisporg.com" target="_blank" rel="noopener noreferrer">
+                                <img src="../tinfoilhat/static/img/wisp_logo.webp" alt="WISP Logo" class="sponsor-logo">
+                            </a>
+                            <a href="https://crashoverride.ai" target="_blank" rel="noopener noreferrer">
+                                <p>crashoverride.ai</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>© 2025 Tinfoil Hat Competition. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
