@@ -27,7 +27,7 @@
             height: 1100px;
             box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
             position: relative;
-            overflow-y: auto;
+            overflow: hidden;
         }
         
         .rf-card::before {
@@ -46,38 +46,38 @@
         h1 {
             font-family: 'Press Start 2P', cursive;
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             text-shadow: 0 0 5px #33ff33;
-            font-size: 1.8vw;
+            font-size: 1.6vw;
         }
         
         .summary {
             text-align: center;
-            font-size: 1.5vw;
-            line-height: 1.3;
-            margin-bottom: 15px;
-            padding: 8px;
+            font-size: 1.1vw;
+            line-height: 1.2;
+            margin-bottom: 12px;
+            padding: 6px;
             border: 1px solid rgba(51, 255, 51, 0.3);
             border-radius: 3px;
             background-color: rgba(51, 255, 51, 0.1);
         }
         
         .rf-section {
-            margin-bottom: 10px;
-            padding: 8px;
+            margin-bottom: 8px;
+            padding: 6px;
         }
         
         .rf-section h2 {
             font-family: 'Press Start 2P', cursive;
-            font-size: 1.2vw;
-            margin-bottom: 5px;
+            font-size: 1vw;
+            margin-bottom: 4px;
             color: #bbffbb;
         }
         
         .rf-section p {
-            margin: 0 0 5px 0;
-            line-height: 1.5;
-            font-size: 1vw;
+            margin: 0 0 4px 0;
+            line-height: 1.4;
+            font-size: 0.85vw;
             font-family: 'Share Tech Mono', monospace;
         }
 
@@ -138,7 +138,7 @@
 
         .key-point {
             font-family: 'Share Tech Mono', monospace;
-            font-size: 0.95vw;
+            font-size: 0.8vw;
             color: #33ff33;
             margin: 5px 0;
             padding-left: 20px;
@@ -178,30 +178,28 @@
         <h1>ABOUT RF ATTENUATION</h1>
         
         <div class="rf-section">
-            <p>RF attenuation measures how effectively a material reduces the power of radio frequency signals. We express this reduction in decibels (dB), where positive values indicate signal blocking and negative values indicate signal amplification.</p>
+            <h2>RF ATTENUATION BASICS</h2>
+            <p>RF attenuation measures how effectively a material reduces radio frequency signals, expressed in decibels (dB). Positive values indicate signal blocking, negative values indicate amplification. We measure this by comparing signal strength before and after passing through shielding material.</p>
         </div>
 
         <div class="rf-section">
-            <h2>MEASUREMENT</h2>
-            <p>We measure RF attenuation by comparing signal strength before and after passing through shielding material. The difference, calculated in decibels, gives us the attenuation value. We test across different frequencies to determine overall shielding effectiveness.</p>
+            <h2>FARADAY SHIELDING</h2>
+            <p>A Faraday shield is a conductive enclosure that blocks external electric fields by redistributing electric charges. For optimal shielding, the material must be conductive, continuous (no gaps), and ideally grounded. Any opening larger than 1/10th of the wavelength allows significant signal leakage. Multiple small holes are better than one large hole of the same total area.</p>
         </div>
-        
+
         <div class="rf-section">
-            <h2>FARADAY SHIELDS</h2>
-            <p>A Faraday shield is a conductive enclosure that blocks external electric fields by redistributing electric charges on its surface.
-            For optimal shielding, the material must be conductive, continuous (no gaps), and ideally grounded to dissipate induced charges.</p>
-            <p>Any opening in a Faraday shield can significantly reduce its effectiveness:</p>
-            <div class="key-point">Openings larger than 1/10th of the wavelength allow significant signal leakage.</div>
-            <div class="key-point">Multiple small holes are better than one large hole of the same total area.</div>
-            <div class="key-point">Mesh screens can provide ventilation while maintaining shielding if the mesh size is small enough.</div>
+            <h2>THE SCIENCE BEHIND IT</h2>
+            <p>When an electromagnetic wave hits a conductive material like aluminum foil, it induces an electric current that creates its own opposing electromagnetic field. Shielding effectiveness depends on material conductivity, thickness, frequency, and the presence of gaps. Higher frequencies are more difficult to shield effectively.</p>
+        </div>
+
+        <div class="rf-section">
+            <h2>DESIGN CONSIDERATIONS</h2>
+            <p>Building an effective RF shield requires balancing ventilation, visibility, comfort, and style. Use multiple layers of foil with good contact between layers, minimize gaps and seams, and use conductive tape to seal any openings. Consider that gaps affecting WiFi (2.4 GHz, λ ≈ 12.5 cm) might not impact FM radio (88.5 MHz, λ ≈ 3.4 meters).</p>
         </div>
 
         <div class="rf-section">
             <h2>PRACTICAL APPLICATIONS</h2>
-            <p>RF shielding has many practical applications:</p>
-            <div class="key-point">RF-blocking wallets protect credit cards and passports from wireless skimming.</div>
-            <div class="key-point">Faraday cages prevent interference in medical imaging rooms.</div>
-            <div class="key-point">RF shielding bags protect electronic devices during forensic analysis.</div>
+            <p>RF shielding has many practical uses: RF-blocking wallets protect credit cards from wireless skimming, Faraday cages prevent interference in medical imaging rooms, and RF shielding bags protect electronic devices during forensic analysis.</p>
         </div>
 
         <div class="sponsors-section">

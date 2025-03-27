@@ -12,16 +12,26 @@ The Tinfoil Hat Competition tests the signal attenuation properties of contestan
 - Calculates attenuation scores
 - Displays results on a leaderboard
 - Visualizes test results in real-time
+- Generates printable flyers for rules, prizes, and RF attenuation information
 
 ## Recent Updates
 
-### Database Improvements (April 2025)
-- Addressed SQLite timestamp converter deprecation warning by:
-  - Implementing custom timestamp adapter and converter functions
-  - Registering them with SQLite instead of using the deprecated default converters
-  - Adding robust fallback options for various timestamp formats
-  - Created comprehensive tests for timestamp handling
-- Improved database connection handling to prevent warnings in Python 3.12+
+### Flyer System Improvements (March 2025)
+- Added new flyer system for competition documentation:
+  - Rules flyer with complete competition guidelines
+  - Prizes flyer showcasing sponsor rewards
+  - RF attenuation guide with technical details
+- Implemented retro terminal aesthetic for all flyers
+- Optimized flyer layouts for better readability
+- Added responsive design for various screen sizes
+- Integrated sponsor logos and branding
+
+### Database Improvements (March 2025)
+- Moved all attenuation and effectiveness calculations to server-side for consistency
+- Eliminated discrepancies between client and server calculations
+- Improved accuracy by only considering valid measurements in calculations
+- Enhanced data validation logic on server for more reliable results
+- Standardized frequency band processing across all calculations
 
 ### Centralized Error Handling (April 2025)
 - Created a new `ErrorHandler.js` component to centralize error handling:
@@ -232,6 +242,12 @@ Then open your browser and navigate to http://localhost:8000
    - Check the effectiveness across different frequency ranges
    - Note the frequencies where the hat performed best/worst
    - The leaderboard updates automatically if this is the contestant's best score
+
+4. **Accessing Flyers**:
+   - Rules: Navigate to `/rules`
+   - Prizes: Navigate to `/prizes`
+   - RF Guide: Navigate to `/rf`
+   - Use browser print function to save as PDF
 
 ## Leaderboard
 
@@ -575,3 +591,46 @@ tinfoilhat/
 ## License
 
 See LICENSE file for details. 
+
+## Project Structure
+
+```
+tinfoilhat/
+├── static/           # Static assets (images, CSS, JS)
+├── templates/        # HTML templates
+│   ├── billboard.html    # Main testing interface
+│   ├── rules_flyer.html  # Competition rules
+│   ├── prizes_flyer.html # Prize information
+│   └── rf_attenuation_flyer.html  # RF guide
+├── routes.py        # Application routes
+├── scanner.py       # HackRF control logic
+├── db.py           # Database operations
+└── app.py          # Application initialization
+```
+
+## Flyer System
+
+The application includes three printable flyers:
+
+1. **Rules Flyer** (`/rules`):
+   - Complete competition guidelines
+   - Category information
+   - Testing process details
+   - Basic rules and requirements
+
+2. **Prizes Flyer** (`/prizes`):
+   - Prize categories and rewards
+   - Sponsor information
+   - Competition timeline
+
+3. **RF Attenuation Guide** (`/rf`):
+   - Technical explanation of RF shielding
+   - Design considerations
+   - Practical applications
+   - Testing methodology
+
+All flyers feature a retro terminal aesthetic with:
+- Monospace fonts (Press Start 2P, Share Tech Mono, IBM Plex Mono)
+- Green-on-black color scheme
+- ASCII-style borders and decorations
+- Responsive design for various screen sizes
