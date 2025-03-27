@@ -1,7 +1,6 @@
 # Tinfoil Hat Competition
 
 ![CI Status](https://github.com/amne51ac/tinfoilhat/actions/workflows/ci.yml/badge.svg)
-![Test Coverage]
 
 A Flask web application for running and tracking Tinfoil Hat Competitions, originally built for Cyphercon in Milwaukee on April 3-4 2025.
 

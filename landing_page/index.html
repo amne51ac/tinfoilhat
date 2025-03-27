@@ -3,9 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tinfoil Hat Competition - Cyphercon 2025</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>Tinfoil Hat Competition 2025 - RF Shielding Contest at Cyphercon & THOTcon</title>
+    <meta name="title" content="Tinfoil Hat Competition 2025 - RF Shielding Contest at Cyphercon & THOTcon">
+    <meta name="description" content="Join the ultimate RF shielding competition! Build a tinfoil hat, block radio frequencies, and win prizes. Test your design against professional RF equipment at Cyphercon and THOTcon 2025.">
+    <meta name="keywords" content="tinfoil hat competition, RF shielding, radio frequency blocking, Cyphercon 2025, THOTcon 2025, hacker conference, RF attenuation, DIY Faraday cage">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tinfoilhat.dev/">
+    <meta property="og:title" content="Tinfoil Hat Competition 2025 - RF Shielding Contest">
+    <meta property="og:description" content="Join the ultimate RF shielding competition! Build a tinfoil hat, block radio frequencies, and win prizes at Cyphercon and THOTcon 2025.">
+    <meta property="og:image" content="https://tinfoilhat.dev/hero.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://tinfoilhat.dev/">
+    <meta property="twitter:title" content="Tinfoil Hat Competition 2025 - RF Shielding Contest">
+    <meta property="twitter:description" content="Join the ultimate RF shielding competition! Build a tinfoil hat, block radio frequencies, and win prizes at Cyphercon and THOTcon 2025.">
+    <meta property="twitter:image" content="https://tinfoilhat.dev/hero.png">
+
+    <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="favicon.png">
+    
+    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://tinfoilhat.dev/">
+
     <style>
         :root {
             --terminal-green: #33ff33;
@@ -106,7 +134,8 @@
             margin: 2rem 0;
             box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
             position: relative;
-            scroll-margin-top: 80px;
+            scroll-margin-top: 250px; /* Increased for expanded nav */
+            transition: scroll-margin-top 0.3s ease;
         }
 
         .section::before {
@@ -330,6 +359,7 @@
 
             .section {
                 padding: 1.5rem;
+                scroll-margin-top: 180px; /* Adjusted for mobile expanded nav */
             }
 
             .card {
@@ -746,6 +776,56 @@
             }
         }
     </style>
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Event",
+      "name": "Tinfoil Hat Competition 2025",
+      "description": "A competition to test RF shielding effectiveness of contestant-made tinfoil hats using professional RF testing equipment.",
+      "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+      "eventStatus": "https://schema.org/EventScheduled",
+      "startDate": "2025-04-03",
+      "endDate": "2025-04-04",
+      "location": {
+        "@type": "Place",
+        "name": "Cyphercon 2025",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Milwaukee",
+          "addressRegion": "WI",
+          "addressCountry": "US"
+        }
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": "https://cyphercon.com",
+        "availability": "https://schema.org/InStock"
+      },
+      "organizer": {
+        "@type": "Organization",
+        "name": "Cyphercon",
+        "url": "https://cyphercon.com"
+      },
+      "subEvent": {
+        "@type": "Event",
+        "name": "Tinfoil Hat Competition at THOTcon",
+        "startDate": "2025-05-30",
+        "endDate": "2025-05-31",
+        "location": {
+          "@type": "Place",
+          "name": "THOTcon 2025",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Chicago",
+            "addressRegion": "IL",
+            "addressCountry": "US"
+          }
+        }
+      }
+    }
+    </script>
 </head>
 <body>
     <nav class="nav-menu">
@@ -790,11 +870,11 @@
                         <h3>1. Create Your Hat</h3>
                         <p>Design and build your tinfoil hat using any materials you choose. Be creative and innovative in your approach to RF shielding!</p>
                         
-                        <h3>2. Testing Process</h3>
-                        <p>Your hat will be tested using a HackRF One device, measuring signal attenuation from 88.5 MHz to 6 GHz.</p>
+                        <h3>2. Test the Hat</h3>
+                        <p>You place your hat on our handy test dummy, and the hat will be tested using a HackRF One device, measuring signal attenuation from 1 MHz to 6 GHz.</p>
                         
                         <h3>3. Results & Scoring</h3>
-                        <p>We compare signal strength with and without the hat, calculating average attenuation in decibels (dB).</p>
+                        <p>We compare signal strength with and without the hat, calculating average attenuation in decibels (dB). The highest attenuation score in each category wins!</p>
                     </div>
                 </div>
             </section>
@@ -815,7 +895,7 @@
                             </div>
                             <div class="category-item">
                                 <h4>Style</h4>
-                                <p>Show off your creativity with unique designs that catch the eye while maintaining functionality.</p>
+                                <p>Show off your creativity with unique designs that catch the eye while maintaining functionality. Style is judged by the TFH staff based on the overall appearance of the hat.</p>
                             </div>
                         </div>
 
@@ -885,7 +965,7 @@
                                     </g>
 
                                     <!-- Y-axis labels -->
-                                    <g class="y-axis-labels" font-family="'Share Tech Mono', monospace" font-size="20" fill="var(--terminal-light-green)">
+                                    <g class="y-axis-labels" font-family="'Share Tech Mono', monospace" font-size="28" fill="var(--terminal-light-green)">
                                         <text x="80" y="120" text-anchor="end">100 dB</text>
                                         <text x="80" y="220" text-anchor="end">75 dB</text>
                                         <text x="80" y="320" text-anchor="end">50 dB</text>
