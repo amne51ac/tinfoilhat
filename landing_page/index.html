@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tinfoil Hat Competition - Cyphercon 2025</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -34,16 +35,16 @@
             background-color: var(--terminal-card-bg);
             border: 2px solid var(--terminal-green);
             border-radius: 5px;
-            padding: 2rem;
             margin: 2rem auto;
             width: 90%;
             max-width: 1200px;
             box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
             position: relative;
+            overflow: hidden;
         }
 
         .header::before {
-            content: "TINFOIL_HAT.TXT";
+            content: "TINFOIL_HAT.JPEG";
             position: absolute;
             top: 0;
             left: 0;
@@ -53,6 +54,15 @@
             padding: 2px 10px;
             font-family: 'Press Start 2P', cursive;
             font-weight: bold;
+            z-index: 2;
+        }
+
+        .header img {
+            width: 100%;
+            height: auto;
+            display: block;
+            max-height: 600px;
+            object-fit: cover;
         }
 
         .header h1 {
@@ -305,8 +315,8 @@
                 width: 100%;
             }
 
-            .header h1 {
-                font-size: 1.5rem;
+            .header {
+                margin: 1rem auto;
             }
             
             .container {
@@ -584,20 +594,74 @@
             padding: 0.5rem 1rem;
             box-shadow: 0 2px 10px rgba(51, 255, 51, 0.1);
             margin-bottom: 1rem;
+            transition: all 0.3s ease;
         }
 
         .nav-container {
             max-width: 1200px;
             margin: 0 auto;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
             align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .nav-title {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-bottom: 1rem;
+        }
+
+        .nav-title h1 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            font-size: 2rem;
+            margin: 0;
+            text-shadow: 0 0 5px var(--terminal-green);
+            transition: all 0.3s ease;
+        }
+
+        .nav-title p {
+            color: var(--terminal-light-green);
+            font-size: 1.2rem;
+            margin: 0.5rem 0 0;
+            text-shadow: 0 0 2px var(--terminal-green);
+            transition: all 0.3s ease;
+            opacity: 1;
+            max-width: 800px;
+        }
+
+        .nav-menu.scrolled .nav-container {
+            flex-direction: row;
+            justify-content: space-between;
+        }
+
+        .nav-menu.scrolled .nav-title {
+            margin-bottom: 0;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .nav-menu.scrolled .nav-title h1 {
+            font-size: 1.5rem;
+        }
+
+        .nav-menu.scrolled .nav-title p {
+            opacity: 0;
+            height: 0;
+            margin: 0;
+            overflow: hidden;
         }
 
         .nav-links {
             display: flex;
-            gap: 2rem;
+            gap: 1.5rem;
             align-items: center;
+            justify-content: center;
+            flex-wrap: nowrap;
         }
 
         .nav-links a {
@@ -605,9 +669,10 @@
             text-decoration: none;
             font-family: 'Share Tech Mono', monospace;
             font-size: 1rem;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.75rem;
             border: 1px solid transparent;
             transition: all 0.3s ease;
+            white-space: nowrap;
         }
 
         .nav-links a:hover {
@@ -657,6 +722,7 @@
                 width: 100%;
                 text-align: center;
                 padding: 0.75rem;
+                white-space: normal;
             }
 
             .hamburger.active span:nth-child(1) {
@@ -670,12 +736,24 @@
             .hamburger.active span:nth-child(3) {
                 transform: rotate(-45deg) translate(5px, -5px);
             }
+
+            .nav-title h1 {
+                font-size: 1.2rem;
+            }
+
+            .nav-title p {
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
 <body>
     <nav class="nav-menu">
         <div class="nav-container">
+            <div class="nav-title">
+                <h1>TINFOIL HAT COMPETITION</h1>
+                <p>Stop the mind control, protect your brainwaves, and win prizes - build the best RF-blocking hat out of tinfoil.</p>
+            </div>
             <div class="hamburger">
                 <span></span>
                 <span></span>
@@ -687,15 +765,13 @@
                 <a href="#details">Details</a>
                 <a href="#rules">Rules</a>
                 <a href="#rf-guide">RF Guide</a>
+                <a href="#events">Events</a>
             </div>
         </div>
     </nav>
 
     <header class="header">
-        <div class="container">
-            <h1>TINFOIL HAT COMPETITION</h1>
-            <p>Stop the mind control, protect your brainwaves, and win prizes - build the best RF-blocking hat out of tinfoil.</p>
-        </div>
+        <img src="hero.png" alt="Tinfoil Hat Competition - Protect your brainwaves from mind control">
     </header>
 
     <div class="main-content">
@@ -969,7 +1045,7 @@
         </main>
 
         <aside class="sidebar">
-            <section class="section" data-label="EVENTS.TXT">
+            <section class="section" data-label="EVENTS.TXT" id="events">
                 <h2>Upcoming Events</h2>
                 <div class="event-card">
                     <h3>Cyphercon 2025</h3>
@@ -1022,6 +1098,16 @@
         // Mobile menu functionality
         const hamburger = document.querySelector('.hamburger');
         const navLinks = document.querySelector('.nav-links');
+        const navMenu = document.querySelector('.nav-menu');
+
+        // Add scroll event listener
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 100) {
+                navMenu.classList.add('scrolled');
+            } else {
+                navMenu.classList.remove('scrolled');
+            }
+        });
 
         hamburger.addEventListener('click', () => {
             hamburger.classList.toggle('active');
