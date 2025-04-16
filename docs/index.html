@@ -69,8 +69,8 @@
             border: 2px solid var(--terminal-green);
             border-radius: 5px;
             margin: 2rem auto;
-            width: 90%;
-            max-width: 1200px;
+            width: 82%;
+            max-width: 1140px;
             box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
             position: relative;
             overflow: hidden;
@@ -94,7 +94,7 @@
             width: 100%;
             height: auto;
             display: block;
-            max-height: 600px;
+            /* max-height: 600px; */
             object-fit: cover;
         }
 
@@ -280,6 +280,23 @@
             padding: 1.5rem;
             margin-bottom: 1rem;
             transition: all 0.3s ease;
+        }
+
+        .event-card.past-event {
+            opacity: 0.7;
+            background: rgba(51, 255, 51, 0.05);
+        }
+
+        .past-badge {
+            display: inline-block;
+            background: rgba(255, 85, 85, 0.2);
+            color: #ff5555;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.8em;
+            margin-left: 0.5rem;
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 0 0 2px rgba(255, 85, 85, 0.5);
         }
 
         .event-card:hover {
@@ -1133,26 +1150,6 @@
             <section class="section" data-label="EVENTS.TXT" id="events">
                 <h2>Upcoming Events</h2>
                 <div class="event-card">
-                    <h3>Cyphercon 2025</h3>
-                    <p class="date">April 3-4, 2025</p>
-                    <p class="location">Milwaukee, WI</p>
-                    <p><span class="bullet">></span> Join us for the first Tinfoil Hat Competition!</p>
-                    <div class="event-sponsors">
-                        <h4>Sponsored by:</h4>
-                        <div class="sponsor-logos">
-                            <a href="https://wisporg.com" target="_blank" rel="noopener noreferrer">
-                                <img src="static/img/wisp_logo.webp" alt="WISP Logo" class="sponsor-logo">
-                            </a>
-                            <a href="https://cyphercon.com" target="_blank" rel="noopener noreferrer">
-                                <img src="static/img/cyphercon_logo.png" alt="Cyphercon Logo" class="sponsor-logo">
-                            </a>
-                            <a href="https://crashoverride.ai" target="_blank" rel="noopener noreferrer">
-                                <p>crashoverride.ai</p>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="event-card">
                     <h3>THOTcon 2025</h3>
                     <p class="date">May 30-31, 2025</p>
                     <p class="location">Chicago, IL</p>
@@ -1162,6 +1159,38 @@
                         <div class="sponsor-logos">
                             <a href="https://wisporg.com" target="_blank" rel="noopener noreferrer">
                                 <img src="static/img/wisp_logo.webp" alt="WISP Logo" class="sponsor-logo">
+                            </a>
+                            <a href="https://crashoverride.ai" target="_blank" rel="noopener noreferrer">
+                                <p>crashoverride.ai</p>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="event-card">
+                    <h3>Secret Con 2025</h3>
+                    <p class="date">June 19-20, 2025</p>
+                    <p class="location">Location TBA</p>
+                    <p><span class="bullet">></span> Third stop on the Tinfoil Hat Tour!</p>
+                    <div class="event-sponsors">
+                        <h4>Sponsored by:</h4>
+                        <div class="sponsor-logos">
+                            <p>Sponsors coming soon!</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="event-card past-event">
+                    <h3>Cyphercon 2025</h3>
+                    <p class="date">April 3-4, 2025</p>
+                    <p class="location">Milwaukee, WI</p>
+                    <p><span class="bullet">></span> First stop on the Tinfoil Hat Tour! <span class="past-badge">PAST EVENT</span></p>
+                    <div class="event-sponsors">
+                        <h4>Sponsored by:</h4>
+                        <div class="sponsor-logos">
+                            <a href="https://wisporg.com" target="_blank" rel="noopener noreferrer">
+                                <img src="static/img/wisp_logo.webp" alt="WISP Logo" class="sponsor-logo">
+                            </a>
+                            <a href="https://cyphercon.com" target="_blank" rel="noopener noreferrer">
+                                <img src="static/img/cyphercon_logo.png" alt="Cyphercon Logo" class="sponsor-logo">
                             </a>
                             <a href="https://crashoverride.ai" target="_blank" rel="noopener noreferrer">
                                 <p>crashoverride.ai</p>
