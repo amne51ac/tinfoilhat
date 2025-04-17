@@ -642,7 +642,7 @@
             top: 0;
             background: var(--terminal-card-bg);
             border-bottom: 2px solid var(--terminal-green);
-            z-index: 1000;
+            z-index: 100;
             padding: 0.5rem 1rem;
             box-shadow: 0 2px 10px rgba(51, 255, 51, 0.1);
             margin-bottom: 1rem;
@@ -797,6 +797,278 @@
                 font-size: 0.9rem;
             }
         }
+
+        /* Add modal styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--terminal-card-bg);
+            border: 2px solid var(--terminal-green);
+            border-radius: 5px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 0 20px rgba(51, 255, 51, 0.3);
+            z-index: 2001;
+        }
+
+        .modal::before {
+            content: "ANNOUNCEMENT.TXT";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--terminal-green);
+            color: var(--terminal-bg);
+            font-size: 0.8em;
+            padding: 2px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-weight: bold;
+        }
+
+        .modal h2 {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--terminal-light-green);
+            margin-bottom: 1.5rem;
+            text-align: center;
+            text-shadow: 0 0 5px var(--terminal-green);
+        }
+
+        .modal p {
+            color: var(--terminal-light-green);
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .modal-button {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background: var(--terminal-green);
+            color: var(--terminal-bg);
+            text-decoration: none;
+            border-radius: 3px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+        }
+
+        .modal-button:hover {
+            background: var(--terminal-light-green);
+            box-shadow: 0 0 10px var(--terminal-green);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: var(--terminal-green);
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: var(--terminal-light-green);
+            text-shadow: 0 0 5px var(--terminal-green);
+        }
+
+        @media (max-width: 768px) {
+            .modal {
+                width: 95%;
+                padding: 1.5rem;
+            }
+
+            .modal-buttons {
+                flex-direction: column;
+            }
+
+            .modal-button {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        .cta-banner {
+            display: none; /* Remove the banner */
+        }
+
+        .hero-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--terminal-text);
+            width: 100%;
+            padding: 1rem;
+            z-index: 1;
+        }
+
+        .hero-overlay {
+            background: rgba(0, 20, 0, 0.8);
+            border: 2px solid var(--terminal-green);
+            border-radius: 5px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            box-shadow: 0 0 20px rgba(51, 255, 51, 0.3);
+            max-width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-overlay h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1rem;
+            color: var(--terminal-green);
+            text-transform: uppercase;
+        }
+
+        .hero-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-button {
+            display: inline-block;
+            padding: 0.8rem 1rem;
+            background: var(--terminal-green);
+            color: var(--terminal-bg);
+            text-decoration: none;
+            border-radius: 3px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.7rem;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+        }
+
+        .hero-button:hover {
+            background: var(--terminal-light-green);
+            box-shadow: 0 0 15px var(--terminal-green);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .hero-buttons {
+                flex-direction: column;
+            }
+            
+            .hero-button {
+                width: 100%;
+            }
+            
+            .hero-overlay {
+                padding: 1rem;
+            }
+            
+            .hero-overlay h3 {
+                font-size: 0.8rem;
+            }
+        }
+
+        /* Dropdown menu */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: var(--terminal-card-bg);
+            min-width: 160px;
+            box-shadow: 0px 8px 16px 0px rgba(51, 255, 51, 0.2);
+            z-index: 1;
+            border: 1px solid var(--terminal-green);
+            border-radius: 3px;
+        }
+
+        .dropdown-content a {
+            color: var(--terminal-light-green);
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+            font-family: 'Share Tech Mono', monospace;
+            border-bottom: 1px solid rgba(51, 255, 51, 0.2);
+        }
+
+        .dropdown-content a:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-content a:hover {
+            background-color: rgba(51, 255, 51, 0.1);
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropbtn {
+            position: relative;
+            padding-right: 20px !important;
+        }
+
+        .dropbtn::after {
+            content: "▼";
+            font-size: 0.7rem;
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        @media (max-width: 768px) {
+            .dropdown-content {
+                position: static;
+                width: 100%;
+                box-shadow: none;
+                margin-top: 0.5rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .dropdown {
+                width: 100%;
+            }
+
+            .dropbtn {
+                width: 100%;
+                text-align: center;
+            }
+        }
     </style>
 
     <!-- Structured Data -->
@@ -850,6 +1122,22 @@
     </script>
 </head>
 <body>
+    <!-- Add modal HTML -->
+    <div class="modal-overlay" id="announcementModal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">X</button>
+            <h2>SUPPORT TINFOIL HAT COMPETITION</h2>
+            <p><span class="bullet">></span> Protect your brainwaves in style with our official Tinfoil Hat Competition merchandise!</p>
+            <p><span class="bullet">></span> Want to support the competition? We're looking for sponsors for our upcoming events!</p>
+            <p><span class="bullet">></span> Help fund prizes and equipment with your donation to make the competition even better!</p>
+            <div class="modal-buttons">
+                <a href="https://tin-foil-hat-competition.printify.me/" target="_blank" rel="noopener noreferrer" class="modal-button">SHOP MERCH</a>
+                <a href="mailto:sponsors@tfhcompetition.com" class="modal-button">BECOME A SPONSOR</a>
+                <a href="https://gofund.me/e6141ea9" target="_blank" rel="noopener noreferrer" class="modal-button">DONATE</a>
+            </div>
+        </div>
+    </div>
+
     <nav class="nav-menu">
         <div class="nav-container">
             <div class="nav-title">
@@ -868,13 +1156,23 @@
                 <a href="#rules">Rules</a>
                 <a href="#rf-guide">RF Guide</a>
                 <a href="#events">Events</a>
-                <a href="https://tin-foil-hat-competition.printify.me/" target="_blank" rel="noopener noreferrer">Merch</a>
+                <a href="#contact">Contact</a>
+                <div class="dropdown">
+                    <a href="#sponsorship" class="dropbtn">Support</a>
+                    <div class="dropdown-content">
+                        <a href="#sponsorship">Sponsor</a>
+                        <a href="https://gofund.me/e6141ea9" target="_blank" rel="noopener noreferrer">Donate</a>
+                        <a href="https://tin-foil-hat-competition.printify.me/" target="_blank" rel="noopener noreferrer">Merch</a>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
 
     <header class="header">
-        <img src="hero.png" alt="Tinfoil Hat Competition - Protect your brainwaves from mind control">
+        <img src="hero.png" alt="Tinfoil Hat Competition" class="hero-image">
+        <div class="hero-content">
+        </div>
     </header>
 
     <div class="main-content">
@@ -1145,6 +1443,54 @@
                     </div>
                 </div>
             </section>
+
+            <section class="section" data-label="SPONSORSHIP.TXT" id="sponsorship">
+                <div class="container">
+                    <h2>Sponsorship</h2>
+                    <div class="content-section">
+                        <h3>Support the Competition</h3>
+                        <p>Your sponsorship helps make the Tinfoil Hat Competition possible! Sponsors play a crucial role in:</p>
+                        <ul>
+                            <li>Covering event costs and venue expenses</li>
+                            <li>Providing high-quality prizes for winners</li>
+                            <li>Supporting the development of RF testing equipment</li>
+                            <li>Helping us reach more participants and venues</li>
+                        </ul>
+
+                        <h3>Sponsor Benefits</h3>
+                        <p>As a sponsor, you'll receive:</p>
+                        <ul>
+                            <li>Logo placement on our website and event materials</li>
+                            <li>Recognition during event announcements</li>
+                            <li>Opportunity to engage with the hacker community</li>
+                            <li>Support for a unique and innovative competition</li>
+                        </ul>
+
+                        <div class="cta">
+                            <p>Ready to support the competition?</p>
+                            <a href="mailto:sponsors@tfhcompetition.com" class="button">BECOME A SPONSOR</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section" data-label="CONTACT.TXT" id="contact">
+                <div class="container">
+                    <h2>Contact Us</h2>
+                    <div class="content-section">
+                        <h3>Get in Touch</h3>
+                        <p>Have questions about the competition? Want to learn more about sponsorship opportunities? We'd love to hear from you!</p>
+
+                        <div class="contact-info">
+                            <h4>General Inquiries</h4>
+                            <p><span class="bullet">></span> Email: <a href="mailto:info@tfhcompetition.com" subject="Tinfoil Hat Competition Inquiry">info@tfhcompetition.com</a></p>
+                            
+                            <h4>Sponsorship Inquiries</h4>
+                            <p><span class="bullet">></span> Email: <a href="mailto:sponsors@tfhcompetition.com" subject="I'd like to learn more about sponsoring the Tinfoil Hat Competition">sponsors@tfhcompetition.com</a></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
 
         <aside class="sidebar">
@@ -1249,6 +1595,30 @@
                     });
                 }
             });
+        });
+
+        // Show modal on page load
+        window.addEventListener('load', function() {
+            // Show the modal every time
+            document.getElementById('announcementModal').style.display = 'block';
+        });
+
+        function closeModal() {
+            document.getElementById('announcementModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('announcementModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
         });
     </script>
 </body>
