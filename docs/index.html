@@ -667,13 +667,22 @@
             margin-bottom: 1rem;
         }
 
-        .nav-title h1 {
+        .nav-title a.logo-link {
+            text-decoration: none;
+        }
+
+        .nav-title a.logo-link h1 {
             font-family: 'Press Start 2P', cursive;
             color: var(--terminal-light-green);
             font-size: 2rem;
             margin: 0;
             text-shadow: 0 0 5px var(--terminal-green);
             transition: all 0.3s ease;
+        }
+
+        .nav-title a.logo-link:hover h1 {
+            color: var(--terminal-green);
+            text-shadow: 0 0 8px var(--terminal-green);
         }
 
         .nav-title p {
@@ -775,6 +784,46 @@
                 text-align: center;
                 padding: 0.75rem;
                 white-space: normal;
+            }
+            
+            .dropdown {
+                width: 100%;
+            }
+            
+            .dropdown-content {
+                display: none;
+                position: static;
+                width: 100%;
+                box-shadow: none;
+                margin: 0.5rem 0;
+                border-radius: 3px;
+            }
+            
+            .dropdown-content a {
+                text-align: center;
+                width: 100%;
+                padding: 0.75rem;
+            }
+            
+            .dropdown.active .dropdown-content {
+                display: block;
+            }
+            
+            .dropbtn {
+                width: 100%;
+                text-align: center;
+                padding: 0.75rem !important;
+                display: inline-flex;
+                justify-content: center;
+                align-items: center;
+                gap: 5px;
+            }
+            
+            .dropbtn::after {
+                font-size: 0.7rem;
+                display: inline-block;
+                position: static;
+                margin-left: 0;
             }
 
             .hamburger.active span:nth-child(1) {
@@ -1038,36 +1087,16 @@
         }
 
         .dropbtn {
-            position: relative;
-            padding-right: 20px !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
         }
 
         .dropbtn::after {
             content: "▼";
             font-size: 0.7rem;
-            position: absolute;
-            right: 0;
-            top: 50%;
-            transform: translateY(-50%);
-        }
-
-        @media (max-width: 768px) {
-            .dropdown-content {
-                position: static;
-                width: 100%;
-                box-shadow: none;
-                margin-top: 0.5rem;
-                margin-bottom: 0.5rem;
-            }
-
-            .dropdown {
-                width: 100%;
-            }
-
-            .dropbtn {
-                width: 100%;
-                text-align: center;
-            }
+            display: inline-block;
         }
     </style>
 
@@ -1127,9 +1156,7 @@
         <div class="modal">
             <button class="modal-close" onclick="closeModal()">X</button>
             <h2>SUPPORT TINFOIL HAT COMPETITION</h2>
-            <p><span class="bullet">></span> Protect your brainwaves in style with our official Tinfoil Hat Competition merchandise!</p>
-            <p><span class="bullet">></span> Want to support the competition? We're looking for sponsors for our upcoming events!</p>
-            <p><span class="bullet">></span> Help fund prizes and equipment with your donation to make the competition even better!</p>
+            <p>Help us fund prizes and logistics for the competition!</p>
             <div class="modal-buttons">
                 <a href="https://tin-foil-hat-competition.printify.me/" target="_blank" rel="noopener noreferrer" class="modal-button">SHOP MERCH</a>
                 <a href="mailto:sponsors@tfhcompetition.com" class="modal-button">BECOME A SPONSOR</a>
@@ -1141,7 +1168,9 @@
     <nav class="nav-menu">
         <div class="nav-container">
             <div class="nav-title">
-                <h1>TINFOIL HAT COMPETITION</h1>
+                <a href="#" class="logo-link">
+                    <h1>TINFOIL HAT COMPETITION</h1>
+                </a>
                 <p>Stop the mind control, protect your brainwaves, and win prizes - build the best RF-blocking hat out of tinfoil.</p>
             </div>
             <div class="hamburger">
@@ -1575,11 +1604,24 @@
             navLinks.classList.toggle('active');
         });
 
+        // Toggle dropdown on mobile
+        document.querySelectorAll('.dropdown .dropbtn').forEach(button => {
+            button.addEventListener('click', function(e) {
+                if (window.innerWidth <= 768) {
+                    e.preventDefault();
+                    this.parentElement.classList.toggle('active');
+                }
+            });
+        });
+
         // Close menu when clicking a link
-        document.querySelectorAll('.nav-links a').forEach(link => {
+        document.querySelectorAll('.nav-links a:not(.dropbtn)').forEach(link => {
             link.addEventListener('click', () => {
                 hamburger.classList.remove('active');
                 navLinks.classList.remove('active');
+                document.querySelectorAll('.dropdown').forEach(dropdown => {
+                    dropdown.classList.remove('active');
+                });
             });
         });
 
