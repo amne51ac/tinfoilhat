@@ -1590,13 +1590,24 @@
         const navLinks = document.querySelector('.nav-links');
         const navMenu = document.querySelector('.nav-menu');
 
-        // Add scroll event listener
+        // Logo scroll to top
+        document.querySelector('.logo-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Add scroll event listener with a large threshold difference
         window.addEventListener('scroll', () => {
-            if (window.scrollY > 100) {
+            // Use a much larger gap between adding and removing the class (50px)
+            if (window.scrollY > 190) {
                 navMenu.classList.add('scrolled');
-            } else {
+            } else if (window.scrollY < 100) {
                 navMenu.classList.remove('scrolled');
             }
+            // When between 100-150px, maintain current state (no changes)
         });
 
         hamburger.addEventListener('click', () => {
