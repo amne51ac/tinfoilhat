@@ -48,12 +48,12 @@
             text-align: center;
             margin-bottom: 8px;
             text-shadow: 0 0 5px #33ff33;
-            font-size: 1.6vw;
+            font-size: 2.2vw;
         }
         
         .summary {
             text-align: center;
-            font-size: 1.0vw;
+            font-size: 1.4vw;
             line-height: 1.2;
             margin-bottom: 12px;
             padding: 6px;
@@ -63,22 +63,22 @@
         }
         
         .rule-section {
-            margin-bottom: 8px;
-            padding: 6px;
+            margin-bottom: 12px;
+            padding: 8px;
         }
         
         .rule-section h2 {
             text-align: center;
             font-family: 'Press Start 2P', cursive;
-            font-size: .8vw;
-            margin-bottom: 4px;
+            font-size: 1.4vw;
+            margin-bottom: 18px;
             color: #bbffbb;
         }
         
         .rule-section p {
-            margin: 0 0 4px 0;
+            margin: 0 0 6px 0;
             line-height: 1.4;
-            font-size: 0.7vw;
+            font-size: 1.2vw;
             font-family: 'Share Tech Mono', monospace;
         }
         
@@ -90,7 +90,7 @@
         
         .bullet {
             font-family: 'Share Tech Mono', monospace;
-            font-size: 1vw;
+            font-size: 1.2vw;
             margin-right: 5px;
             color: #33ff33;
         }
@@ -99,21 +99,25 @@
             margin-top: 20px;
             text-align: center;
             font-family: 'Share Tech Mono', monospace;
-            font-size: 1.1vw;
+            font-size: 1.4vw;
             color: #99ee99;
         }
 
-        .sponsors-section img {
-            height: 90px;
-            margin: 0 15px;
-            vertical-align: middle;
-            filter: brightness(0) saturate(100%) invert(100%);
-        }
-
-        .sponsor-text {
+        .sponsors-section a {
+            text-decoration: none;
             display: inline-block;
             margin: 0 15px;
+            transition: opacity 0.3s ease;
+        }
+
+        .sponsors-section a:hover {
+            opacity: 0.8;
+        }
+
+        .sponsors-section img {
+            height: 70px;
             vertical-align: middle;
+            filter: brightness(0) saturate(100%) invert(100%);
         }
     </style>
 </head>
@@ -122,43 +126,46 @@
         <h1>TINFOIL HAT CONTEST RULES</h1>
         
         <div class="summary">
-            Stop the mind control and protect your brainwaves, build the best RF-blocking hat out of tinfoil.
+            Stop the mind control, protect your brainwaves, build the best RF-blocking hat out of tinfoil.
         </div>
         
         <div class="rule-section">
             <h2>CATEGORIES</h2>
-            <p>Build a hat out of purely tinfoil to compete in the <span class="category">classic</span> category, or tinfoil plus other materials to compete in the <span class="category">hybrid</span> category. (You can also win on style)</p>
-        </div>
-        
-        <div class="rule-section">
-            <h2>SUPPLIES</h2>
-            <p><span class="bullet">></span> We will provide a limited amount of tinfoil</p>
-            <p><span class="bullet">></span> You are welcome to bring your own supplies</p>
+            <p><span class="category">Classic</span>: Pure tinfoil only<br>
+            <span class="category">Hybrid</span>: Tinfoil + other materials<br>
+            <span class="category">Style</span>: Coolest looking hat</p>
         </div>
         
         <div class="rule-section">
             <h2>BASIC RULES</h2>
-            <p><span class="bullet">></span> The wearer must be able to see</p>
-            <p><span class="bullet">></span> You can test as many times as you want by returning to the end of the line after each test</p>
-            <p><span class="bullet">></span> You are not allowed to interfere with or manipulate the test equipment</p>
-            <p><span class="bullet">></span> Please be courteous of the other participants</p>
+            <p><span class="bullet">></span> Wearer must be able to see<br>
+            <span class="bullet">></span> Test as many times as you want<br>
+            <span class="bullet">></span> No interfering with equipment<br>
+            <span class="bullet">></span> Be courteous to other participants</p>
         </div>
         
         <div class="rule-section">
             <h2>TESTING PROCESS</h2>
-            <p><span class="bullet">1.</span> TFH staff will run a baseline with nothing on the mannequin</p>
-            <p><span class="bullet">2.</span> You will be asked to place your hat on the mannequin</p>
-            <p><span class="bullet">3.</span> The scoring test will be performed on your hat</p>
-            <p><span class="bullet">4.</span> Your best score will be used for the competition results</p>
+            <p><span class="bullet">1.</span> Baseline test (no hat)<br>
+            <span class="bullet">2.</span> Place your hat on mannequin<br>
+            <span class="bullet">3.</span> Scoring test performed<br>
+            <span class="bullet">4.</span> Best score counts</p>
         </div>
 
         <div class="sponsors-section">
             <p>Sponsored by:</p>
-            <img src="/static/img/wisp_logo.webp" alt="WISP Logo">
-            <img src="/static/img/cyphercon_logo.png" alt="CypherCon Logo">
-            <img src="/static/img/Cyera_Logo_White.png" alt="Cyera Logo">
-            <img src="/static/img/CyberCX_logo_RGB-medium.png" alt="CyberCX Logo">
-            <img src="/static/img/hackersidekick-logo.png" alt="Hacker Sidekick Logo">
+            <a href="https://wisporg.com" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/wisp_logo.webp" alt="WISP Logo">
+            </a>
+            <a href="https://www.cyera.com/" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/Cyera_Logo_White.png" alt="Cyera Logo">
+            </a>
+            <a href="https://cybercx.com/" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/CyberCX_logo_RGB-medium.png" alt="CyberCX Logo">
+            </a>
+            <a href="https://hackersidekick.com" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/hackersidekick-logo.png" alt="Hacker Sidekick Logo">
+            </a>
             <!-- <span class="sponsor-text">TEXT LOGO SAMPLE</span> -->
         </div>
     </div>

@@ -52,7 +52,8 @@
         }
         
         .prize-section {
-            margin-bottom: 8px;
+            margin-bottom: 20px;
+            margin-top: 20px;
             padding: 6px;
             border: 1px solid rgba(51, 255, 51, 0.3);
             border-radius: 3px;
@@ -61,8 +62,8 @@
         .prize-section h2 {
             text-align: center;
             font-family: 'Press Start 2P', cursive;
-            font-size: 1vw;
-            margin-bottom: 4px;
+            font-size: 1.4vw;
+            margin-bottom: 18px;
             color: #bbffbb;
         }
         
@@ -70,8 +71,9 @@
             text-align: center;
             margin: 0 0 4px 0;
             line-height: 1.4;
-            font-size: .8vw;
+            font-size: 1.2vw;
             font-family: 'Share Tech Mono', monospace;
+            margin-bottom: 18px;
         }
         
         .prize-section ul {
@@ -84,7 +86,7 @@
             margin: 4px 0;
             padding-left: 20px;
             position: relative;
-            font-size: 0.8vw;
+            font-size: 1.2vw;
             font-family: 'Share Tech Mono', monospace;
         }
         
@@ -108,16 +110,26 @@
         }
 
         .sponsors-section {
-            margin-top: 20px;
+            margin-top: 50px;
             text-align: center;
             font-family: 'Share Tech Mono', monospace;
             font-size: 1vw;
             color: #99ee99;
         }
 
-        .sponsors-section img {
-            height: 90px;
+        .sponsors-section a {
+            text-decoration: none;
+            display: inline-block;
             margin: 0 15px;
+            transition: opacity 0.3s ease;
+        }
+
+        .sponsors-section a:hover {
+            opacity: 0.8;
+        }
+
+        .sponsors-section img {
+            height: 70px;
             vertical-align: middle;
             filter: brightness(0) saturate(100%) invert(100%);
         }
@@ -135,47 +147,49 @@
         
         <div class="prize-section">
             <h2>CLASSIC</h2>
-            <p class="category-description">Build a hat out of purely tinfoil that blocks the most RF energy.</p>
+            <p class="category-description">Build a hat of only tinfoil that blocks the most RF.</p>
             <ul>
-                <li><span class="prize-item">Extreme Badge to Cypher Con 2026</span></li>
                 <li><span class="prize-item">RTL SDR V3 Software Defined Radio</span></li>
                 <li><span class="prize-item">Limited Edition Tinfoil Hat Shirt</span></li>
                 <li><span class="prize-item">Limited Edition Tinfoil Hat Bag</span></li>
-                <li><span class="prize-item">Women In Security and Privacy Travel Mug</span></li>
-                <li><span class="prize-item">$100,000 Movie Prop Money</span></li>
+                <li><span class="prize-item">Women In Security and Privacy Flask</span></li>
             </ul>
         </div>
         
         <div class="prize-section">
             <h2>HYBRID</h2>
-            <p class="category-description">Build a hat out of tinfoil and a non-tinfoil material that blocks the most RF energy.</p>
+            <p class="category-description">Build a hat of tinfoil and anything that blocks the most RF.</p>
             <ul>
-                <li><span class="prize-item">RTL SDR V3 Software Defined Radio</span></li>
                 <li><span class="prize-item">Limited Edition Tinfoil Hat Shirt</span></li>
                 <li><span class="prize-item">Limited Edition Tinfoil Hat Bag</span></li>
-                <li><span class="prize-item">Women In Security and Privacy Travel Mug</span></li>
-                <li><span class="prize-item">$50,000 Movie Prop Money</span></li>
+                <li><span class="prize-item">Women In Security and Privacy Flask</span></li>
             </ul>
         </div>
         
         <div class="prize-section">
             <h2>STYLE</h2>
-            <p class="category-description">Build the coolest looking tinfoil hat according to definitely not-biased panel of totally expert judges.</p>
+            <p class="category-description">Build the coolest looking tinfoil hat.</p>
             <ul>
-                <li><span class="prize-item">Women In Security and Privacy Travel Mug</span></li>
                 <li><span class="prize-item">Limited Edition Tinfoil Hat Shirt</span></li>
                 <li><span class="prize-item">Limited Edition Tinfoil Hat Bag</span></li>
-                <li><span class="prize-item">$10,000 Movie Prop Money</span></li>
+                <li><span class="prize-item">Women In Security and Privacy Flask</span></li>
             </ul>
         </div>
 
         <div class="sponsors-section">
             <p>Sponsored by:</p>
-            <img src="/static/img/wisp_logo.webp" alt="WISP Logo">
-            <img src="/static/img/cyphercon_logo.png" alt="CypherCon Logo">
-            <img src="/static/img/Cyera_Logo_White.png" alt="Cyera Logo">
-            <img src="/static/img/CyberCX_logo_RGB-medium.png" alt="CyberCX Logo">
-            <img src="/static/img/hackersidekick-logo.png" alt="Hacker Sidekick Logo">
+            <a href="https://wisporg.com" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/wisp_logo.webp" alt="WISP Logo">
+            </a>
+            <a href="https://www.cyera.com/" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/Cyera_Logo_White.png" alt="Cyera Logo">
+            </a>
+            <a href="https://cybercx.com/" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/CyberCX_logo_RGB-medium.png" alt="CyberCX Logo">
+            </a>
+            <a href="https://hackersidekick.com" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/hackersidekick-logo.png" alt="Hacker Sidekick Logo">
+            </a>
             <!-- <span class="sponsor-text">TEXT LOGO SAMPLE</span> -->
         </div>
     </div>

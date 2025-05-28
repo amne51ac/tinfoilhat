@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RF Attenuation Guide</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #000;
+            color: #33ff33;
+            font-family: 'IBM Plex Mono', monospace;
+            margin: 0;
+            padding: 10px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .rf-card {
+            background-color: #111;
+            border: 2px solid #33ff33;
+            border-radius: 5px;
+            padding: 15px;
+            width: 850px;
+            height: 1100px;
+            box-shadow: inset 0 0 10px rgba(51, 255, 51, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .rf-card::before {
+            content: "RF_ATTENUATION.TXT";
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #33ff33;
+            color: #000;
+            font-size: 1em;
+            padding: 2px 10px;
+            font-family: 'Press Start 2P', cursive;
+            font-weight: bold;
+        }
+        
+        h1 {
+            font-family: 'Press Start 2P', cursive;
+            text-align: center;
+            margin-bottom: 8px;
+            text-shadow: 0 0 5px #33ff33;
+            font-size: 2.2vw;
+        }
+        
+        .summary {
+            text-align: center;
+            font-size: 1.4vw;
+            line-height: 1.2;
+            margin-bottom: 12px;
+            padding: 6px;
+            border: 1px solid rgba(51, 255, 51, 0.3);
+            border-radius: 3px;
+            background-color: rgba(51, 255, 51, 0.1);
+        }
+        
+        .rf-section {
+            margin-bottom: 12px;
+            padding: 8px;
+        }
+        
+        .rf-section h2 {
+            text-align: center;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.4vw;
+            margin-bottom: 18px;
+            color: #bbffbb;
+        }
+        
+        .rf-section p {
+            margin: 0 0 6px 0;
+            line-height: 1.4;
+            font-size: 1.2vw;
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        .sponsors-section {
+            margin-top: 30px;
+            text-align: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.4vw;
+            color: #99ee99;
+        }
+
+        .sponsors-section a {
+            text-decoration: none;
+            display: inline-block;
+            margin: 0 15px;
+            transition: opacity 0.3s ease;
+        }
+
+        .sponsors-section a:hover {
+            opacity: 0.8;
+        }
+
+        .sponsors-section img {
+            height: 70px;
+            vertical-align: middle;
+            filter: brightness(0) saturate(100%) invert(100%);
+        }
+    </style>
+</head>
+<body>
+    <div class="rf-card">
+        <h1>ABOUT RF ATTENUATION</h1>
+        
+        <div class="rf-section">
+            <h2>WHAT IS RF ATTENUATION?</h2>
+            <p>RF attenuation measures how well materials block radio signals, measured in decibels (dB). Higher dB = better blocking.</p>
+        </div>
+
+        <div class="rf-section">
+            <h2>FARADAY SHIELDING BASICS</h2>
+            <p>Conductive materials like aluminum foil block electromagnetic fields. No gaps = better shielding. Any opening larger than 1/10th wavelength allows signal leakage.</p>
+        </div>
+
+        <div class="rf-section">
+            <h2>DESIGN TIPS</h2>
+            <p>• Use multiple layers of foil<br>
+            • Ensure good contact between layers<br>
+            • Minimize gaps and seams<br>
+            • Seal openings with conductive tape</p>
+        </div>
+
+        <div class="rf-section">
+            <h2>FREQUENCY GUIDE</h2>
+            <p>WiFi (2.4 GHz): Small gaps matter<br>
+            FM Radio (88.5 MHz): Large gaps OK<br>
+            Higher frequencies = harder to shield</p>
+        </div>
+
+        <div class="sponsors-section">
+            <p>Sponsored by:</p>
+            <a href="https://wisporg.com" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/wisp_logo.webp" alt="WISP Logo">
+            </a>
+            <a href="https://www.cyera.com/" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/Cyera_Logo_White.png" alt="Cyera Logo">
+            </a>
+            <a href="https://cybercx.com/" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/CyberCX_logo_RGB-medium.png" alt="CyberCX Logo">
+            </a>
+            <a href="https://hackersidekick.com" target="_blank" rel="noopener noreferrer">
+                <img src="../docs/static/img/hackersidekick-logo.png" alt="Hacker Sidekick Logo">
+            </a>
+        <!-- <span class="sponsor-text">TEXT LOGO SAMPLE</span> -->
+        </div>
+    </div>
+</body>
+</html> 
